@@ -1,0 +1,4 @@
+{
+    "Art": "rounddown((sqrt(8 * Exp + 1)-1)/2)",
+    "Ability": "rounddown((sqrt(8 * Exp / 5 + 1)-1)/2)"
+}

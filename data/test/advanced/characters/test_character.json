@@ -1,0 +1,80 @@
+{
+    "Magus": {
+        "Arts": [{
+            "Creo": {
+                "Type": "Art",
+                "Subtype": "Technique",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Intellego": {
+                "Type": "Art",
+                "Subtype": "Technique",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Muto": {
+                "Type": "Art",
+                "Subtype": "Technique",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Perdo": {
+                "Type": "Art",
+                "Subtype": "Technique",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Rego": {
+                "Type": "Art",
+                "Subtype": "Technique",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Animal": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Aquam": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Auram": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Corpus": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Herbam": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Imaginem": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Ignem": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Mentem": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Terram": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}, {
+            "Vim": {
+                "Type": "Art",
+                "Subtype": "Form",
+                "Exp": [{"Value": 0, "Source": "CharacterCreation"}]
+            }}]
+    }
+}

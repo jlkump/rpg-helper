@@ -1,0 +1,10 @@
+{
+    "Art": {
+        "Subtype": ["Technique", "Form"],
+        "Exp": "List<Exp>"
+    },
+    "Exp": {
+        "Value": "I32",
+        "Source": "String"
+    }
+}

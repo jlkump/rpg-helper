@@ -1,0 +1,23 @@
+{
+    "Magus": {
+        "DataIndex": true,
+        "Arts": "List<Art>",
+        "Abilities": "",
+        "Characteristics": "List<Characteristic>"
+    },
+    "Art": {
+        "Subtype": ["Technique", "Form"],
+        "Exp": "List<Exp>"
+    },
+    "Exp": {
+        "Value": "I32",
+        "Source": "String"
+    },
+    "Decrepitude": {
+        "Age": "I32"
+    },
+    "Characteristic": {
+        "Value": "I32",
+        "Age Points": "I32"
+    }
+}
