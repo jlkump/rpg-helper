@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 
 pub mod parse;
+pub mod tokenize;
 
 use crate::data::meta_type::*;
 use crate::data::equation::*;
