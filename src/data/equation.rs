@@ -20,13 +20,16 @@ impl Equation {
         })
     }
 
-    pub fn evaluate(&self, container: &MetaTypeInstance, data: &DataIndex) -> i32 {
-        todo!()
+    pub fn evaluate(&self, container: &MetaTypeInstance, data: &DataIndex) -> Result<f32, EvaluationError> {
+        self.ast.evaluate(container, data)
     }
 }
 
+#[derive(Debug)]
+pub struct EvaluationError;
+
 #[derive(Debug, Clone, PartialEq)]
-pub struct EquationSyntaxTree {
+struct EquationSyntaxTree {
     root: SyntaxNode
 }
 
@@ -98,6 +101,45 @@ impl EquationSyntaxTree {
             
         }
         root_ind
+    }
+
+    fn evaluate(&self, container: &MetaTypeInstance, data: &DataIndex) -> Result<f32, EvaluationError> {
+        Self::eval_recursive(&self.root, container, data)
+    }
+
+    fn eval_recursive(node: &SyntaxNode, container: &MetaTypeInstance, data: &DataIndex) -> Result<f32, EvaluationError> {
+        match &node {
+            SyntaxNode::Operand(op) => {
+                match &op {
+                    OperandNode::Number(i) => Ok(*i),
+                    OperandNode::Query(q) => {
+                        if let Some(fv) = container.get_field(q) {
+                            if let Some(val) = fv.get_value(data, container) {
+                                Ok(val as f32)
+                            } else {
+                                Ok(data.get_value(q, Some(&container.get_name())) as f32)
+                            }
+                        } else {
+                            Err(EvaluationError)
+                        }
+                    },
+                }
+            },
+            SyntaxNode::Operator(op) => {
+                match op.op {
+                    Operation::Add => Ok(Self::eval_recursive(&op.vals[0], container, data)? + Self::eval_recursive(&op.vals[1], container, data)?),
+                    Operation::Subtract => Ok(Self::eval_recursive(&op.vals[0], container, data)? - Self::eval_recursive(&op.vals[1], container, data)?),
+                    Operation::Multiply => Ok(Self::eval_recursive(&op.vals[0], container, data)? * Self::eval_recursive(&op.vals[1], container, data)?),
+                    Operation::Divide => Ok(Self::eval_recursive(&op.vals[0], container, data)? / Self::eval_recursive(&op.vals[1], container, data)?),
+                    Operation::Negate => Ok(-Self::eval_recursive(&op.vals[0], container, data)?),
+                    Operation::Pow => Ok(Self::eval_recursive(&op.vals[0], container, data)?.powf(Self::eval_recursive(&op.vals[1], container, data)?)),
+                    Operation::Sqrt => Ok(Self::eval_recursive(&op.vals[0], container, data)?.sqrt()),
+                    Operation::Round => Ok(Self::eval_recursive(&op.vals[0], container, data)?.round()),
+                    Operation::RoundDown => Ok(Self::eval_recursive(&op.vals[0], container, data)?.floor()),
+                    Operation::RoundUp => Ok(Self::eval_recursive(&op.vals[0], container, data)?.ceil()),
+                }
+            }
+        }
     }
 }
 
@@ -212,7 +254,7 @@ impl Display for OperandNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::{data::equation::{Equation, EquationSyntaxTree, OperandNode, Operation, OperatorNode, SyntaxNode}, syntax::tokenize::tokenize_expression};
+    use crate::{data::{equation::{Equation, EquationSyntaxTree, OperandNode, Operation, OperatorNode, SyntaxNode}, meta_type::{MetaField, MetaType, MetaTypeInstance}}, syntax::tokenize::tokenize_expression};
 
     #[test]
     fn simple_find_root() {

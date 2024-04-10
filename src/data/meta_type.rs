@@ -79,14 +79,14 @@ pub enum FieldValue<'a> {
 }
 
 impl FieldValue<'_> {
-    fn get_value(data: &DataIndex, f: &FieldValue, owner: &MetaTypeInstance) -> i32 {
-        match f {
-            FieldValue::Int(i) => *i,
-            FieldValue::Enum(_) => panic!(),
-            FieldValue::List(l) => l.iter().map(|f| {Self::get_value(&data, &f, owner)}).sum(),
+    pub fn get_value(&self, data: &DataIndex, owner: &MetaTypeInstance) -> Option<i32> {
+        match &self {
+            FieldValue::Int(i) => Some(*i),
+            FieldValue::Enum(_) => None,
+            FieldValue::List(l) => l.iter().map(|f| {f.get_value(&data, owner)}).sum(),
             FieldValue::Meta(m) => MetaTypeInstance::get_value(&data, &m),
-            FieldValue::String(_) => panic!(),
-            FieldValue::Equation(e) => e.evaluate(&owner, data)
+            FieldValue::String(_) => None,
+            FieldValue::Equation(e) => Some(e.evaluate(&owner, data).unwrap() as i32)
         }
     }
 }
@@ -145,10 +145,10 @@ impl<'g> MetaTypeInstance<'g> {
         return None
     }
 
-    pub fn get_value(data: &DataIndex, mti: &MetaTypeInstance) -> i32 {
+    pub fn get_value(data: &DataIndex, mti: &MetaTypeInstance) -> Option<i32> {
         if let Some(f) = mti.get_field(&"Value".to_owned()) {
-            return FieldValue::get_value(data, &f, mti)
+            return f.get_value(data, mti)
         }
-        return 0
+        return None
     }
 }

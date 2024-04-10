@@ -26,10 +26,10 @@ impl DataIndex<'_> {
         if let Some(mti) = self.data.get(name) {
             if let Some(use_case) = used_for {
                 if let Some(m) = self.modifiers.iter().find(|modifier| modifier.target.eq(name)) {
-                    return MetaTypeInstance::get_value(self, mti) + m.apply_modifier(self, use_case)
+                    return MetaTypeInstance::get_value(self, mti).unwrap() + m.apply_modifier(self, use_case)
                 }
             }
-            return MetaTypeInstance::get_value(self, mti)
+            return MetaTypeInstance::get_value(self, mti).unwrap()
         }
         return 0
     }
