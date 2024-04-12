@@ -1,10 +1,10 @@
-use std::{collections::HashMap, iter::{Map, Sum}, ops};
+use syntax::parse;
 
 mod syntax;
 mod data;
 
 pub fn run() {
-    // parse::read_types("C:\\Users\\lando\\OneDrive\\Documents\\code_projects\\ars-magica-cli\\data\\test\\setting\\types.json");
+    println!("{}", parse::json_parser::parse_types("C:\\Users\\lando\\OneDrive\\Documents\\code_projects\\rpg-helper\\data\\test\\basic\\setting\\types.json"));
 }
 
 

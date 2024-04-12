@@ -2,34 +2,29 @@ use std::{collections::HashMap, fmt::Display};
 
 use crate::data::equation::Equation;
 
-use super::{CharacterData, DataIndex, TypeIndex};
+use super::ValueIndex;
 
+#[derive(PartialEq)]
 pub struct MetaType {
     type_name: String,
     fields: Vec<MetaField>
 }
 
 impl MetaType {
-    pub fn new(type_name: String, fields: Vec<MetaField>) -> MetaType {
-        MetaType {
+    pub fn new(type_name: String) -> MetaTypeBuilder {
+        MetaTypeBuilder {
             type_name,
-            fields
+            fields: vec![]
         }
     }
 
-    pub fn define_field(field_name: String, field_type: Type) -> MetaField {
-        MetaField {
-            field_name,
-            field_type
-        }
+    pub fn get_name(&self) -> &str {
+        &self.type_name
     }
 
-    pub fn has_field(&self, field_name: &str) -> bool {
-        self.fields.iter().any(|f| f.field_name.eq(field_name))
-    }
-
-    pub fn get_name(&self) -> String {
-        self.type_name.clone()
+    // Might need to made pub, idk yet
+    fn get_field(&self, field_name: &str) -> Option<&MetaField> {
+        self.fields.iter().find(|f| f.field_name.eq(field_name))
     }
 }
 
@@ -47,7 +42,27 @@ impl Display for MetaType {
     }
 }
 
-pub struct MetaField {
+pub struct MetaTypeBuilder {
+    type_name: String,
+    fields: Vec<MetaField>
+}
+
+impl MetaTypeBuilder {
+    pub fn define_field(&mut self, field_name: String, field_type: Type) {
+        // TODO: Error handling for making sure that no field has the same name as another existing field
+        self.fields.push(MetaField {field_name, field_type})
+    }
+
+    pub fn build(self) -> MetaType {
+        MetaType {
+            type_name: self.type_name,
+            fields: self.fields
+        }
+    }
+}
+
+#[derive(PartialEq)]
+struct MetaField {
     field_name: String,
     field_type: Type
 }
@@ -58,97 +73,104 @@ impl Display for MetaField {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Type {
-    Int,
-    String,
+    Num,
+    Text,
     List(Box<Type>),
     Enum(Vec<String>),
-    Meta(String),
+    // Meta(String), // Meta types can just be treated as equations
     Equation(Equation)
 }
 
-#[derive(Clone)]
-pub enum FieldValue<'a> {
-    Int(i32),
-    String(String),
-    List(Vec<FieldValue<'a>>),
+pub struct DataConversionErr;
+
+#[derive(Clone, PartialEq)]
+pub struct Value<'a> {
+    t: Type,
+    d: Data<'a>
+}
+
+impl Value<'_> {
+    pub fn as_f32(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Option<f32> {
+        match &self.d {
+            Data::Num(n) => Some(*n),
+            Data::Text(_) => None,
+            Data::List(l) => l.iter().fold(Some(0 as f32), |a: Option<f32>, v| {
+                if let Some(a) = a {
+                    if let Some(v) = v.as_f32(container, data) {
+                        Some(a + v)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }),
+            Data::Enum(_) => None,
+            // Data::Meta(t) => if let Some(v) = t.get_field_value("Value") {
+            //     v.as_f32(t, data)
+            // } else {
+            //     None
+            // },
+            Data::Equation(e) => if let Ok(v) = e.evaluate(container, data) {
+                Some(v)
+            } else {
+                None
+            }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq)]
+enum Data<'a> {
+    Num(f32),
+    Text(String),
+    List(Vec<Value<'a>>),
     Enum(String),
-    Meta(MetaTypeInstance<'a>),
+    // Meta(MetaTypeInstance<'a>), // These are used for MetaTypeInstances that don't have a name (they are named by their field instead)
     Equation(&'a Equation)
 }
 
-impl FieldValue<'_> {
-    pub fn get_value(&self, data: &DataIndex, owner: &MetaTypeInstance) -> Option<i32> {
-        match &self {
-            FieldValue::Int(i) => Some(*i),
-            FieldValue::Enum(_) => None,
-            FieldValue::List(l) => l.iter().map(|f| {f.get_value(&data, owner)}).sum(),
-            FieldValue::Meta(m) => MetaTypeInstance::get_value(&data, &m),
-            FieldValue::String(_) => None,
-            FieldValue::Equation(e) => Some(e.evaluate(&owner, data).unwrap() as i32)
-        }
-    }
-}
-
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct MetaTypeInstance<'a>  {
-    name: String,
+    // Name is implicit in anything that holds an instance
     t: &'a MetaType,
-    fields: HashMap<String, FieldValue<'a>>,
+    fields: HashMap<String, Value<'a>>,
 }
 
 impl<'g> MetaTypeInstance<'g> {
-    pub fn new<'a>(name: String, t: &'a MetaType, index: &'a TypeIndex) -> MetaTypeInstance<'a> {
-        let mut fields = HashMap::new();
-        for f in &t.fields {
-            fields.insert(f.field_name.clone(), Self::type_to_field(&f.field_type, index));
-        }
-        MetaTypeInstance {
-            name,
+    pub fn new<'a>(t: &'a MetaType) -> MetaTypeInstanceBuilder<'a> {
+        MetaTypeInstanceBuilder {
             t,
-            fields,
+            fields: HashMap::new(),
         }
     }
 
-    fn type_to_field<'a>(t: &'a Type, index: &'a TypeIndex) -> FieldValue<'a> {
-        match t {
-            Type::Meta(s) => FieldValue::Meta(Self::new(s.clone(), index.get_type(s).expect("No field found"), index)),
-            Type::Int => FieldValue::Int(0),
-            Type::List(_) => todo!(),
-            Type::String => FieldValue::String("".to_owned()),
-            Type::Enum(vals) => FieldValue::Enum(vals[0].clone()),
-            Type::Equation(e) => FieldValue::Equation(&e)
-        }
+    pub fn get_field_value<'a>(&'a self, field_name: &str) -> Option<&Value<'a>> {
+        self.fields.get(field_name)
     }
+}
 
-    pub fn get_name(&self) -> String {
-        self.name.clone()
-    }
 
-    pub fn get_type(&self) -> &MetaType {
-        &self.t
-    }
+pub struct MetaTypeInstanceErr;
 
-    pub fn set_field(&mut self, field_name: &String, new_value: FieldValue<'g>) -> Option<FieldValue> {
-        if self.fields.contains_key(field_name) {
-            self.fields.insert(field_name.clone(), new_value)
+pub struct MetaTypeInstanceBuilder<'a> {
+    t: &'a MetaType,
+    fields: HashMap<String, Value<'a>>
+}
+
+impl<'a> MetaTypeInstanceBuilder<'a> {
+    pub fn init_field(&'a mut self, field_name: String, field_value: Value<'a>) -> Result<(), MetaTypeInstanceErr> {
+        if let Some(field) = self.t.get_field(&field_name) {
+            if field_value.t == field.field_type {
+                self.fields.insert(field_name, field_value);
+                Ok(())
+            } else {
+                Err(MetaTypeInstanceErr) // Field Type Mis-match
+            }
         } else {
-            None
+            Err(MetaTypeInstanceErr) // Type does not have field with the given name
         }
-    }
-
-    pub fn get_field(&self, field_name: &String) -> Option<FieldValue> {
-        if let Some(field) = self.fields.get(field_name) {
-            return Some(field.clone())
-        }
-        return None
-    }
-
-    pub fn get_value(data: &DataIndex, mti: &MetaTypeInstance) -> Option<i32> {
-        if let Some(f) = mti.get_field(&"Value".to_owned()) {
-            return f.get_value(data, mti)
-        }
-        return None
     }
 }

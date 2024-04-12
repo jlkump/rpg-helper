@@ -1,14 +1,15 @@
 use core::fmt;
 use std::{fmt::Display, num::ParseFloatError};
 
-use super::{meta_type::MetaTypeInstance, DataIndex};
+use super::ValueIndex;
+use super::meta_type::MetaTypeInstance;
 use crate::syntax::parse;
 use crate::syntax::tokenize::tokenize_expression;
 use crate::syntax::parse::SyntaxError;
 use crate::syntax::parse::ErrorType;
 use crate::syntax::parse::Operation;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Equation {
     ast: EquationSyntaxTree
 }
@@ -20,7 +21,7 @@ impl Equation {
         })
     }
 
-    pub fn evaluate(&self, container: &MetaTypeInstance, data: &DataIndex) -> Result<f32, EvaluationError> {
+    pub fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
         self.ast.evaluate(container, data)
     }
 }
@@ -103,24 +104,29 @@ impl EquationSyntaxTree {
         root_ind
     }
 
-    fn evaluate(&self, container: &MetaTypeInstance, data: &DataIndex) -> Result<f32, EvaluationError> {
+    fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
         Self::eval_recursive(&self.root, container, data)
     }
 
-    fn eval_recursive(node: &SyntaxNode, container: &MetaTypeInstance, data: &DataIndex) -> Result<f32, EvaluationError> {
+    fn eval_recursive(node: &SyntaxNode, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
         match &node {
             SyntaxNode::Operand(op) => {
                 match &op {
                     OperandNode::Number(i) => Ok(*i),
                     OperandNode::Query(q) => {
-                        if let Some(fv) = container.get_field(q) {
-                            if let Some(val) = fv.get_value(data, container) {
-                                Ok(val as f32)
+                        if let Some(fv) = container.get_field_value(q) {
+                            if let Some(val) = fv.as_f32(container, data) {
+                                // TODO: Evaluate Enums as a query into the data?
+                                // EX: Casting Score = Technique + Form + Stamina + Aura Modifier
+                                Ok(val)
                             } else {
-                                Ok(data.get_value(q, Some(&container.get_name())) as f32)
+                                Err(EvaluationError) // Value is not a number, list, or reference to a number or list
                             }
+                        } else if let Some(val) = data.get_value(q, "Value").as_f32(container, data) {
+                            // If the container does not have the referenced value
+                            Ok(val)
                         } else {
-                            Err(EvaluationError)
+                            Err(EvaluationError) // Container or data does not have the requested field value
                         }
                     },
                 }
@@ -254,7 +260,7 @@ impl Display for OperandNode {
 
 #[cfg(test)]
 mod tests {
-    use crate::{data::{equation::{Equation, EquationSyntaxTree, OperandNode, Operation, OperatorNode, SyntaxNode}, meta_type::{MetaField, MetaType, MetaTypeInstance}}, syntax::tokenize::tokenize_expression};
+    use crate::{data::equation::{Equation, EquationSyntaxTree, OperandNode, Operation, OperatorNode, SyntaxNode}, syntax::tokenize::tokenize_expression};
 
     #[test]
     fn simple_find_root() {

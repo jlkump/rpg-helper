@@ -4,7 +4,7 @@
         "Exp": "List<Exp>"
     },
     "Exp": {
-        "Value": "I32",
+        "Value": "Num",
         "Source": "String"
     }
 }

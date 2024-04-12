@@ -1,5 +1,6 @@
 use core::fmt;
 
+pub mod json_parser;
 
 /// Matching bracket implementation comes from StackOverflow:
 /// https://codereview.stackexchange.com/questions/253279/matching-brackets-in-rust
