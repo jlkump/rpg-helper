@@ -2,9 +2,15 @@ use syntax::parse;
 
 mod syntax;
 mod data;
+mod error;
 
 pub fn run() {
-    println!("{}", parse::json_parser::parse_types("C:\\Users\\lando\\OneDrive\\Documents\\code_projects\\rpg-helper\\data\\test\\basic\\setting\\types.json"));
+    let equations = parse::json_parser::parse_equations("C:\\Users\\lando\\OneDrive\\Documents\\code_projects\\rpg-helper\\data\\test\\basic\\setting\\equations.json");
+    println!("##### Equations ######\n{}", equations);
+    let types = parse::json_parser::parse_types("C:\\Users\\lando\\OneDrive\\Documents\\code_projects\\rpg-helper\\data\\test\\basic\\setting\\types.json", equations);
+    println!("##### Types ######\n{}", types);
+    let values = parse::json_parser::parse_values(&types, "C:\\Users\\lando\\OneDrive\\Documents\\code_projects\\rpg-helper\\data\\test\\basic\\character.json");
+    println!("##### Values ######\n{}", values);
 }
 
 

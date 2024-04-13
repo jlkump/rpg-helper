@@ -1,5 +1,7 @@
 use core::fmt;
 
+use super::tokenize::tokenize_expression;
+
 pub mod json_parser;
 
 /// Matching bracket implementation comes from StackOverflow:
@@ -38,6 +40,11 @@ pub fn brackets_are_balanced(string: &str) -> bool {
         }
     }
     brackets.is_empty()
+}
+
+fn string_contains_op(s: &str) -> bool {
+    let tokens = tokenize_expression(s);
+    tokens.len() != 1
 }
 
 #[derive(Debug, Default, Clone)]
@@ -252,7 +259,6 @@ pub fn remove_paren(e: Vec<String>) -> Vec<String> {
                     // }
                 }
                 if !needed {
-                    println!("Pushing unneeded {}, {}", i, top.left_pa.unwrap());
                     unneeded.push(top.left_pa.unwrap());
                     unneeded.push(i);
                 }

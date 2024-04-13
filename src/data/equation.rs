@@ -24,10 +24,21 @@ impl Equation {
     pub fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
         self.ast.evaluate(container, data)
     }
+
+    pub fn to_string(&self) -> String {
+        // TODO: Reconstruct string from ast
+        String::new()
+    }
+}
+
+impl Display for Equation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
 }
 
 #[derive(Debug)]
-pub struct EvaluationError;
+pub struct EvaluationError; // Requirements for die-rolls could be passed up through EvaluationErrors of a specific type
 
 #[derive(Debug, Clone, PartialEq)]
 struct EquationSyntaxTree {
@@ -122,9 +133,12 @@ impl EquationSyntaxTree {
                             } else {
                                 Err(EvaluationError) // Value is not a number, list, or reference to a number or list
                             }
-                        } else if let Some(val) = data.get_value(q, "Value").as_f32(container, data) {
-                            // If the container does not have the referenced value
-                            Ok(val)
+                        } else if let Some(val) = data.get_value(q, "Value") {
+                            if let Some(v) = val.as_f32(container, data) {
+                                Ok(v)
+                            } else {
+                                Err(EvaluationError) // Value does not evaluate to a f32
+                            }
                         } else {
                             Err(EvaluationError) // Container or data does not have the requested field value
                         }
