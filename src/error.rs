@@ -1,11 +1,15 @@
 #[derive(Debug)]
-pub struct InsertionError;
+pub enum InsertionError<T> {
+    Conflicting(Vec<T>)
+}
 
 #[derive(Debug)]
-pub struct DataConversionError;
+pub enum FieldError {
+    Mismatch(String, String),
+    Nonexistant(String)
+}
 
 #[derive(Debug)]
-pub struct FieldError;
-
-#[derive(Debug)]
-pub struct TypeRegistationErr;
+pub enum DefinitionError<T> {
+    Redef(T)
+}

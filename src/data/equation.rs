@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{fmt::Display, num::ParseFloatError};
 
-use super::ValueIndex;
+use super::indexes::value_index::ValueIndex;
 use super::meta_type::MetaTypeInstance;
 use crate::syntax::parse;
 use crate::syntax::tokenize::tokenize_expression;
@@ -38,7 +38,16 @@ impl Display for Equation {
 }
 
 #[derive(Debug)]
-pub struct EvaluationError; // Requirements for die-rolls could be passed up through EvaluationErrors of a specific type
+pub struct EvaluationError;
+
+pub struct EvalResult {
+    pub val: f32,
+    pub needs: Vec<EvalRequest>
+}
+
+pub enum EvalRequest {
+    DieRoll
+}
 
 #[derive(Debug, Clone, PartialEq)]
 struct EquationSyntaxTree {
@@ -125,22 +134,25 @@ impl EquationSyntaxTree {
                 match &op {
                     OperandNode::Number(i) => Ok(*i),
                     OperandNode::Query(q) => {
+                        let mut val = None;
                         if let Some(fv) = container.get_field_value(q) {
-                            if let Some(val) = fv.as_f32(container, data) {
-                                // TODO: Evaluate Enums as a query into the data?
-                                // EX: Casting Score = Technique + Form + Stamina + Aura Modifier
-                                Ok(val)
-                            } else {
-                                Err(EvaluationError) // Value is not a number, list, or reference to a number or list
+                            if let Some(v) = fv.as_f32(container, data) {
+                                val = Some(v);
                             }
-                        } else if let Some(val) = data.get_value(q, "Value") {
-                            if let Some(v) = val.as_f32(container, data) {
-                                Ok(v)
-                            } else {
-                                Err(EvaluationError) // Value does not evaluate to a f32
+                        }
+                        if val.is_none() {
+                            if let Some(i) = data.get_instance(q) {
+                                if let Some(v) = i.get_field_value("Value") {
+                                    if let Some(v) = v.as_f32(container, data) {
+                                        val = Some(v);
+                                    }
+                                }
                             }
+                        }
+                        if let Some(v) = val {
+                            Ok(v)
                         } else {
-                            Err(EvaluationError) // Container or data does not have the requested field value
+                            Err(EvaluationError) // Some Error
                         }
                     },
                 }
@@ -244,7 +256,8 @@ impl Display for OperatorNode {
 #[derive(Debug, Clone, PartialEq)]
 enum OperandNode {
     Number(f32),
-    Query(String)
+    Query(String),
+    // CompoundQuery(Vec<String>)
 }
 
 impl OperandNode {

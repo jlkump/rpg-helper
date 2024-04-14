@@ -1,8 +1,6 @@
-use std::{io::{self, Split, Write}, slice::Iter};
+use std::{io::{self, Write}, slice::Iter};
 
-use serde::de::value;
-
-use crate::{data::{meta_type::{MetaType, MetaTypeInstance, Type, Value}, TypeIndex, ValueIndex}, error::TypeRegistationErr, syntax::{parse, tokenize}};
+use crate::{data::{indexes::{type_index::TypeIndex, value_index::ValueIndex}, meta_type::{MetaType, MetaTypeInstance, Type, Value}}, syntax::parse};
 
 pub fn run_basic_test() -> Result<(), io::Error> {
     let equations = parse::json_parser::parse_equations("C:\\Users\\lando\\OneDrive\\Documents\\code_projects\\rpg-helper\\data\\test\\basic\\setting\\equations.json");
@@ -16,7 +14,7 @@ pub fn run_basic_test() -> Result<(), io::Error> {
     let mut should_loop = true;
     while should_loop {
         print!(">");
-        io::stdout().flush();
+        io::stdout().flush().unwrap();
         io::stdin().read_line(&mut buffer)?;
         let temp = buffer.split(|c: char| c.is_whitespace()).collect::<Vec<&str>>();
         // let temp = buffer.split_off(buffer.find(|c: char| c.is_whitespace()).unwrap_or(buffer.len()));
@@ -68,7 +66,7 @@ fn add<'a, 'b>(mut tokens: Iter<'b, &str>, types: &'a TypeIndex, mut values: Val
     if let Some(meta_inst_name) = tokens.next() {
         if let Some(field_name) = tokens.next() {
             let mut add_option = AddOption::None;
-            if let Some(v) = values.get_value(meta_inst_name, field_name) {
+            if let Some(v) = values.get_instance(meta_inst_name).unwrap().get_field_value(field_name) {
                 add_option = match v.get_type() {
                     Type::Num => AddOption::AddNum,
                     Type::Text => {
@@ -76,18 +74,10 @@ fn add<'a, 'b>(mut tokens: Iter<'b, &str>, types: &'a TypeIndex, mut values: Val
                         AddOption::None
                     },
                     Type::List(t) => AddOption::AddListElem(t.as_ref().clone()),
-                    Type::Enum(_) => {
-                        println!("Can not add enums");
+                    _ => {
+                        println!("Can not add {}", v.get_type());
                         AddOption::None
-                    },
-                    Type::Meta(_) => {
-                        println!("Can not add meta types");
-                        AddOption::None
-                    },
-                    Type::Equation(_) => {
-                        println!("Can not add equation types");
-                        AddOption::None
-                    },
+                    }
                 }
             } else {
                 println!("{}.{} does not exist", meta_inst_name, field_name);
@@ -95,7 +85,7 @@ fn add<'a, 'b>(mut tokens: Iter<'b, &str>, types: &'a TypeIndex, mut values: Val
             match add_option {
                 AddOption::None => {},
                 AddOption::AddNum => {
-                    if let Some(old) = values.get_mut_value(meta_inst_name, field_name)
+                    if let Some(old) = values.get_mut_instance(meta_inst_name).unwrap().get_mut_field_value(field_name)
                             .unwrap()
                             .as_mut_f32() {
                         let mut val_str = String::new();
@@ -103,12 +93,12 @@ fn add<'a, 'b>(mut tokens: Iter<'b, &str>, types: &'a TypeIndex, mut values: Val
                             val_str = val.to_string();
                         } else {
                             println!("Input num to add: ");
-                            io::stdin().read_line(&mut val_str);
+                            io::stdin().read_line(&mut val_str).unwrap();
                         }
                         while let Err(_) = val_str.parse::<f32>() {
                             println!("Input must be a numeric value");
                             println!("Input num to add: ");
-                            io::stdin().read_line(&mut val_str);
+                            io::stdin().read_line(&mut val_str).unwrap();
                         }
                         if let Ok(val) = val_str.parse::<f32>() {
                             *old = *old + val;
@@ -121,9 +111,9 @@ fn add<'a, 'b>(mut tokens: Iter<'b, &str>, types: &'a TypeIndex, mut values: Val
                     println!("Enter List Elem: ");
                     let mut elem = None;
                     while elem.is_none() {
-                        elem = create_value(&t, types, &values);
+                        elem = create_value(&t, types);
                     }
-                    if let Some(mut_list) = values.get_mut_value(&meta_inst_name, field_name)
+                    if let Some(mut_list) = values.get_mut_instance(meta_inst_name).unwrap().get_mut_field_value(field_name)
                             .unwrap()
                             .as_mut_list() {
                         mut_list.push(elem.unwrap());
@@ -137,9 +127,9 @@ fn add<'a, 'b>(mut tokens: Iter<'b, &str>, types: &'a TypeIndex, mut values: Val
     values
 }
 
-fn create_value<'a>(t: &Type, types: &'a TypeIndex, values: &ValueIndex) -> Option<Value<'a>> {
+fn create_value<'a>(t: &Type, types: &'a TypeIndex) -> Option<Value<'a>> {
     match t {
-        crate::data::meta_type::Type::Num => {
+        Type::Num => {
             let mut buffer = String::new();
             if io::stdin().read_line(&mut buffer).is_ok() {
                 if let Ok(num) = buffer.parse() {
@@ -153,7 +143,7 @@ fn create_value<'a>(t: &Type, types: &'a TypeIndex, values: &ValueIndex) -> Opti
                 None
             }
         },
-        crate::data::meta_type::Type::Text => {
+        Type::Text => {
             let mut buffer = String::new();
             if io::stdin().read_line(&mut buffer).is_ok() {
                 Some(Value::new_text(buffer))
@@ -162,8 +152,8 @@ fn create_value<'a>(t: &Type, types: &'a TypeIndex, values: &ValueIndex) -> Opti
                 None
             }
         },
-        crate::data::meta_type::Type::List(_) => todo!(),
-        crate::data::meta_type::Type::Enum(var) => {
+        Type::List(_) => todo!(),
+        Type::Enum(var) => {
             println!("   Available types:");
             for v in var {
                 println!("   {}", v);
@@ -181,19 +171,19 @@ fn create_value<'a>(t: &Type, types: &'a TypeIndex, values: &ValueIndex) -> Opti
                 None
             }
         },
-        crate::data::meta_type::Type::Meta(s) => Some(Value::new_meta_instance(
+        Type::Meta(s) => Some(Value::new_meta_instance(
                     s.to_string(), 
                     create_meta_instance(types.get_type(&s).unwrap(), 
-                    types, 
-                    values))),
-        crate::data::meta_type::Type::Equation(_) => todo!(),
+                    types))),
+        Type::Equation(_) => todo!(),
+        Type::MetaRef(_) => todo!(),
     }
 }
 
-fn create_meta_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex, values: &ValueIndex) -> MetaTypeInstance<'a> {
+fn create_meta_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex) -> MetaTypeInstance<'a> {
     let mut m = MetaTypeInstance::new(meta_type);
     let needed_fields = m.get_needed_fields();
-    println!("Constructing type: {}", meta_type.get_name());
+    println!("Constructing type: {}", meta_type.get_type_name());
     for (f, t) in needed_fields {
         let mut final_value = None;
         while final_value == None {
@@ -201,7 +191,7 @@ fn create_meta_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex, value
             let mut buffer = String::new();
             if io::stdin().read_line(&mut buffer).is_ok() {
                 final_value = match t {
-                    crate::data::meta_type::Type::Num => {
+                    Type::Num => {
                         buffer.retain(|c: char| c.is_numeric());
                         if let Ok(num) = buffer.parse::<f32>() {
                             Some(Value::new_num(num))
@@ -210,18 +200,19 @@ fn create_meta_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex, value
                             None
                         }
                     },
-                    crate::data::meta_type::Type::Text => Some(Value::new_text(buffer.clone())),
-                    crate::data::meta_type::Type::List(_) => todo!(),
-                    crate::data::meta_type::Type::Enum(_) => todo!(),
-                    crate::data::meta_type::Type::Meta(_) => todo!(),
-                    crate::data::meta_type::Type::Equation(_) => todo!(),
+                    Type::Text => Some(Value::new_text(buffer.clone())),
+                    Type::List(_) => todo!(),
+                    Type::Enum(_) => todo!(),
+                    Type::Meta(_) => todo!(),
+                    Type::Equation(_) => todo!(),
+                    Type::MetaRef(_) => todo!()
                 };
             } else {
                 println!("Error while reading input");
             }
             buffer.clear();
         }
-        m.init_field(f, final_value.unwrap()).unwrap();
+        m = m.init_field(f, final_value.unwrap()).unwrap();
     }
     m.build(types)
 }
