@@ -134,7 +134,7 @@ fn build_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex, m: serde_js
             }
         }
     }
-    val.build()
+    val.build(&types)
 }
 
 fn to_value<'a>(val: serde_json::Value, t: Type, types: &'a TypeIndex) -> Value<'a> {

@@ -1,0 +1,1 @@
+const BASIC_TEST_FOLDER_PATH: &str = "./data/test/basic";

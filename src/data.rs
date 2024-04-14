@@ -123,38 +123,50 @@ impl<'b> ValueIndex<'b> {
         self.values.get(meta_instance_name)?.get_field_value(field_name)
     }
 
-
-    pub fn set_value(&mut self, meta_instance_name: &str, field_name: &str, field_value: Value<'b>) -> Result<Option<Value<'b>>, InsertionError> {
-        if let Some(m) = self.values.get_mut(meta_instance_name) {
-            m.set_field_value(field_name, field_value)
-        } else {
-            Err(InsertionError) // Value can't be set b/c meta field instance with the given name doesn't exist
-        }
+    pub fn get_mut_value(&mut self, meta_instance_name: &str, field_name: &str) -> Option<&mut Value<'b>> {
+        self.values.get_mut(meta_instance_name)?.get_mut_field_value(field_name)
     }
 
-    // This adds a value to the meta type instace's Value field if the value field is a list
-    // returns error on a type mis-match or when a meta instance or field doesn't exist
-    pub fn append_to_list(&'b mut self, meta_instance_name: &str, field_name: &str, field_value: Value<'b>) -> Result<(), InsertionError> {
-        if let Some(m) = self.values.get_mut(meta_instance_name) {
-            if let Some(v) = m.get_mut_field_value(field_name) {
-                let v_type = v.get_type().clone();
-                if let Some(old) = v.as_mut_list() {
-                    if &v_type == field_value.get_type() {
-                        old.push(field_value);
-                        Ok(())
-                    } else {
-                        Err(InsertionError) // Type mis-match between list and inserted value
-                    }
-                } else {
-                    Err(InsertionError) // Expected list value type
-                }
-            } else {
-                Err(InsertionError) // Meta Instance doesn't have the given field
-            }
-        } else {
-            Err(InsertionError) // Non-existant meta instance
-        }
+    pub fn get_instance(&self, meta_instance_name: &str) -> Option<&MetaTypeInstance<'b>> {
+        self.values.get(meta_instance_name)
     }
+
+    pub fn get_mut_instance(&mut self, meta_instance_name: &str) -> Option<&mut MetaTypeInstance<'b>> {
+        self.values.get_mut(meta_instance_name)
+    }
+
+
+    // pub fn set_value(&mut self, meta_instance_name: &str, field_name: &str, field_value: Value<'b>) -> Result<Option<Value<'b>>, InsertionError> {
+    //     if let Some(m) = self.values.get_mut(meta_instance_name) {
+    //         m.set_field_value(field_name, field_value)
+    //     } else {
+    //         Err(InsertionError) // Value can't be set b/c meta field instance with the given name doesn't exist
+    //     }
+    // }
+
+    // // This adds a value to the meta type instace's Value field if the value field is a list
+    // // returns error on a type mis-match or when a meta instance or field doesn't exist
+    // pub fn append_to_list(&'b mut self, meta_instance_name: &str, field_name: &str, field_value: Value<'b>) -> Result<(), InsertionError> {
+    //     if let Some(m) = self.values.get_mut(meta_instance_name) {
+    //         if let Some(v) = m.get_mut_field_value(field_name) {
+    //             let v_type = v.get_type().clone();
+    //             if let Some(old) = v.as_mut_list() {
+    //                 if &v_type == field_value.get_type() {
+    //                     old.push(field_value);
+    //                     Ok(())
+    //                 } else {
+    //                     Err(InsertionError) // Type mis-match between list and inserted value
+    //                 }
+    //             } else {
+    //                 Err(InsertionError) // Expected list value type
+    //             }
+    //         } else {
+    //             Err(InsertionError) // Meta Instance doesn't have the given field
+    //         }
+    //     } else {
+    //         Err(InsertionError) // Non-existant meta instance
+    //     }
+    // }
 
     pub fn add_instance(&mut self, name: &str, inst: MetaTypeInstance<'b>) -> Result<(), InsertionError> {
         if self.values.contains_key(name) {

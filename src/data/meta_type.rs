@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 use crate::data::equation::Equation;
 use crate::error::*;
 
-use super::ValueIndex;
+use super::{TypeIndex, ValueIndex};
 
 #[derive(PartialEq)]
 pub struct MetaType {
@@ -34,6 +34,18 @@ impl MetaType {
     // Might need to made pub, idk yet
     fn get_field(&self, field_name: &str) -> Option<&MetaField> {
         self.fields.iter().find(|f| f.field_name.eq(field_name))
+    }
+
+    pub fn get_fields(&self) -> Vec<String> {
+        self.fields.iter().map(|f| f.field_name.clone()).collect()
+    }
+
+    pub fn get_default<'a>(&'a self, types: &'a TypeIndex) -> MetaTypeInstance<'a> {
+        let mut result = MetaTypeInstance::new(&self);
+        for f in &self.fields {
+            result.init_field(f.field_name.to_string(), f.field_type.get_default(types));
+        }
+        result.build(types)
     }
 }
 
@@ -123,6 +135,17 @@ impl Type {
             None
         }
     }
+
+    pub fn get_default<'a>(&self, types: &'a TypeIndex) -> Value<'a> {
+        match &self {
+            Type::Num => Value::new_num(0.0f32),
+            Type::Text => Value::new_text("".to_string()),
+            Type::List(_) => Value::new_list(Vec::<Value>::new(), self.to_owned()).unwrap(),
+            Type::Enum(variants) => Value::new_enum(variants.first().unwrap().clone(), self.to_owned()).unwrap(),
+            Type::Meta(m) => Value::new_meta_instance(m.to_string(), types.get_type(m).unwrap().get_default(types)),
+            Type::Equation(_) => Value::new_equation(self.to_owned()).unwrap(),
+        }
+    }
 }
 
 impl Display for Type {
@@ -184,7 +207,6 @@ impl<'g> Value<'g> {
     }
     
     pub fn new_enum<'a>(val: String, t: Type) -> Result<Value<'a>, DataConversionError> {
-        // TODO: Check that enum variant is valid
         if let Type::Enum(variants) = &t {
             if variants.contains(&val) {
                 Ok(Value {
@@ -243,6 +265,13 @@ impl<'g> Value<'g> {
             } else {
                 None
             }
+        }
+    }
+
+    pub fn as_mut_f32(&mut self) -> Option<&mut f32> {
+        match &mut self.d {
+            Data::Num(n) => Some(n),
+            _ => None,
         }
     }
 
@@ -329,6 +358,10 @@ impl<'g> MetaTypeInstance<'g> {
         self.fields.get_mut(field_name)
     }
 
+    pub fn get_type(&self) -> &'g MetaType {
+        &self.t
+    }
+
     pub fn set_field_value(&mut self, field_name: &str, field_value: Value<'g>) -> Result<Option<Value<'g>>, InsertionError> {
         if let Some(v) = self.fields.get(field_name) {
             if v.t == field_value.t {
@@ -374,7 +407,24 @@ impl<'a> MetaTypeInstanceBuilder<'a> {
         }
     }
 
-    pub fn build(self) -> MetaTypeInstance<'a> {
+    // Returns a list of the needed fields to build this instance
+    pub fn get_needed_fields(&self) -> Vec<(String, Type)> {
+        let mut result = vec![];
+        let fields = self.t.get_fields();
+        for field in &fields {
+            if !self.fields.contains_key(field) {
+                result.push((field.clone(), self.t.get_field_type(field).unwrap().clone()));
+            }
+        }
+        result
+    }
+
+    pub fn build(mut self, types: &'a TypeIndex) -> MetaTypeInstance<'a> {
+        // TODO: Initialize un-initialized fields to proper values
+        let needed = self.get_needed_fields();
+        for (s, t) in needed {
+            self.fields.insert(s, t.get_default(types));
+        }
         MetaTypeInstance {
             t: self.t,
             fields: self.fields,
