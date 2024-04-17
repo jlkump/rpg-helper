@@ -4,6 +4,7 @@ mod syntax;
 mod data;
 mod error;
 mod util;
+mod network;
 
 pub fn run() {
     cli::run_basic_test();

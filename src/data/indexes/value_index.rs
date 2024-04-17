@@ -5,7 +5,7 @@ use crate::{data::meta_type::MetaTypeInstance, error::InsertionError};
 /// A wrapper struct that handles all the management of type instances for the
 /// meta type system. This will be used to hold all the data of a character
 pub struct ValueIndex<'a> {
-    values: HashMap<String, MetaTypeInstance<'a>>,
+    values: HashMap<String, MetaTypeInstance<'a>>
 }
 
 impl<'b> ValueIndex<'b> {
@@ -14,14 +14,6 @@ impl<'b> ValueIndex<'b> {
             values: HashMap::new()
         }
     }
-
-    // pub fn get_value(&self, meta_instance_name: &str, field_name: &str) -> Option<&'b Value> {
-    //     self.values.get(meta_instance_name)?.get_field_value(field_name)
-    // }
-
-    // pub fn get_mut_value(&mut self, meta_instance_name: &str, field_name: &str) -> Option<&mut Value<'b>> {
-    //     self.values.get_mut(meta_instance_name)?.get_mut_field_value(field_name)
-    // }
 
     pub fn get_instance(&self, meta_instance_name: &str) -> Option<&MetaTypeInstance<'b>> {
         self.values.get(meta_instance_name)

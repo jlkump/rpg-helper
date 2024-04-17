@@ -1,16 +1,11 @@
 {
-    "CharacterID": {
-        "Type": "Num",
-        "Value": 9013518
-    },
-    "Owner": {
-        "Type": "Num",
-        "Value": "(CharacterID)"
-    },
+    "ID": 9012312,
     "Creo": {
         "Type": "Art",
         "Subtype": "Technique",
-        "Exp": [{"Value": 0, "Source": "Character Creation"}]
+        "Exp": [{"Value": 0, "Source": "Character Creation"}],
+        "Value": "rounddown((sqrt(8 * Exp + 1)-1)/2) + 12",
+        "COMMENT": "The above is an example of over-riding the default equation given in the setting. This might be done when a character discovers some new ability, virtue, flaw, etc. This will override the setting's equation"
     },
     "Intellego": {
         "Type": "Art",
@@ -81,5 +76,17 @@
         "Type": "Art",
         "Subtype": "Form",
         "Exp": [{"Value": 0, "Source": "Character Creation"}]
+    },
+    "Creo Animal Casting Score": {
+        "Type": "Casting Score",
+        "Technique": "Creo",
+        "Form": "Animal",
+        "Value": "Technique + Form + Stamina + Aura Modifier + 1",
+        "COMMENT": "Above is an example of a modified equation value for the casting score"
+    },
+    "Creo Aquam Casting Score": {
+        "Type": "Casting Score",
+        "Technique": "Creo",
+        "Form": "Aquam"
     }
 }

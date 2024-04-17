@@ -92,6 +92,18 @@ impl MetaTypeBuilder {
     }
 }
 
+#[derive(Debug, PartialEq)]
+struct MetaField {
+    field_name: String,
+    field_type: Type
+}
+
+impl Display for MetaField {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:>10}:    {:?}", self.field_name, self.field_type)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct MetaTypeInstance<'a>  {
     // Name is implicit in anything that holds an instance
@@ -137,7 +149,7 @@ pub struct MetaTypeInstanceBuilder<'a> {
 }
 
 impl<'a> MetaTypeInstanceBuilder<'a> {
-    pub fn init_field(mut self, field_name: String, field_value: Value<'a>) -> Result<Self, FieldError> {
+    pub fn init_field(mut self, field_name: String, mut field_value: Value<'a>) -> Result<Self, FieldError> {
         if let Some(field) = self.t.get_field(&field_name) {
             if field_value.t == field.field_type {
                 self.fields.insert(field_name, field_value);
@@ -184,14 +196,14 @@ impl<'g> Value<'g> {
     pub fn new_num<'a>(num: f32) -> Value<'a> {
         Value {
             t: Type::Num,
-            d: Data::Num(num)
+            d: Data::Num(num),
         }
     }
 
     pub fn new_text<'a>(text: String) -> Value<'a> {
         Value {
             t: Type::Text,
-            d: Data::Text(text)
+            d: Data::Text(text),
         }
     }
 
@@ -204,7 +216,7 @@ impl<'g> Value<'g> {
             }
             Ok(Value {
                 t,
-                d: Data::List(list)
+                d: Data::List(list),
             })
         } else {
             Err(FieldError::Mismatch("List<?>".to_owned(), t.to_string()))
@@ -216,7 +228,7 @@ impl<'g> Value<'g> {
             if variants.contains(&val) {
                 Ok(Value {
                     t,
-                    d: Data::Enum(val)
+                    d: Data::Enum(val),
                 })
             } else {
                 Err(FieldError::Nonexistant(t.to_string()))
@@ -230,7 +242,7 @@ impl<'g> Value<'g> {
         if let Type::Equation(_) = &t {
             Ok(Value {
                 t,
-                d: Data::Equation
+                d: Data::Equation,
             })
         } else {
             Err(FieldError::Mismatch("Equation".to_string(), t.to_string()))
@@ -240,14 +252,14 @@ impl<'g> Value<'g> {
     pub fn new_meta_instance<'a>(meta_type_name: String, inst: MetaTypeInstance<'a>) -> Value<'a> {
         Value {
             t: Type::Meta(meta_type_name),
-            d: Data::Meta(inst)
+            d: Data::Meta(inst),
         }
     }
 
     pub fn new_meta_ref<'a>(meta_ref_name: String, t: Type) -> Value<'a> {
         Value {
             t,
-            d: Data::MetaRef(meta_ref_name)
+            d: Data::MetaRef(meta_ref_name),
         }
     }
 
@@ -334,18 +346,6 @@ impl Display for Value<'_> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-struct MetaField {
-    field_name: String,
-    field_type: Type
-}
-
-impl Display for MetaField {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:>10}:    {:?}", self.field_name, self.field_type)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Type {
     Num,
@@ -353,7 +353,8 @@ pub enum Type {
     List(Box<Type>),
     Enum(Vec<String>),
     Meta(String), // Name of the meta type
-    Equation(Equation),
+    Equation(Equation),   // Equation is owned by the type and thus not named
+    // EquationRef(String),  // Refrence to an equation by name
     MetaRef(String) // MetaRef has the name of the meta type, just like Meta
     // TODO: Add built-in type for die rolls. Defined by a string of the form: "1d10", "3d6", etc
     // Value is retrieved by an in-built roll or by input of what the roll result was
@@ -426,6 +427,7 @@ enum Data<'a> {
     Enum(String),
     Meta(MetaTypeInstance<'a>), // The meta type is accessed by the field name
     Equation,
+    // EquationRef,
     MetaRef(String) // Name of the actual reference to the meta instance
 }
 

@@ -8,77 +8,25 @@
         "Lab Progress": {
             "Type": "Add",
             "Target": "Point",
-            "Restrictions": ["Point::Container == Spell"]
+            "Restrictions": ["Point::Super::Type == Spell || Point::Super::Type == Enchantment ..."]
         }
     },
     "Types": {
-        "Advancement": {
-            "Source Quality Min": "Int",
-            "Source Quality Max": "Int",
-            "Advancement Total": {
-                "Input": "Int",
-                "Restrictions": "Range(Source Quality Min, Source Quality Max)"
-            },
-            "Effect": {
-                "Type": "Add Exp",
-                "Target": "Input",
-                "Exp": {
-                    "Value": {
-                        "Input": "Int",
-                        "Restrictions": "Frac(Advancement Total)"
-                    },
-                    "Source": "Type"
-                }
-            },
-            "Description": {
-                "Text": "Whenever a character spends a season in study, they gain a number of Exp equal to the advancement total, which is ...",
-                "Keywords": ["Exp"]
-            }
-        },
-        "Training": {
-            "Masters Score": {
-                "Input": "Ability",
-                "Ability Query": "Ability::Type",
-                "Restrictions": ["Ability::Owner != Self::Ability Query::Owner", "Ability < Self::Ability Query"]
-            },
-            "Advancement Total": {
-                "Value": "Masters Score + 3",
-                "Restrictions": "Range(0, Masters Score)"
-            },
-            "Effect": {
-                "Type": "Add Exp",
-                "Target": "Masters Score::Ability Query",
-                "Exp": {
-                    "Value": {
-                        "Value": "Advancement Total"
-                    }
-                }
-            }
-        },
-        "Teaching": {
-            "Teacher Communication": {
-                "Input": "Ability",
-                "AbilityType": "Ability.Type",
-                "Restrictions": ["Ability.Type == Communication"]
-            },
-            "Teacher Teaching": {
-                "Input": "Ability",
-                "AbilityType": "Ability.Type",
-                "Restrictions": ["Ability.Type == Teaching"]
-            },
-            "Teaching Source Quality": {
-                "Value": ""
-            }
-        }
-    },
-    "Instances": {
         "Adventure": {
-            "Type": "Advancement",
             "Source Quality Min": 5,
             "Source Quality Max": 10,
-            "Restrictions": {
+            "Advancement Total": {
+                "Input": "Num",
+                "Restrictions": ["Range(Source Quality Min, Source Quality Max)", "WholeNumber(Input)"]
+            },
+            "Effect": {
+                "Type": "Add Exp",
                 "Exp": {
-                    "Value": "Range(0, 5)"
+                    "Value": {
+                        "Input": "Num",
+                        "Restrictions": ["Frac(Advancement Total)", "Range(0, 5)", "WholeNumber(Input)"]
+                    },
+                    "Source": "Adventure"
                 }
             },
             "Description": {
@@ -87,31 +35,60 @@
             }
         },
         "Exposure": {
-            "Type": "Advancement",
-            "Source Quality Min": 2,
-            "Source Quality Max": 2,
-            "Description": {
-                "Text": "A character can spend ...",
-                "Keywords": []
-            }
-        },
-        "Practice": {
-            "Type": "Advancement",
-            "Source Quality Min": 3,
-            "Source Quality Max": 8,
-            "Restrictions": {
-                "Target": "Type != Art"
+            "Effect": {
+                "Type": "Add Exp",
+                "Restrictions": ["Exp::Type != Art"],
+                "Exp": {
+                    "Value": 2,
+                    "Source": "Exposure"
+                }
             },
             "Description": {
                 "Text": "...",
                 "Keywords": []
             }
         },
+        "Practice": {
+            "Effect": {
+                "Type": "Add Exp",
+                "Restrictions": ["Exp::Type != Art"],
+                "Exp": {
+                    "Value": {
+                        "Input": "Num",
+                        "Restrictions": ["Range(3, 8)", "Whole Number"]
+                    }
+                }
+            }
+        },
         "Training": {
-            "Type": "Training",
-            "Description": {
-                "Text": "...",
-                "Keywords": []
+            "Masters Score": {
+                "Input": "Ability",
+                "Restrictions": ["Input::Owner != Self::ID", "Ability < query(Self, Input::Name, Value)"]
+            },
+            "Advancement Total": {
+                "Value": "Masters Score + 3",
+                "Restrictions": "Range(0, Masters Score)"
+            },
+            "Effect": {
+                "Type": "Add Exp",
+                "Restrictions": ["Masters Score::Input::Type == Exp::Super::Type"],
+                "Exp": {
+                    "Value": "Advancement Total",
+                    "Source": "Training"
+                }
+            }
+        },
+        "Teaching": {
+            "Teacher Communication": {
+                "Input": "Ability",
+                "Restrictions": ["Input::Type == Communication"]
+            },
+            "Teacher Teaching": {
+                "Input": "Ability",
+                "Restrictions": ["Ability::Type == Teaching"]
+            },
+            "Teaching Source Quality": {
+                "Value": ""
             }
         }
     }

@@ -4,10 +4,33 @@ pub fn tokenize_expression(e: &str) -> Vec<String> {
     let e = remove_whitespace(e);
     let mut result = Vec::<String>::new();
     let mut last = 0;
-    for (index, matched) in e.match_indices(|c: char| !c.is_alphanumeric() && c != ' ') {
+    let mut skip = 0;
+    for (index, mut matched) in e.match_indices(|c: char| !c.is_alphanumeric() && c != ' ') {
+        if skip > 0 {
+            skip = skip - 1;
+            continue;
+        }
         if last != index {
             result.push(e[last..index].to_string());
         }
+        match matched {
+            ">" | "<" | "!" | "=" => {
+                if e.chars().nth(index + 1).is_some_and(|x| x.eq(&'=')) {
+                    skip = 1;
+                    matched = &e[index..index + 2];
+                }
+            },
+            "|" | "&" | ":" => {
+                if let Some(c) = matched.chars().next() {
+                    if e.chars().nth(index + 1).is_some_and(|x| x.eq(&c)) {
+                        skip = 1;
+                        matched = &e[index..index + 2];
+                    }
+                }
+            }
+            _ => {}
+        }
+
         result.push(matched.to_string());
         last = index + matched.len();
     }
@@ -100,6 +123,11 @@ mod tests {
     }
 
     #[test]
+    fn simple_variable_spaces() {
+        assert_eq!(tokenize_expression("Variable With Spaces + 2"), vec!["Variable With Spaces", "+", "2"]);
+    }
+
+    #[test]
     fn method_split() {
         assert_eq!(tokenize_expression("rounddown((sqrt(8 * Exp + 1)-1)/2)"), 
             vec!["rounddown", "(", "(", "sqrt", "(", "8", "*", "Exp", "+", "1", ")", "-", "1", ")", "/","2", ")"]);
@@ -121,5 +149,71 @@ mod tests {
     fn negate_method() {
         assert_eq!(tokenize_expression("-rounddown  ( \t  \n (    sqrt   (8   *\t Exp   +  1) -  1 )   / 2   )  "), 
             vec!["-", "rounddown", "(", "(", "sqrt", "(", "8", "*", "Exp", "+", "1", ")", "-", "1", ")", "/","2", ")"]);
+    }
+
+    #[test]
+    fn equality() {
+        assert_eq!(tokenize_expression("2==3"), 
+            vec!["2", "==", "3"]);
+    }
+
+    #[test]
+    fn less_than() {
+        assert_eq!(tokenize_expression("2<3"), 
+            vec!["2", "<", "3"]);
+    }
+
+    #[test]
+    fn less_than_eq() {
+        assert_eq!(tokenize_expression("2<=3"), 
+            vec!["2", "<=", "3"]);
+    }
+
+    #[test]
+    fn greater_than() {
+        assert_eq!(tokenize_expression("2>3"), 
+            vec!["2", ">", "3"]);
+    }
+
+    #[test]
+    fn greater_than_eq() {
+        assert_eq!(tokenize_expression("2>=3"), 
+            vec!["2", ">=", "3"]);
+    }
+
+    #[test]
+    fn not_eq() {
+        assert_eq!(tokenize_expression("2!=3"), 
+            vec!["2", "!=", "3"]);
+    }
+
+    #[test]
+    fn or() {
+        assert_eq!(tokenize_expression("2||3"), 
+            vec!["2", "||", "3"]);
+    }
+
+    #[test]
+    fn and() {
+        assert_eq!(tokenize_expression("2&&3"), 
+            vec!["2", "&&", "3"]);
+    }
+
+    #[test]
+    fn query_field_op() {
+        assert_eq!(tokenize_expression("Creo::Exp::Type"), 
+            vec!["Creo", "::", "Exp", "::", "Type"]);
+    }
+
+    #[test]
+    fn query_field_op_comparison() {
+        assert_eq!(tokenize_expression("Creo Auram Casting Score::Technique == Input::Technique"), 
+            vec!["Creo Auram Casting Score", "::", "Technique", "==", "Input", "::", "Technique"]);
+    }
+
+    #[test]
+    fn ref_variable() {
+        assert_eq!(tokenize_expression("Ref<Auram>"), 
+            vec!["Ref", "<", "Auram", ">"]);
     }
 }

@@ -1,8 +1,14 @@
 use core::fmt;
+use std::collections::HashMap;
 use std::{fmt::Display, num::ParseFloatError};
 
+use super::dice::DieRoll;
 use super::indexes::value_index::ValueIndex;
+use super::meta_type::MetaType;
 use super::meta_type::MetaTypeInstance;
+use super::meta_type::Type;
+use super::meta_type::Value;
+use super::DataView;
 use crate::syntax::parse;
 use crate::syntax::tokenize::tokenize_expression;
 use crate::syntax::parse::SyntaxError;
@@ -25,6 +31,13 @@ impl Equation {
         self.ast.evaluate(container, data)
     }
 
+    // When input is required for the equation, returns a list of the required input
+    // that will be requested upon evaluation. Can be fed to a RequestEval
+    // in order to evaluate the equation in full.
+    pub fn get_required_input() -> Option<Vec<EvalRequest>> {
+        todo!()
+    }
+
     pub fn to_string(&self) -> String {
         // TODO: Reconstruct string from ast
         String::new()
@@ -40,13 +53,46 @@ impl Display for Equation {
 #[derive(Debug)]
 pub struct EvaluationError;
 
-pub struct EvalResult {
-    pub val: f32,
-    pub needs: Vec<EvalRequest>
+pub enum EvalResult {
+    Value(f32),
+    Boolean(BoolEval),
+    Request(Vec<EvalRequest>, RequestEval)
 }
 
 pub enum EvalRequest {
-    DieRoll
+    DieRoll(DieRoll), // The requested die roll. 1d10, 2d3, Stress Die, etc
+    Input(RestrictedValue) // Name of meta-type input
+}
+
+pub struct RestrictedValue {
+    value_type: Type,
+    restrictions: Vec<BoolEval>,
+}
+
+impl RestrictedValue {
+    pub fn valid_input(given_input: &Value) -> bool {
+        todo!()
+    }
+}
+
+pub struct BoolEval {
+
+}
+
+impl BoolEval {
+    pub fn evaluate<'a>(&self, input: &MetaTypeInstance<'a>, data: &DataView<'a>) -> bool {
+        todo!()
+    }
+}
+
+pub struct RequestEval {
+    root: SyntaxNode // Built from the equation's AST, evaluated to the point where input is required. 
+}
+
+impl RequestEval {
+    pub fn evaluate(inputs: Vec<Value>) -> f32 {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,6 +112,7 @@ impl EquationSyntaxTree {
 
     fn build_node(e: Vec<String>) -> Result<SyntaxNode, SyntaxError> {
         if let Some(r) = Self::find_root_op_index(&e) {
+
             let left = parse::remove_paren(Vec::from_iter(e[0..r].iter().cloned()));
             let right = parse::remove_paren(Vec::from_iter(e[r+1..].iter().cloned()));
             let operator = &e[r];
@@ -124,12 +171,68 @@ impl EquationSyntaxTree {
         root_ind
     }
 
-    fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
-        Self::eval_recursive(&self.root, container, data)
+    fn parse_op(e: Vec<String>, op: Operation) -> Result<SyntaxNode, SyntaxError> {
+        match op {
+            Operation::Add => todo!(),
+            Operation::Subtract => todo!(),
+            Operation::Multiply => todo!(),
+            Operation::Divide => todo!(),
+            Operation::Negate => todo!(),
+            Operation::Pow => todo!(),
+            Operation::Sqrt => todo!(),
+            Operation::Round => todo!(),
+            Operation::RoundDown => todo!(),
+            Operation::RoundUp => todo!(),
+        }
+        todo!()
     }
 
-    fn eval_recursive(node: &SyntaxNode, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
-        match &node {
+    fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
+        self.root.eval_recursive(container, data)
+    }
+}
+
+impl Display for EquationSyntaxTree {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = String::new();
+        tree_recursive_display_helper(&mut result, &"".to_owned(), &self.root, true);
+        write!(f, "{}", result)
+    }
+}
+
+fn tree_recursive_display_helper(result: &mut String, prefix: &String, node: &SyntaxNode, end: bool) {
+    result.push_str(prefix);
+    result.push_str("|__");
+    result.push_str(&node.to_string());
+    result.push_str("\n");
+
+    match node {
+        SyntaxNode::Operator(node) => {
+            let last = node.vals.len() - 1;
+            for (i, n) in node.vals.iter().enumerate() {
+                let mut new_prefix = prefix.clone();
+                if end {
+                    new_prefix.push_str("   ");
+                } else {
+                    new_prefix.push_str("|  ");
+                }
+                tree_recursive_display_helper(result, &new_prefix, n, i == last);
+            }
+        },
+        SyntaxNode::Operand(_) => (),
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum SyntaxNode {
+    Operator(OperatorNode),
+    Operand(OperandNode),
+}
+
+impl SyntaxNode {
+    // TODO: Return Eval Request when equation requests input, such as a dice roll or selecting a reference to another value instance.
+    fn eval_recursive(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
+        match &self {
             SyntaxNode::Operand(op) => {
                 match &op {
                     OperandNode::Number(i) => Ok(*i),
@@ -173,43 +276,6 @@ impl EquationSyntaxTree {
             }
         }
     }
-}
-
-impl Display for EquationSyntaxTree {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut result = String::new();
-        tree_recursive_display_helper(&mut result, &"".to_owned(), &self.root, true);
-        write!(f, "{}", result)
-    }
-}
-
-fn tree_recursive_display_helper(result: &mut String, prefix: &String, node: &SyntaxNode, end: bool) {
-    result.push_str(prefix);
-    result.push_str("|__");
-    result.push_str(&node.to_string());
-    result.push_str("\n");
-
-    match node {
-        SyntaxNode::Operator(node) => {
-            let last = node.vals.len() - 1;
-            for (i, n) in node.vals.iter().enumerate() {
-                let mut new_prefix = prefix.clone();
-                if end {
-                    new_prefix.push_str("   ");
-                } else {
-                    new_prefix.push_str("|  ");
-                }
-                tree_recursive_display_helper(result, &new_prefix, n, i == last);
-            }
-        },
-        SyntaxNode::Operand(_) => (),
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum SyntaxNode {
-    Operator(OperatorNode),
-    Operand(OperandNode),
 }
 
 impl Display for SyntaxNode {
@@ -257,7 +323,10 @@ impl Display for OperatorNode {
 enum OperandNode {
     Number(f32),
     Query(String),
-    // CompoundQuery(Vec<String>)
+    // InputRequest(RestrictedValue)    // Restricted Value is the input type and restrictions
+    // DieRollRequest(DieRoll)          // DieRoll contains the type of die being rolled and how it is treated when rolled. 
+    // IndexQuery(String, String, String), // IndexQuery(IndexID, type_name, field_name)
+    // CompoundQuery(Vec<String>) // When the user uses the following syntax: Container::Field::Field of Field
 }
 
 impl OperandNode {
