@@ -19,8 +19,9 @@
         "Form": "Ref<Art>",
         "Requisites": "List<Ref<Art>>",
         "Base Level": "Num",
-        "Magnitude": "RoundUp(Base Level / 5) + Target::Magnitude Mod + Duration::Magnitude Mod + Range::Magnitude Mod",
-        "Level": "(Magnitude < 5) ? (Magnitude) : (round(Magnitude * 5))",
+        "Magnitude Mods": ["Target::Magnitude", "Duration::Magnitude", "Range::Magnitude"],
+        "Level": "(Base Level < 5) ? (Base Level + Min(Magnitude Mods, 5 - Base Level) + (Magnitude Mods - Min(Magnitude Mods, 5 - Base Level)) * 5) : Base Level + Magnitude Mods * 5",
+        "Magnitude": "roundup(Base Level / 5)",
         "Name": "String",
         "Description": "Description",
         "Exp": "List<Exp>",
@@ -29,15 +30,15 @@
     },
     "Target": {
         "Name": "String",
-        "Magnitude Mod": "Num"
+        "Magnitude": "Num"
     },
     "Range": {
         "Name": "String",
-        "Magnitude Mod": "Num"
+        "Magnitude": "Num"
     },
     "Duration": {
         "Name": "String",
-        "Magnitude Mod": "Num"
+        "Magnitude": "Num"
     },
     "Point": {
         "Value": "Num",

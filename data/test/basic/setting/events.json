@@ -63,7 +63,7 @@
         "Training": {
             "Masters Score": {
                 "Input": "Ability",
-                "Restrictions": ["Input::Owner != Self::ID", "Ability < query(Self, Input::Name, Value)"]
+                "Restrictions": ["Input::Owner != Self::ID", "Ability < find(Ability, Input::Name)"]
             },
             "Advancement Total": {
                 "Value": "Masters Score + 3",

@@ -1,6 +1,6 @@
 use core::fmt;
 
-use super::tokenize::tokenize_expression;
+use super::{operators::Operation, tokenize::tokenize_expression};
 
 pub mod json_parser;
 
@@ -56,12 +56,12 @@ struct ParenPair {
 }
 
 impl ParenPair {
-    fn new(left_pa: Option<usize>, min_op: Option<i32>, left_op: Option<i32>, is_method: bool) -> ParenPair {
+    fn new(left_pa: Option<usize>, is_method: bool) -> ParenPair {
         ParenPair {
             left_pa,
-            min_op,
-            left_op,
             is_method,
+            min_op: None,
+            left_op: None,
         }
     }
     fn new_empty() -> ParenPair {
@@ -74,144 +74,18 @@ impl ParenPair {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Operation {
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Negate,
-    Pow,
-    Sqrt,
-    Round,
-    RoundDown,
-    RoundUp
-}
-
-impl Operation {
-    pub fn get_num_operands(&self) -> i32 {
-        match self {
-            Operation::Add => 2,
-            Operation::Subtract => 2,
-            Operation::Multiply => 2,
-            Operation::Divide => 2,
-            Operation::Negate => 1,
-            Operation::Pow => 2,
-            Operation::Sqrt => 1,
-            Operation::Round => 1,
-            Operation::RoundUp => 1,
-            Operation::RoundDown => 1,
-        }
-    }
-
-    pub fn is_method_operator(s: &str) -> bool {
-        match s {
-            "sqrt" => true,
-            "pow" => true,
-            "round" => true,
-            "rounddown" => true,
-            "roundup" => true,
-            _ => false,
-        }
-    }
-
-    pub fn get_operator(s: &str, is_prefix: bool) -> Option<Operation> {
-        match s {
-            "sqrt" => Some(Operation::Sqrt),
-            "pow" => Some(Operation::Pow),
-            "round" => Some(Operation::Round),
-            "rounddown" => Some(Operation::RoundDown),
-            "roundup" => Some(Operation::RoundUp),
-            "+" => if is_prefix {
-                    None
-                } else {
-                    Some(Operation::Add)
-                },
-            "-" => if is_prefix {
-                    Some(Operation::Negate)
-                } else {
-                    Some(Operation::Subtract)
-                },
-            "*" => if is_prefix {
-                    None
-                } else {
-                    Some(Operation::Multiply)
-                },
-            "/" => if is_prefix {
-                    None
-                } else {
-                    Some(Operation::Divide)
-                },
-            "^" => if is_prefix {
-                    None
-                } else {
-                    Some(Operation::Pow)
-                },
-            _ => None
-        }
-    }
-
-    pub fn get_precedence(&self) -> i32 {
-        match &self {
-            Operation::Add => 0,
-            Operation::Subtract => 0,
-            Operation::Multiply => 1,
-            Operation::Divide => 1,
-            Operation::Negate => 2,
-            Operation::Pow => 2,
-            Operation::Sqrt => 2,
-            Operation::Round => 2,
-            Operation::RoundUp => 2,
-            Operation::RoundDown => 2,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
-pub struct SyntaxError {
-    equation_string: String,
-    error_pos: Option<usize>,
-    error: ErrorType
-}
-
-impl SyntaxError {
-    pub fn new(e: String, p: Option<usize>, er: ErrorType) -> SyntaxError {
-        SyntaxError {
-            equation_string: e,
-            error_pos: p,
-            error: er,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ErrorType {
-    WrongNumOperands(Operation, i32, i32), // operation, has operands, should have
-    MethodMissingParen(Operation), // operation
-    EmptyParen,
-    VariableInvalidChar,
-    InvalidOperation,
-    UnbalancedParen,
-    UnknownChar(char)
-}
-
-impl fmt::Display for SyntaxError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        todo!()
-    }
-}
+pub struct SyntaxError;
 
 pub fn remove_paren(e: Vec<String>) -> Vec<String> {
     let mut stack = vec![ParenPair::new_empty()];
     let mut unneeded = Vec::<usize>::new();
-    let mut prev : Option<&String> = None;
+    let mut prev : Option<&str> = None;
     for (i, token) in e.iter().enumerate() {
-        let is_between = prev.is_some_and(|s| s.starts_with(|c: char| c.is_alphanumeric() || c == ')'));
         let prev_is_method = prev.is_some_and(|s| Operation::is_method_operator(s));
-        prev = Some(token);
-
-        if let Some(op) = Operation::get_operator(token, !is_between) {
-            let default = &mut ParenPair { min_op: None, left_op: None, left_pa: None, is_method: false};
+        println!("On token {}, is op {:?}", token, Operation::get_operator(token, prev));
+        if let Some(op) = Operation::get_operator(token, prev) {
+            let default = &mut ParenPair::new_empty();
             let paren_pair: &mut ParenPair = stack.last_mut().unwrap_or(default);
             if paren_pair.min_op.is_none() || paren_pair.min_op.iter().any(|min| *min > op.get_precedence()) {
                 paren_pair.min_op = Some(op.get_precedence());
@@ -220,21 +94,26 @@ pub fn remove_paren(e: Vec<String>) -> Vec<String> {
                 paren_pair.left_op = Some(op.get_precedence());
             }
         } else if token.eq("(") {
-            stack.push(ParenPair::new(Some(i), None, None, prev_is_method));
+            stack.push(ParenPair::new(Some(i), prev_is_method));
         } else if token.eq(")") {
+            println!("Stack is {:?}", stack);
             if let Some(top) = stack.pop() {
                 let mut needed = top.is_method;
                 if let Some(min_prec) = top.min_op {
                     let mut right: Option<Operation> = None;
                     // Look to next right operation (if it exists)
                     for n in (i + 1)..e.len() {
-                        if e.iter().nth(n).is_some_and(|s| Operation::get_operator(s, false).is_some()) {
-                            right = Operation::get_operator(e.iter().nth(n).unwrap(), false);
+                        if e.iter().nth(n).is_some_and(|s| Operation::get_operator(s, e.iter().nth(n-1).map(|x| x.as_str())).is_some()) {
+                            right = Operation::get_operator(e.iter().nth(n).unwrap(), e.iter().nth(n-1).map(|x| x.as_str()));
+                            println!("Found right op for {} as {:?}", i, right);
+                            break;
                         }
+                        
                     }
                     // Check right precedence and keep parentheses if needed
                     if let Some(r_op) = right {
                         if min_prec < r_op.get_precedence() {
+                            println!("Needed due to right precedence {} vs {}", min_prec, r_op.get_precedence());
                             needed = true;
                         }
                     } else {
@@ -246,17 +125,17 @@ pub fn remove_paren(e: Vec<String>) -> Vec<String> {
                     for pair in stack.iter() {
                         if let Some(left) = pair.left_op {
                             if left > min_prec {
+                                println!("Needed due to left precedence {} vs {}", left, min_prec);
                                 needed = true;
                             }
                         }
                     }
-                    // This often evaluates to true in cases when parentheses aren't needed (idk why the tutorial mentioned them)
-                    // if let Some(left) = top.left_op {
-                    //     if left == min_prec {
-                    //         println!("Kept due to left precedence with {} and min {}", left, min_prec);
-                    //         needed = true;
-                    //     }
-                    // }
+                    if let Some(left) = top.left_op {
+                        if left > min_prec {
+                            println!("Needed due to top left precedence {} vs {}", left, min_prec);
+                            needed = true;
+                        }
+                    }
                 }
                 if !needed {
                     unneeded.push(top.left_pa.unwrap());
@@ -266,6 +145,7 @@ pub fn remove_paren(e: Vec<String>) -> Vec<String> {
                 panic!(); // Unbalanced paren
             }
         }
+        prev = Some(token);
         // Skip any operands
     }
 
@@ -337,9 +217,72 @@ mod tests {
     }
 
     #[test]
+    fn remove_ternary_paren() {
+        let test = remove_paren(tokenize_expression("((1 < 2) ? (3 + 3) : 1) + 2"));
+        let expected = tokenize_expression("(1 < 2 ? 3 + 3 : 1) + 2"); // Require paren around entire ternary
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn remove_ternary_paren_two() {
+        let test = remove_paren(tokenize_expression("((1 < 2 || 3 > 2) ? (3 + 3) : 1) + 2"));
+        let expected = tokenize_expression("((1 < 2 || 3 > 2) ? 3 + 3 : 1) + 2"); // Require paren around entire ternary, it should be find anyways
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn remove_ternary_paren_three() {
+        let test = remove_paren(tokenize_expression("(1 < 2 || 3 > 2 ? (3 + 3) : 1) + 2"));
+        let expected = tokenize_expression("(1 < 2 || 3 > 2 ? 3 + 3 : 1) + 2"); // Require paren around entire ternary, it should be find anyways
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn remove_ternary_paren_four() {
+        let test = remove_paren(tokenize_expression("((Left::field) < Right::field ? Left::field : Right::field) + 2"));
+        let expected = tokenize_expression("(Left::field < Right::field ? Left::field : Right::field) + 2");
+        assert_eq!(test, expected);
+    }
+
+    #[test]
     fn remove_method_paren() {
         let test = remove_paren(tokenize_expression("sqrt(8)"));
         let expected = tokenize_expression("sqrt(8)");
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn remove_method_paren_two() {
+        let test = remove_paren(tokenize_expression("sqrt((8))"));
+        let expected = tokenize_expression("sqrt(8)");
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn remove_method_paren_three() {
+        let test = remove_paren(tokenize_expression("sqrt((8 + 3))"));
+        let expected = tokenize_expression("sqrt(8 + 3)");
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn remove_bool_paren() {
+        let test = remove_paren(tokenize_expression("(1 < 2) || (1 > 2)"));
+        let expected = tokenize_expression("1 < 2 || 1 > 2");
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn remove_bool_paren_two() {
+        let test = remove_paren(tokenize_expression("(1 < 2 || 1 > 2) && (3 < 2 || 2 < 1)"));
+        let expected = tokenize_expression("(1 < 2 || 1 > 2) && (3 < 2 || 2 < 1)");
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn compound_one() {
+        let test = remove_paren(tokenize_expression("(3 < Test ? True : Not) + 3"));
+        let expected = tokenize_expression("(3 < Test ? True : Not) + 3");
         assert_eq!(test, expected);
     }
 }

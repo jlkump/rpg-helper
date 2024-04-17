@@ -1,10 +1,8 @@
 use core::fmt;
-use std::collections::HashMap;
 use std::{fmt::Display, num::ParseFloatError};
 
 use super::dice::DieRoll;
 use super::indexes::value_index::ValueIndex;
-use super::meta_type::MetaType;
 use super::meta_type::MetaTypeInstance;
 use super::meta_type::Type;
 use super::meta_type::Value;
@@ -12,8 +10,7 @@ use super::DataView;
 use crate::syntax::parse;
 use crate::syntax::tokenize::tokenize_expression;
 use crate::syntax::parse::SyntaxError;
-use crate::syntax::parse::ErrorType;
-use crate::syntax::parse::Operation;
+use crate::syntax::operators::Operation;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Equation {
@@ -54,7 +51,7 @@ impl Display for Equation {
 pub struct EvaluationError;
 
 pub enum EvalResult {
-    Value(f32),
+    Numeric(f32),
     Boolean(BoolEval),
     Request(Vec<EvalRequest>, RequestEval)
 }
@@ -103,7 +100,7 @@ struct EquationSyntaxTree {
 impl EquationSyntaxTree {
     fn build_syntax_tree(e: String) -> Result<EquationSyntaxTree, SyntaxError> {
         if !parse::brackets_are_balanced(&e) {
-            return Err(SyntaxError::new(e, None, ErrorType::UnbalancedParen))
+            return Err(SyntaxError)
         }
         Ok(EquationSyntaxTree {
             root: Self::build_node(tokenize_expression(&e))?
@@ -112,30 +109,35 @@ impl EquationSyntaxTree {
 
     fn build_node(e: Vec<String>) -> Result<SyntaxNode, SyntaxError> {
         if let Some(r) = Self::find_root_op_index(&e) {
-
-            let left = parse::remove_paren(Vec::from_iter(e[0..r].iter().cloned()));
-            let right = parse::remove_paren(Vec::from_iter(e[r+1..].iter().cloned()));
-            let operator = &e[r];
-            let is_prefix_op = left.is_empty();
-            if let Some(op) = Operation::get_operator(operator, is_prefix_op) {
-                let mut vals = vec![];
-                if !left.is_empty() {
-                    vals.push(Self::build_node(left)?);
-                }
-                if !right.is_empty() {
-                    vals.push(Self::build_node(right)?);
-                }
-                return Ok(SyntaxNode::Operator(OperatorNode::new(op, vals)));
+            if let Ok(node) = Self::parse_op(e, r) {
+                return Ok(node)
             } else {
-                return Err(SyntaxError::new(operator.to_owned(), None, ErrorType::InvalidOperation));
+                // Syntax error
+                panic!()
             }
+            // let left = parse::remove_paren(Vec::from_iter(e[0..r].iter().cloned()));
+            // let right = parse::remove_paren(Vec::from_iter(e[r+1..].iter().cloned()));
+            // let operator = &e[r];
+            // let is_prefix_op = left.is_empty();
+            // if let Some(op) = Operation::get_operator(operator, is_prefix_op) {
+            //     let mut vals = vec![];
+            //     if !left.is_empty() {
+            //         vals.push(Self::build_node(left)?);
+            //     }
+            //     if !right.is_empty() {
+            //         vals.push(Self::build_node(right)?);
+            //     }
+            //     return Ok(SyntaxNode::Operator(OperatorNode::new(op, vals)));
+            // } else {
+            //     return Err(SyntaxError::new(operator.to_owned(), None, ErrorType::InvalidOperation));
+            // }
         } else {
             // Trim paren and place the non-parentheses as
             // the leaf nodes
             // let trimmed = remove_paren(e.to_vec());
             let operand = e.into_iter().find(|s| s.chars().all(|c: char| c.is_alphanumeric()));
             if operand.is_none() {
-                return Err(SyntaxError::new("".to_owned(), None, ErrorType::EmptyParen));
+                return Err(SyntaxError);
             } else {
                 return Ok(SyntaxNode::Operand(OperandNode::new(operand.unwrap())?));
             }
@@ -149,16 +151,18 @@ impl EquationSyntaxTree {
         let mut min_precedence = i32::MAX;
         let mut root_ind: Option<usize> = None;
         let mut brace_count = 0;
+        let mut prev = None;
         while let Some((i, s)) = it.next() {
             if s.eq(&"(") {
                 brace_count = brace_count + 1;
             } else if s.eq(&")") {
                 brace_count = brace_count - 1;
             } else {
-                let is_between = 
-                    i < e.len() - 1 && e.iter().nth(i + 1).unwrap().starts_with(|c: char| c.is_alphanumeric() || c == '(' || c == ')' || c == '-')
-                    && i > 0 && e.iter().nth(i - 1).unwrap().ends_with(|c: char| c.is_alphanumeric() || c == '(' || c == ')');
-                if let Some(op) = Operation::get_operator(s, !is_between) {                    
+
+                // let is_between = 
+                //     i < e.len() - 1 && e.iter().nth(i + 1).unwrap().starts_with(|c: char| c.is_alphanumeric() || c == '(' || c == ')' || c == '-')
+                //     && i > 0 && e.iter().nth(i - 1).unwrap().ends_with(|c: char| c.is_alphanumeric() || c == '(' || c == ')');
+                if let Some(op) = Operation::get_operator(s, prev) {                    
                     let precedence = op.get_precedence() + brace_count * 10;
                     if precedence < min_precedence {
                         min_precedence = precedence;
@@ -166,29 +170,71 @@ impl EquationSyntaxTree {
                     }
                 }
             }
-            
+            prev = Some(s);
         }
         root_ind
     }
 
-    fn parse_op(e: Vec<String>, op: Operation) -> Result<SyntaxNode, SyntaxError> {
-        match op {
-            Operation::Add => todo!(),
-            Operation::Subtract => todo!(),
-            Operation::Multiply => todo!(),
-            Operation::Divide => todo!(),
-            Operation::Negate => todo!(),
-            Operation::Pow => todo!(),
-            Operation::Sqrt => todo!(),
-            Operation::Round => todo!(),
-            Operation::RoundDown => todo!(),
-            Operation::RoundUp => todo!(),
+    fn parse_op(e: Vec<String>, split: usize) -> Result<SyntaxNode, SyntaxError> {
+        let mut vals = vec![];
+        match e[split].as_str() {
+            "?" => {
+                let mut num_paren = 0;
+                for c in e.iter() {
+                    if c.eq("(") {
+                        num_paren += 1;
+                    }
+                    if c.eq(")") {
+                        num_paren -= 1;
+                    }
+                    if c.eq("?") {
+                        break;
+                    }
+                }
+                vals.push(Vec::from_iter(e[num_paren..split].iter().cloned()));
+                let expected = num_paren;
+                num_paren = 0;
+                for (i, c) in e.iter().enumerate() {
+                    if c.eq(")") {
+                        num_paren += 1;
+                    }
+                    if c.eq(":") && expected == num_paren {
+                        vals.push(Vec::from_iter(e[split + 1..i].iter().cloned()));
+                        vals.push(Vec::from_iter(e[i + 1..e.len() - num_paren].iter().cloned()));
+                        break;
+                    }
+                }
+                if vals.len() != 3 {
+                    Err(SyntaxError)
+                } else {
+                    let mut children = vec![];
+                    for v in vals {
+                        children.push(Self::build_node(v)?);
+                    }
+                    Ok(SyntaxNode::Operator(OperatorNode::new(Operation::Ternary, children)))
+                }
+            },
+            _ => {
+                Err(SyntaxError)
+            }
         }
-        todo!()
+        // match op {
+        //     Operation::Add => todo!(),
+        //     Operation::Subtract => todo!(),
+        //     Operation::Multiply => todo!(),
+        //     Operation::Divide => todo!(),
+        //     Operation::Negate => todo!(),
+        //     Operation::Pow => todo!(),
+        //     Operation::Sqrt => todo!(),
+        //     Operation::Round => todo!(),
+        //     Operation::RoundDown => todo!(),
+        //     Operation::RoundUp => todo!(),
+        // }
     }
 
     fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
-        self.root.eval_recursive(container, data)
+        // self.root.eval_recursive(container, data)
+        todo!()
     }
 }
 
@@ -231,50 +277,53 @@ enum SyntaxNode {
 
 impl SyntaxNode {
     // TODO: Return Eval Request when equation requests input, such as a dice roll or selecting a reference to another value instance.
-    fn eval_recursive(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
-        match &self {
-            SyntaxNode::Operand(op) => {
-                match &op {
-                    OperandNode::Number(i) => Ok(*i),
-                    OperandNode::Query(q) => {
-                        let mut val = None;
-                        if let Some(fv) = container.get_field_value(q) {
-                            if let Some(v) = fv.as_f32(container, data) {
-                                val = Some(v);
-                            }
-                        }
-                        if val.is_none() {
-                            if let Some(i) = data.get_instance(q) {
-                                if let Some(v) = i.get_field_value("Value") {
-                                    if let Some(v) = v.as_f32(container, data) {
-                                        val = Some(v);
-                                    }
-                                }
-                            }
-                        }
-                        if let Some(v) = val {
-                            Ok(v)
-                        } else {
-                            Err(EvaluationError) // Some Error
-                        }
-                    },
-                }
-            },
-            SyntaxNode::Operator(op) => {
-                match op.op {
-                    Operation::Add => Ok(Self::eval_recursive(&op.vals[0], container, data)? + Self::eval_recursive(&op.vals[1], container, data)?),
-                    Operation::Subtract => Ok(Self::eval_recursive(&op.vals[0], container, data)? - Self::eval_recursive(&op.vals[1], container, data)?),
-                    Operation::Multiply => Ok(Self::eval_recursive(&op.vals[0], container, data)? * Self::eval_recursive(&op.vals[1], container, data)?),
-                    Operation::Divide => Ok(Self::eval_recursive(&op.vals[0], container, data)? / Self::eval_recursive(&op.vals[1], container, data)?),
-                    Operation::Negate => Ok(-Self::eval_recursive(&op.vals[0], container, data)?),
-                    Operation::Pow => Ok(Self::eval_recursive(&op.vals[0], container, data)?.powf(Self::eval_recursive(&op.vals[1], container, data)?)),
-                    Operation::Sqrt => Ok(Self::eval_recursive(&op.vals[0], container, data)?.sqrt()),
-                    Operation::Round => Ok(Self::eval_recursive(&op.vals[0], container, data)?.round()),
-                    Operation::RoundDown => Ok(Self::eval_recursive(&op.vals[0], container, data)?.floor()),
-                    Operation::RoundUp => Ok(Self::eval_recursive(&op.vals[0], container, data)?.ceil()),
-                }
-            }
-        }
+    fn eval_recursive(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<EvalResult, EvaluationError> {
+        // match &self {
+        //     SyntaxNode::Operand(op) => {
+        //         match &op {
+        //             OperandNode::Number(i) => Ok(EvalResult::Numeric(*i)),
+        //             OperandNode::Query(q) => {
+        //                 let mut val = None;
+        //                 if let Some(fv) = container.get_field_value(q) {
+        //                     if let Some(v) = fv.as_f32(container, data) {
+        //                         val = Some(v);
+        //                     }
+        //                 }
+        //                 if val.is_none() {
+        //                     if let Some(i) = data.get_instance(q) {
+        //                         if let Some(v) = i.get_field_value("Value") {
+        //                             if let Some(v) = v.as_f32(container, data) {
+        //                                 val = Some(v);
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //                 if let Some(v) = val {
+        //                     Ok(v);
+        //                 } else {
+        //                     Err(EvaluationError); // Some Error
+        //                 }
+                        
+        //             },
+        //         }
+        //     },
+        // }
+        //     SyntaxNode::Operator(op) => {
+        //         match op.op {
+        //             Operation::Add => Ok(Self::eval_recursive(&op.vals[0], container, data)? + Self::eval_recursive(&op.vals[1], container, data)?),
+        //             Operation::Subtract => Ok(Self::eval_recursive(&op.vals[0], container, data)? - Self::eval_recursive(&op.vals[1], container, data)?),
+        //             Operation::Multiply => Ok(Self::eval_recursive(&op.vals[0], container, data)? * Self::eval_recursive(&op.vals[1], container, data)?),
+        //             Operation::Divide => Ok(Self::eval_recursive(&op.vals[0], container, data)? / Self::eval_recursive(&op.vals[1], container, data)?),
+        //             Operation::Negate => Ok(-Self::eval_recursive(&op.vals[0], container, data)?),
+        //             Operation::Pow => Ok(Self::eval_recursive(&op.vals[0], container, data)?.powf(Self::eval_recursive(&op.vals[1], container, data)?)),
+        //             Operation::Sqrt => Ok(Self::eval_recursive(&op.vals[0], container, data)?.sqrt()),
+        //             Operation::Round => Ok(Self::eval_recursive(&op.vals[0], container, data)?.round()),
+        //             Operation::RoundDown => Ok(Self::eval_recursive(&op.vals[0], container, data)?.floor()),
+        //             Operation::RoundUp => Ok(Self::eval_recursive(&op.vals[0], container, data)?.ceil()),
+        //         }
+        //     }
+        // }
+        todo!()
     }
 }
 
@@ -315,6 +364,18 @@ impl Display for OperatorNode {
             Operation::Round => write!(f, "round"),
             Operation::RoundDown => write!(f, "roundDown"),
             Operation::RoundUp =>  write!(f, "roundUp"),
+            Operation::Ternary => todo!(),
+            Operation::Query => todo!(),
+            Operation::Find => todo!(),
+            Operation::Equal => todo!(),
+            Operation::NotEqual => todo!(),
+            Operation::LessThan => todo!(),
+            Operation::LessThanEq => todo!(),
+            Operation::GreaterThan => todo!(),
+            Operation::GreaterThanEq => todo!(),
+            Operation::Not => todo!(),
+            Operation::Or => todo!(),
+            Operation::And => todo!(),
         }
     }
 }
@@ -339,7 +400,7 @@ impl OperandNode {
                 Ok(OperandNode::Query(s))
             } else {
                 // TODO: Determine if should be a number based error or a variable based error
-                Err(SyntaxError::new(s, None, ErrorType::VariableInvalidChar))
+                Err(SyntaxError)
             }
         }
     }
@@ -480,6 +541,22 @@ mod tests {
         let i = EquationSyntaxTree::find_root_op_index(&split).unwrap();
         assert_eq!(split[i], split[1]);
         assert_eq!(i, 1);
+    }
+
+    #[test]
+    fn bool_root() {
+        let split = tokenize_expression("1 == 2");
+        let i = EquationSyntaxTree::find_root_op_index(&split).unwrap();
+        assert_eq!(split[i], split[1]);
+        assert_eq!(i, 1);
+    }
+
+    #[test]
+    fn ternary_root() {
+        let split = tokenize_expression("1 == 2 ? 21 + 3 : 2");
+        let i = EquationSyntaxTree::find_root_op_index(&split).unwrap();
+        assert_eq!(split[i], split[3]);
+        assert_eq!(i, 3);
     }
 
     #[test]
