@@ -149,7 +149,7 @@ pub struct MetaTypeInstanceBuilder<'a> {
 }
 
 impl<'a> MetaTypeInstanceBuilder<'a> {
-    pub fn init_field(mut self, field_name: String, mut field_value: Value<'a>) -> Result<Self, FieldError> {
+    pub fn init_field(mut self, field_name: String, field_value: Value<'a>) -> Result<Self, FieldError> {
         if let Some(field) = self.t.get_field(&field_name) {
             if field_value.t == field.field_type {
                 self.fields.insert(field_name, field_value);

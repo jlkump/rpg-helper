@@ -4,7 +4,6 @@ use super::{indexes::type_index::TypeIndex, meta_type::{MetaTypeInstance, Type}}
 pub struct Timeline {
     timeline_events: TypeIndex,
     events: Vec<TimelineEventInstance>,
-
 }
 
 pub struct TimelineEvent {

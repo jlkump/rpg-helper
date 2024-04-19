@@ -25,7 +25,7 @@ pub enum Operation {
 }
 
 impl Operation {
-    pub fn get_num_operands(&self) -> i32 {
+    pub fn get_num_operands(&self) -> usize {
         match self {
             Operation::Add => 2,
             Operation::Subtract => 2,
@@ -81,7 +81,7 @@ impl Operation {
     }
 
     pub fn get_operator(s: &str, prev: Option<&str>) -> Option<Operation> {
-        let mut is_prefix = prev.is_none();
+        let mut is_prefix = prev.is_none() && !Self::is_method_operator(s);
         if let Some(s) = prev {
             is_prefix = !s.starts_with(|c: char| c == ')' || c.is_alphanumeric());
         }
@@ -116,7 +116,6 @@ impl Operation {
                 _ => None
             }
         }
-
     }
 
     pub fn get_precedence(&self) -> i32 {

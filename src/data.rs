@@ -10,6 +10,7 @@ pub mod timeline;
 pub mod indexes;
 pub mod dice;
 pub mod file_storage;
+pub mod modifier;
 
 
 pub struct AppData<'a> {

@@ -40,35 +40,6 @@ pub fn tokenize_expression(e: &str) -> Vec<String> {
     result
 }
 
-// pub fn tokenize_query(q: &str) -> Vec<String> {
-//     let q = remove_whitespace(q);
-//     let mut result = Vec::<String>::new();
-//     let mut last = 0;
-//     let mut skip = 0;
-//     for (index, mut matched) in q.match_indices(|c: char| !c.is_alphanumeric() && c != ' ') {
-//         if skip > 0 {
-//             skip = skip - 1;
-//             continue;
-//         }
-//         if last != index {
-//             result.push(q[last..index].to_string());
-//         }
-//         if matched.eq(":") {
-//             if q.chars().nth(index + 1).is_some_and(|x| x.eq(&':')) {
-//                 skip = 1;
-//                 matched = &q[index..index + 2];
-//             }
-//         }
-
-//         result.push(matched.to_string());
-//         last = index + matched.len();
-//     }
-//     if last < q.len() {
-//         result.push(q[last..].to_string());
-//     }
-//     result
-// }
-
 /// Removes the unneccessary whitespace of an expression
 fn remove_whitespace(e: &str) -> String {
     let mut result = String::new();

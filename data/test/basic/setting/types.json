@@ -26,7 +26,7 @@
         "Description": "Description",
         "Exp": "List<Exp>",
         "Mastery": "rounddown((sqrt(8 * Exp / 5 + 1)-1)/2)",
-        "Formuliac Casting Total": "((Mastery < 0) ? Stress Die : Exploding Die Roll) + rounddown(Mastery) + Stamina + Aura Modifier + find(Casting Score, Technique == Technique::Name && Form == Form::Name)"
+        "Formuliac Casting Total": "((Mastery < 0) ? Stress Die : Exploding Die Roll) + rounddown(Mastery) + Stamina + Aura Modifier + find(Casting Score, Technique == Technique && Form == Form)"
     },
     "Target": {
         "Name": "String",
