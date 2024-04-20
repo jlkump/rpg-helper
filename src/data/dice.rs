@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct DieIndex {
     // TODO, for special dice types, such as stress die, botch die, simple die. They have special effects when rolled.
     dice_types: Vec<DieRoll>,
@@ -14,6 +15,7 @@ impl DieIndex {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct DieRoll {
     num_dice: i32,
     num_sides: i32,
@@ -26,6 +28,7 @@ impl DieRoll {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum DieResult {
     Num(i32),
     ChanceToBotch(i32), // Number of botch die to roll
@@ -33,6 +36,7 @@ pub enum DieResult {
     Explode(i32), // Number of cumulative explodes
 }
 
+#[derive(Clone, Debug, PartialEq)]
 enum DieModifier {
     Exploding(i32), // Multiplier applied when exploding
     Botch(i32) // Number of botch die

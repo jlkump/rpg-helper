@@ -4,6 +4,7 @@ use std::{fmt::Display, num::ParseFloatError};
 use super::dice::DieRoll;
 use super::indexes::value_index::ValueIndex;
 use super::meta_type::MetaTypeInstance;
+use super::meta_type::RestrictedInput;
 use super::meta_type::Type;
 use super::meta_type::Value;
 use super::DataView;
@@ -51,26 +52,17 @@ impl Display for Equation {
 #[derive(Debug)]
 pub struct EvaluationError;
 
-pub enum EvalResult {
+pub enum EvalResult<'a, 'b> {
     Numeric(f32),
+    MetaType(&'a MetaTypeInstance<'b>),
     Boolean(bool),
     Request(Vec<EvalRequest>, RequestEval)
 }
 
+#[derive(Debug)]
 pub enum EvalRequest {
     DieRoll(DieRoll), // The requested die roll. 1d10, 2d3, Stress Die, etc
-    Input(RestrictedValue) // Name of meta-type input
-}
-
-pub struct RestrictedValue {
-    value_type: Type,
-    restrictions: Vec<Equation>, // Equations are expected to evaluate to a true / false value. Will panic if they don't
-}
-
-impl RestrictedValue {
-    pub fn valid_input(given_input: &Value) -> bool {
-        todo!()
-    }
+    Input(RestrictedInput) // Name of meta-type input
 }
 
 pub struct RequestEval {
@@ -142,8 +134,233 @@ enum SyntaxNode {
 }
 
 impl SyntaxNode {
+    fn build_node(e: Vec<String>) -> Result<SyntaxNode, SyntaxError> {
+        println!("calling build root node for {:?}", e);
+        if let Some(r) = Self::find_root_op_index(&e) {
+            println!("Found root index {}", r);
+            Self::parse_op(e, r)
+        } else {
+            println!("Did not find root index");
+            // Trim paren and place the non-parentheses as
+            // the leaf nodes
+            let operand = e.into_iter().find(|s| s.chars().all(|c: char| c.is_alphanumeric()));
+            if operand.is_none() {
+                return Err(SyntaxError);
+            } else {
+                return Ok(SyntaxNode::Operand(OperandNode::new(operand.unwrap())?));
+            }
+        }
+    }
+
+    /// Finds the place where the split needs to happen for the next syntax node
+    /// If None is returned, we have hit a leaf node for the vec.
+    fn find_root_op_index(e: &[String]) -> Option<usize> {
+        let mut it = e.iter().enumerate();
+        let mut min_precedence = i32::MAX;
+        let mut root_ind: Option<usize> = None;
+        let mut brace_count = 0;
+        let mut prev = None;
+        while let Some((i, s)) = it.next() {
+            if s.eq(&"(") {
+                brace_count = brace_count + 1;
+            } else if s.eq(&")") {
+                brace_count = brace_count - 1;
+            } else {
+                if let Some(op) = Operation::get_operator(s, prev) {     
+                    let precedence = op.get_precedence() + brace_count * 10;
+                    if precedence < min_precedence {
+                        min_precedence = precedence;
+                        root_ind = Some(i);
+                    }
+                }
+            }
+            prev = Some(s);
+        }
+        root_ind
+    }
+
+    fn parse_op(e: Vec<String>, split: usize) -> Result<SyntaxNode, SyntaxError> {
+        if e[split].eq("?") {
+            return Self::parse_ternary(e, split)
+        } else {
+            let prev;
+            if split == 0 {
+                prev = None;
+            } else {
+                prev = e.iter().nth(split - 1).map(|x| x.as_str());
+            }
+            if let Some(op) = Operation::get_operator(&e[split], prev) {
+                if Operation::is_method_operator(&e[split]) {
+                    return Self::parse_method_op(e, split, op)
+                } else if op.get_num_operands() == 2 {
+                    return Self::parse_binary_op(e, split, op)
+                } else if op.get_num_operands() == 1 {
+                    return Self::parse_unary_op(e, split, op)
+                }
+            }
+        }
+        Err(SyntaxError)
+    }
+
+    fn parse_method_op(e: Vec<String>, split: usize, op: Operation) -> Result<SyntaxNode, SyntaxError> {
+        if split + 1 >= e.len() {
+            return Err(SyntaxError) // The method call is empty
+        }
+        let mut params = vec![];
+        let mut param = vec![];
+        let iter = e[split + 2..].iter();
+        let last = iter.len() - 1;
+        for (i, token) in iter.enumerate() {
+            if token.eq(",") || i == last {
+                params.push(param.clone());
+                param = vec![];
+            } else {
+                param.push(token.to_owned());
+            }
+        }
+        if params.len() != op.get_num_operands() {
+            return Err(SyntaxError)
+        }
+        let mut vals = vec![];
+        for p in params {
+            vals.push(Self::build_node(p)?)
+        }
+        Ok(SyntaxNode::Operator(OperatorNode::new(op, vals)))
+    }
+
+    fn parse_binary_op(e: Vec<String>, split: usize, op: Operation) -> Result<SyntaxNode, SyntaxError> {
+        if e.iter().position(|s| !s.eq("(")).is_some_and(|i| i == split) || split == 0 {
+            return Err(SyntaxError)
+        }
+        let left = remove_paren(Vec::from_iter(e[..split].iter().cloned()));
+        let right = remove_paren(Vec::from_iter(e[split + 1..].iter().cloned()));
+        return Ok(SyntaxNode::Operator(OperatorNode::new(op, vec![Self::build_node(left)?, Self::build_node(right)?])))
+    }
+
+    fn parse_unary_op(e: Vec<String>, split: usize, op: Operation) -> Result<SyntaxNode, SyntaxError> {
+        if e.iter().position(|s| !s.eq("(")).is_some_and(|i| i != split) || split != 0 {
+            return Err(SyntaxError)
+        }
+        let child = remove_paren(Vec::from_iter(e[split + 1..].iter().cloned()));
+        return Ok(SyntaxNode::Operator(OperatorNode::new(op, vec![Self::build_node(child)?])))
+    }
+    
+    fn parse_ternary(e: Vec<String>, split: usize) -> Result<SyntaxNode, SyntaxError> {
+        let mut vals = vec![];
+        let mut num_paren = 0;
+        for c in e.iter() {
+            if c.eq("(") {
+                num_paren += 1;
+            }
+            if c.eq(")") {
+                num_paren -= 1;
+            }
+            if c.eq("?") {
+                break;
+            }
+        }
+        vals.push(Vec::from_iter(e[num_paren..split].iter().cloned()));
+        let expected = num_paren;
+        num_paren = 0;
+        for (i, c) in e.iter().enumerate() {
+            if c.eq(")") {
+                num_paren += 1;
+            }
+            if c.eq(":") && expected == num_paren {
+                vals.push(Vec::from_iter(e[split + 1..i].iter().cloned()));
+                vals.push(Vec::from_iter(e[i + 1..e.len() - num_paren].iter().cloned()));
+                break;
+            }
+        }
+        if vals.len() != 3 {
+            Err(SyntaxError)
+        } else {
+            let mut children = vec![];
+            for v in vals {
+                children.push(Self::build_node(v)?);
+            }
+            Ok(SyntaxNode::Operator(OperatorNode::new(Operation::Ternary, children)))
+        }
+    }
+
+
     // TODO: Return Eval Request when equation requests input, such as a dice roll or selecting a reference to another value instance.
     fn eval_recursive(&self, container: &MetaTypeInstance, data: &DataView) -> Result<EvalResult, EvaluationError> {
+        match &self {
+            SyntaxNode::Operator(op) => {
+                // Perform operation if we can. If the eval result of children are requests, 
+                // we need to build up the tree for the eval result to pass back up the chain. 
+                // Also, operands will expect either a boolean or a numeric value and recieving 
+                // the incorrect value will be an evaluation error.
+
+                // Expect a boolean result?
+                // Expect a numeric result?
+
+                // Evaluate
+                match op.op {
+                    Operation::Add => todo!(),
+                    Operation::Subtract => todo!(),
+                    Operation::Multiply => todo!(),
+                    Operation::Divide => todo!(),
+                    Operation::Negate => todo!(),
+                    Operation::Pow => todo!(),
+                    Operation::Sqrt => todo!(),
+                    Operation::Round => todo!(),
+                    Operation::RoundDown => todo!(),
+                    Operation::RoundUp => todo!(),
+                    Operation::Ternary => todo!(),
+                    Operation::Query => {
+                        // Look at the left operand node, query the 
+                        todo!()
+                    },
+                    Operation::Find => {
+                        if let SyntaxNode::Operand(type_query) = &op.vals[0] {
+                            if let OperandNode::Query(q) = type_query {
+                                // for t in data.get_value_index().all_of_type(q) {
+                                //     // See which one matches first with op.vals[1] evaluated 
+                                //     // to true as t being the input container
+                                //     // Might need a container heirarchy being passes through the eval recursive,
+                                //     // That way the "Super" qualifier can be used.
+                                // }
+                            }
+                        }
+                        todo!()
+                    },
+                    Operation::Equal => todo!(),
+                    Operation::NotEqual => todo!(),
+                    Operation::LessThan => todo!(),
+                    Operation::LessThanEq => todo!(),
+                    Operation::GreaterThan => todo!(),
+                    Operation::GreaterThanEq => todo!(),
+                    Operation::Not => todo!(),
+                    Operation::Or => todo!(),
+                    Operation::And => todo!(),
+                }
+                todo!()
+            }, 
+            SyntaxNode::Operand(o) => {
+                // Result could be a number, eval of another meta type, a request for input or a die roll request.
+
+                // Is a number, return EvalResult of a numeric type
+                match o {
+                    OperandNode::Number(num) => {
+                        return Ok(EvalResult::Numeric(*num))
+                    },
+                    OperandNode::Query(query) => {
+                        // Check if container has the meta-type first
+
+                        // Then check if the index has it
+                        
+                        // If neither has it, pass the query up the chain?
+
+                        // If we found a value, check the type. If it is an input or die roll,
+                        // pass a Request up the chain.
+                    },
+                }
+                todo!()
+            }, 
+        }
+
         // match &self {
         //     SyntaxNode::Operand(op) => {
         //         match &op {
@@ -190,162 +407,6 @@ impl SyntaxNode {
         //     }
         // }
         todo!()
-    }
-
-    fn build_node(e: Vec<String>) -> Result<SyntaxNode, SyntaxError> {
-        println!("calling build root node for {:?}", e);
-        if let Some(r) = Self::find_root_op_index(&e) {
-            println!("Found root index {}", r);
-            Self::parse_op(e, r)
-        } else {
-            println!("Did not find root index");
-            // Trim paren and place the non-parentheses as
-            // the leaf nodes
-            let operand = e.into_iter().find(|s| s.chars().all(|c: char| c.is_alphanumeric()));
-            if operand.is_none() {
-                return Err(SyntaxError);
-            } else {
-                return Ok(SyntaxNode::Operand(OperandNode::new(operand.unwrap())?));
-            }
-        }
-    }
-
-        /// Finds the place where the split needs to happen for the next syntax node
-    /// If None is returned, we have hit a leaf node for the vec.
-    fn find_root_op_index(e: &[String]) -> Option<usize> {
-        let mut it = e.iter().enumerate();
-        let mut min_precedence = i32::MAX;
-        let mut root_ind: Option<usize> = None;
-        let mut brace_count = 0;
-        let mut prev = None;
-        while let Some((i, s)) = it.next() {
-            if s.eq(&"(") {
-                brace_count = brace_count + 1;
-            } else if s.eq(&")") {
-                brace_count = brace_count - 1;
-            } else {
-                if let Some(op) = Operation::get_operator(s, prev) {     
-                    let precedence = op.get_precedence() + brace_count * 10;
-                    println!("Found op {:?} with precendence {}", op, precedence);        
-                    if precedence < min_precedence {
-                        min_precedence = precedence;
-                        root_ind = Some(i);
-                    }
-                }
-            }
-            prev = Some(s);
-        }
-        root_ind
-    }
-
-    fn parse_op(e: Vec<String>, split: usize) -> Result<SyntaxNode, SyntaxError> {
-        if e[split].eq("?") {
-            return Self::parse_ternary(e, split)
-        } else {
-            let prev;
-            if split == 0 {
-                prev = None;
-            } else {
-                prev = e.iter().nth(split - 1).map(|x| x.as_str());
-            }
-            if let Some(op) = Operation::get_operator(&e[split], prev) {
-                if Operation::is_method_operator(&e[split]) {
-                    return Self::parse_method_op(e, split, op)
-                } else if op.get_num_operands() == 2 {
-                    return Self::parse_binary_op(e, split, op)
-                } else if op.get_num_operands() == 1 {
-                    return Self::parse_unary_op(e, split, op)
-                }
-            }
-        }
-        println!("Failed to find operator for {:?} with split as {}", e, split);
-        Err(SyntaxError)
-    }
-
-    fn parse_method_op(e: Vec<String>, split: usize, op: Operation) -> Result<SyntaxNode, SyntaxError> {
-        if split + 1 >= e.len() {
-            println!("Error on parse method: empty method call");
-            return Err(SyntaxError) // The method call is empty
-        }
-        let mut params = vec![];
-        let mut param = vec![];
-        let iter = e[split + 2..].iter();
-        let last = iter.len() - 1;
-        for (i, token) in iter.enumerate() {
-            println!("Current token {} with index {} of len {}", token, i, last);
-            if token.eq(",") || i == last {
-                params.push(param.clone());
-                param = vec![];
-            } else {
-                param.push(token.to_owned());
-            }
-        }
-        if params.len() != op.get_num_operands() {
-            println!("Error on parse method: wrong operands, got params {:?}", params);
-            return Err(SyntaxError)
-        }
-        let mut vals = vec![];
-        for p in params {
-            vals.push(Self::build_node(p)?)
-        }
-        Ok(SyntaxNode::Operator(OperatorNode::new(op, vals)))
-    }
-
-    fn parse_binary_op(e: Vec<String>, split: usize, op: Operation) -> Result<SyntaxNode, SyntaxError> {
-        if e.iter().position(|s| !s.eq("(")).is_some_and(|i| i == split) || split == 0 {
-            println!("Error on parse binary op: Invalid split pos");
-            return Err(SyntaxError)
-        }
-        let left = remove_paren(Vec::from_iter(e[..split].iter().cloned()));
-        let right = remove_paren(Vec::from_iter(e[split + 1..].iter().cloned()));
-        return Ok(SyntaxNode::Operator(OperatorNode::new(op, vec![Self::build_node(left)?, Self::build_node(right)?])))
-    }
-
-    fn parse_unary_op(e: Vec<String>, split: usize, op: Operation) -> Result<SyntaxNode, SyntaxError> {
-        if e.iter().position(|s| !s.eq("(")).is_some_and(|i| i != split) || split != 0 {
-            println!("Error on parse unary op: Invalid split pos");
-            return Err(SyntaxError)
-        }
-        let child = remove_paren(Vec::from_iter(e[split + 1..].iter().cloned()));
-        return Ok(SyntaxNode::Operator(OperatorNode::new(op, vec![Self::build_node(child)?])))
-    }
-    
-    fn parse_ternary(e: Vec<String>, split: usize) -> Result<SyntaxNode, SyntaxError> {
-        let mut vals = vec![];
-        let mut num_paren = 0;
-        for c in e.iter() {
-            if c.eq("(") {
-                num_paren += 1;
-            }
-            if c.eq(")") {
-                num_paren -= 1;
-            }
-            if c.eq("?") {
-                break;
-            }
-        }
-        vals.push(Vec::from_iter(e[num_paren..split].iter().cloned()));
-        let expected = num_paren;
-        num_paren = 0;
-        for (i, c) in e.iter().enumerate() {
-            if c.eq(")") {
-                num_paren += 1;
-            }
-            if c.eq(":") && expected == num_paren {
-                vals.push(Vec::from_iter(e[split + 1..i].iter().cloned()));
-                vals.push(Vec::from_iter(e[i + 1..e.len() - num_paren].iter().cloned()));
-                break;
-            }
-        }
-        if vals.len() != 3 {
-            Err(SyntaxError)
-        } else {
-            let mut children = vec![];
-            for v in vals {
-                children.push(Self::build_node(v)?);
-            }
-            Ok(SyntaxNode::Operator(OperatorNode::new(Operation::Ternary, children)))
-        }
     }
 }
 
@@ -405,9 +466,7 @@ impl Display for OperatorNode {
 #[derive(Debug, Clone, PartialEq)]
 enum OperandNode {
     Number(f32),
-    Query(String),
-    // InputRequest(RestrictedValue)    // Restricted Value is the input type and restrictions
-    // DieRollRequest(DieRoll)          // DieRoll contains the type of die being rolled and how it is treated when rolled. 
+    Query(String)
 }
 
 impl OperandNode {
@@ -430,7 +489,7 @@ impl Display for OperandNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
             Self::Number(n) => write!(f, "{}", n),
-            Self::Query(s) => write!(f, "{}", s)
+            Self::Query(s) => write!(f, "{}", s),
         }
     }
 }

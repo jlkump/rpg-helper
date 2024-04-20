@@ -177,6 +177,8 @@ fn create_value<'a>(t: &Type, types: &'a TypeIndex) -> Option<Value<'a>> {
                     types))),
         Type::Equation(_) => todo!(),
         Type::MetaRef(_) => todo!(),
+        Type::Input(_) => todo!(),
+        Type::DieRoll(_) => todo!(),
     }
 }
 
@@ -205,7 +207,9 @@ fn create_meta_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex) -> Me
                     Type::Enum(_) => todo!(),
                     Type::Meta(_) => todo!(),
                     Type::Equation(_) => todo!(),
-                    Type::MetaRef(_) => todo!()
+                    Type::MetaRef(_) => todo!(),
+                    Type::Input(_) => todo!(),
+                    Type::DieRoll(_) => todo!(),
                 };
             } else {
                 println!("Error while reading input");

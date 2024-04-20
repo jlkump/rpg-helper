@@ -173,6 +173,8 @@ fn to_value<'a>(val: serde_json::Value, t: Type, types: &'a TypeIndex) -> Value<
             Type::Equation(_) => panic!("Found string value for equation"),
             Type::Meta(_) => panic!("Expected meta type, found string"),
             Type::MetaRef(_) => Value::new_meta_ref(s, t),
+            Type::Input(_) => todo!(),
+            Type::DieRoll(_) => todo!(),
         },
         serde_json::Value::Array(l) => if let Type::List(sub_type) = &t {
             Value::new_list(l.into_iter().map(|f| to_value(f, sub_type.as_ref().clone(), types)).collect(), t).expect("List values not able to be parsed")

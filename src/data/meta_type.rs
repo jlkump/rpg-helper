@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 use crate::data::equation::Equation;
 use crate::error::*;
 
+use super::dice::DieRoll;
 use super::indexes::type_index::TypeIndex;
 use super::indexes::value_index::ValueIndex;
 
@@ -263,10 +264,22 @@ impl<'g> Value<'g> {
         }
     }
 
+    pub fn new_input<'a>(t: Type, restrictions: Vec<String>) -> Value<'a> {
+        Value {
+            t: Type::Input(
+                RestrictedInput { 
+                    t: Box::new(t), 
+                    restrictions: restrictions.into_iter().map(|f| Equation::new(f).unwrap()).collect()
+                }
+            ),
+            d: Data::Input
+        }
+    }
+
     pub fn as_f32(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Option<f32> {
         match &self.d {
             Data::Num(n) => Some(*n),
-            Data::Text(_) => None,
+            Data::Text(_) | Data::Enum(_) | Data::DieRoll | Data::Input => None,
             Data::List(l) => l.iter().fold(Some(0 as f32), |a: Option<f32>, v| {
                 if let Some(a) = a {
                     if let Some(v) = v.as_f32(container, data) {
@@ -278,7 +291,6 @@ impl<'g> Value<'g> {
                     None
                 }
             }),
-            Data::Enum(_) => None,
             Data::Meta(t) => if let Some(v) = t.get_field_value("Value") {
                 v.as_f32(t, data)
             } else {
@@ -354,8 +366,9 @@ pub enum Type {
     Enum(Vec<String>),
     Meta(String), // Name of the meta type
     Equation(Equation),   // Equation is owned by the type and thus not named
-    // EquationRef(String),  // Refrence to an equation by name
-    MetaRef(String) // MetaRef has the name of the meta type, just like Meta
+    MetaRef(String), // MetaRef has the name of the meta type, just like Meta
+    Input(RestrictedInput),
+    DieRoll(DieRoll),
     // TODO: Add built-in type for die rolls. Defined by a string of the form: "1d10", "3d6", etc
     // Value is retrieved by an in-built roll or by input of what the roll result was
     // For this, we will need equations to support tertiary operators for
@@ -395,6 +408,8 @@ impl Type {
             Type::Meta(m) => Value::new_meta_instance(m.to_string(), types.get_type(m).unwrap().get_default(types)),
             Type::Equation(_) => Value::new_equation(self.to_owned()).unwrap(),
             Type::MetaRef(_) => panic!("Meta ref not given. Can not initialize a default val"),
+            Type::Input(_) => Value::new_input(self.to_owned(), vec![]),
+            Type::DieRoll(_) => todo!(),
         }
     }
 }
@@ -415,6 +430,8 @@ impl Display for Type {
             Type::Equation(e) => write!(f, "Equation[{}]", e),
             Type::Meta(s) => write!(f, "Meta[{}]", s),
             Type::MetaRef(r) => write!(f, "MetaRef[{}]", r),
+            Type::Input(i) => write!(f, "Input<{}>", i.t),
+            Type::DieRoll(_) => write!(f, "DieRoll"),
         }
     }
 }
@@ -427,7 +444,8 @@ enum Data<'a> {
     Enum(String),
     Meta(MetaTypeInstance<'a>), // The meta type is accessed by the field name
     Equation,
-    // EquationRef,
+    Input, // Maybe store last input and whether it has been used?
+    DieRoll, // IDK, but can store stuff for later
     MetaRef(String) // Name of the actual reference to the meta instance
 }
 
@@ -447,6 +465,20 @@ impl Display for Data<'_> {
             Data::Equation=> Ok(()),
             Data::Meta(m) => write!(f, "{}", m),
             Data::MetaRef(r) => write!(f, "{}", r),
+            Data::Input => todo!(),
+            Data::DieRoll => todo!(),
         }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RestrictedInput {
+    t: Box<Type>,
+    restrictions: Vec<Equation>, // Equations are expected to evaluate to a true / false value. Will panic if they don't
+}
+
+impl RestrictedInput {
+    pub fn valid_input(given_input: &Value) -> bool {
+        todo!()
     }
 }
