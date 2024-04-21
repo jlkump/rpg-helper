@@ -19,14 +19,20 @@
         "Form": "Ref<Art>",
         "Requisites": "List<Ref<Art>>",
         "Base Level": "Num",
-        "Magnitude Mods": ["Target::Magnitude", "Duration::Magnitude", "Range::Magnitude"],
+        "Magnitude Mods": "Target::Magnitude + Duration::Magnitude + Range::Magnitude",
         "Level": "(Base Level < 5) ? (Base Level + Min(Magnitude Mods, 5 - Base Level) + (Magnitude Mods - Min(Magnitude Mods, 5 - Base Level)) * 5) : Base Level + Magnitude Mods * 5",
         "Magnitude": "roundup(Base Level / 5)",
         "Name": "String",
-        "Description": "Description",
         "Exp": "List<Exp>",
-        "Mastery": "rounddown((sqrt(8 * Exp / 5 + 1)-1)/2)",
-        "Formuliac Casting Total": "((Mastery < 0) ? Stress Die : Exploding Die Roll) + rounddown(Mastery) + Stamina + Aura Modifier + find(Casting Score, Technique == Technique && Form == Form)"
+        "Mastery": "rounddown((sqrt(8 * Exp / 5 + 1)-1)/2)"
+    },
+    "Formuliac Casting Total": {
+        "Spell": "Ref<Spell>",
+        "Value": "((Spell::Mastery < 0) ? Stress Die : Exploding Die Roll) + rounddown(Spell::Mastery) + Stamina + Aura Modifier + find(Casting Score, Spell::Technique == F::Technique && Spell::Form == F::Form)"
+    },
+    "Ritual Casting Total": {
+        "Spell": "Ref<Spell>",
+        "Value": ""
     },
     "Target": {
         "Name": "String",

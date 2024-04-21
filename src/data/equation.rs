@@ -285,7 +285,8 @@ impl SyntaxNode {
 
 
     // TODO: Return Eval Request when equation requests input, such as a dice roll or selecting a reference to another value instance.
-    fn eval_recursive(&self, container: &MetaTypeInstance, data: &DataView) -> Result<EvalResult, EvaluationError> {
+    // Optional data view so that we can force queries to be a value?
+    fn eval_recursive(&self, container: &MetaTypeInstance, data: Option<&DataView>) -> Result<EvalResult, EvaluationError> {
         match &self {
             SyntaxNode::Operator(op) => {
                 // Perform operation if we can. If the eval result of children are requests, 

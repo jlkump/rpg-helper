@@ -109,7 +109,7 @@ impl Display for MetaField {
 pub struct MetaTypeInstance<'a>  {
     // Name is implicit in anything that holds an instance
     t: &'a MetaType,
-    fields: HashMap<String, Value<'a>>,
+    fields: HashMap<String, Value<'a>>
 }
 
 impl<'g> MetaTypeInstance<'g> {
@@ -182,7 +182,7 @@ impl<'a> MetaTypeInstanceBuilder<'a> {
         }
         MetaTypeInstance {
             t: self.t,
-            fields: self.fields,
+            fields: self.fields
         }
     }
 }
@@ -272,7 +272,7 @@ impl<'g> Value<'g> {
                     restrictions: restrictions.into_iter().map(|f| Equation::new(f).unwrap()).collect()
                 }
             ),
-            d: Data::Input
+            d: Data::Input,
         }
     }
 

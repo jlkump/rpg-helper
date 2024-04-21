@@ -8,7 +8,7 @@
         "Lab Progress": {
             "Type": "Add",
             "Target": "Point",
-            "Restrictions": ["Point::Super::Type == Spell || Point::Super::Type == Enchantment ..."]
+            "Restrictions": ["Target::Super::Type == Spell || Target::Super::Type == Enchantment ..."]
         }
     },
     "Types": {
