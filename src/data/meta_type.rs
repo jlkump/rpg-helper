@@ -300,7 +300,7 @@ impl<'g> Value<'g> {
                 }
                 return None;
             }),
-            Data::Equation => if let Ok(v) = self.t.to_equation().unwrap().evaluate(&EvalResultType::Numeric ,container, data) {
+            Data::Equation => if let Ok(v) = self.t.to_equation().unwrap().evaluate(EvalResultType::Numeric ,container, data) {
                 v.as_f32(data)
             } else {
                 None

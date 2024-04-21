@@ -26,7 +26,7 @@ impl Equation {
         })
     }
 
-    pub fn evaluate(&self, expects: &EvalResultType, container: &MetaTypeInstance, data: Option<&DataView>) -> Result<EvalResult, EvaluationError> {
+    pub fn evaluate<'a>(&'a self, expects: EvalResultType, container: &'a MetaTypeInstance, data: Option<&'a DataView>) -> Result<EvalResult, EvaluationError> {
         self.ast.evaluate(expects, container, data)
     }
 
@@ -61,14 +61,27 @@ pub enum EvalResult<'a, 'b> {
     Request(EvalRequest)
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum EvalResultType {
+    Any,
     Numeric,
     Boolean,
     MetaType,
 }
 
 impl EvalResult<'_, '_> {
+    pub fn expects_f32(&self, data: Option<&DataView>, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>) -> Option<f32> {
+        if let Some(n) = self.as_f32(data) {
+            return Some(n);
+        } else if let Some((eval, tree)) = self.as_input() {
+            node.vals.push(tree.root);
+        } else if let Some(eval_request) = self.as_request() {
+            node.vals.push(SyntaxNode::Input(prev_requests.len()));
+            prev_requests.push(eval_request);
+        }
+        return None;
+    }
+
     pub fn as_f32(&self, data: Option<&DataView>) -> Option<f32> {
         match &self {
             EvalResult::Numeric(n) => Some(*n),
@@ -131,7 +144,7 @@ impl EquationSyntaxTree {
         })
     }
 
-    fn evaluate(&self, expects: &EvalResultType, container: &MetaTypeInstance, data: Option<&DataView>) -> Result<EvalResult, EvaluationError> {
+    fn evaluate<'a>(&'a self, expects: EvalResultType, container: &'a MetaTypeInstance, data: Option<&'a DataView>) -> Result<EvalResult, EvaluationError> {
         self.root.eval_recursive(expects, container, data, None)
     }
 }
@@ -328,7 +341,7 @@ impl SyntaxNode {
 
     // TODO: Return Eval Request when equation requests input, such as a dice roll or selecting a reference to another value instance.
     // Optional data view so that we can force queries to be a value?
-    fn eval_recursive<'a>(&'a self, expects: &EvalResultType, container: &'a MetaTypeInstance, data: Option<&'a DataView>, inputs: Option<&'a Vec<Value>>) -> Result<EvalResult, EvaluationError> {
+    fn eval_recursive<'a>(&'a self, expects: EvalResultType, container: &'a MetaTypeInstance, data: Option<&'a DataView>, inputs: Option<&'a Vec<Value>>) -> Result<EvalResult, EvaluationError> {
         match &self {
             SyntaxNode::Input(index) => {
                 if let Some(inputs) = inputs {
@@ -341,6 +354,11 @@ impl SyntaxNode {
                             EvalResultType::MetaType => if let Some(inst) = input.as_meta_inst(data) {
                                 return Ok(EvalResult::MetaType(inst));
                             },
+                            EvalResultType::Any => if let Some(inst) = input.as_meta_inst(data) {
+                                return Ok(EvalResult::MetaType(inst));
+                            } else if let Some(num) = input.as_f32(container, data) {
+                                return Ok(EvalResult::Numeric(num));
+                            },
                         }
                     }
                 }
@@ -349,57 +367,110 @@ impl SyntaxNode {
             SyntaxNode::Operator(op) => {
                 // Perform operation if we can. If the eval result of children are requests, 
                 // we need to build up the tree for the eval result to pass back up the chain. 
-                // Also, operands will expect either a boolean or a numeric value and recieving 
+                
+                
+                // Operators will expect either a boolean, numeric or meta inst value and recieving 
                 // the incorrect value will be an evaluation error.
 
-                // Expect a boolean result?
-                // Expect a numeric result?
-                // let mut results = vec![];
-                // for n in &op.vals {
-                //     results.push(n.eval_recursive(container, data, inputs)?);
-                // }
-                
-                // let mut requests = vec![];
-                // let mut node = op.clone();
-                // for res in &results {
-                //     match res {
-                //         EvalResult::Numeric(num) => {
-                //             node.vals.push(SyntaxNode::Operand(OperandNode::Number(*num)));
-                //         },
-                //         EvalResult::MetaType(m) => {
-                //             node.vals.push(SyntaxNode::Operand(OperandNode::Query()))
-                //         },
-                //         EvalResult::Boolean(b) => {
-                //             node.vals.push(SyntaxNode::Operand(OperandNode::Boolean(*b)));
-                //         },
-                //         EvalResult::Input(_, _) => todo!(),
-                //         EvalResult::Request(_) => todo!(),
-                //     }
-                //     if let Some((mut r, mut t)) = res.as_input() {
-                //         t.root.add_to_input_index(requests.len());
-                //         node.vals.push(t.root);
-                //         requests.append(&mut r);
-                //     } else if let Some(r) = res.as_request() {
-                //         node.vals.push(SyntaxNode::Input(requests.len()));
-                //         requests.push(r);
-                //     } else if let Some(num) = res.as_f32(data) {
-                //     } else if let Some(b) = res.as_bool() {
-                //     }
-                // }
+                // First check that the expected value will match the value of the result for the operation
+                match op.op {
+                    Operation::Add | Operation::Subtract | Operation::Multiply | 
+                    Operation::Divide | Operation::Negate | Operation::Pow | Operation::Sqrt | 
+                    Operation::Round | Operation::RoundDown | Operation::RoundUp => 
+                        if expects != EvalResultType::Numeric {
+                            return Err(EvaluationError);
+                        },
+                    Operation::Query => 
+                        if expects != EvalResultType::MetaType || expects != EvalResultType::Numeric {
+                            return Err(EvaluationError); 
+                        },
+                    Operation::Find => 
+                        if expects != EvalResultType::MetaType {
+                            return Err(EvaluationError);
+                        },
+                    Operation::Equal | Operation::NotEqual | Operation::LessThan | 
+                    Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq | 
+                    Operation::Not | Operation::Or | Operation::And => 
+                        if expects != EvalResultType::Boolean {
+                            return Err(EvaluationError);
+                        },
+                    Operation::Ternary => {}, // Any type can be expected as a result
+                }
+
+                // Generally
+                // - get the expected type
+                // - if the type is instead an input or request type, build the resulting tree
+                //      using the current operand
+                let mut node = OperatorNode::new(op.op, vec![]);
+                let mut prev_requests = vec![];
+                let mut children_vals = vec![];
+                if op.op != Operation::Find || op.op != Operation::Query {
+                    for (i, v) in op.vals[0..op.op.get_num_operands()].iter().enumerate() {
+                        children_vals.push(v.eval_recursive(op.op.expect_child_type(i), container, data, inputs)?);
+                    }
+                }
                 // Evaluate
                 match op.op {
                     Operation::Add => {
-
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                                return Ok(EvalResult::Numeric(v0 + v1));
+                            }
+                        }
                     },
-                    Operation::Subtract => todo!(),
-                    Operation::Multiply => todo!(),
-                    Operation::Divide => todo!(),
-                    Operation::Negate => todo!(),
-                    Operation::Pow => todo!(),
-                    Operation::Sqrt => todo!(),
-                    Operation::Round => todo!(),
-                    Operation::RoundDown => todo!(),
-                    Operation::RoundUp => todo!(),
+                    Operation::Subtract => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                                return Ok(EvalResult::Numeric(v0 - v1));
+                            }
+                        }
+                    },
+                    Operation::Multiply => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                                return Ok(EvalResult::Numeric(v0 * v1));
+                            }
+                        }
+                    },
+                    Operation::Divide => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                                return Ok(EvalResult::Numeric(v0 / v1));
+                            }
+                        }
+                    },
+                    Operation::Negate => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            return Ok(EvalResult::Numeric(-v0));
+                        }
+                    },
+                    Operation::Pow => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                                return Ok(EvalResult::Numeric(v0.powf(v1)));
+                            }
+                        }
+                    },
+                    Operation::Sqrt => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            return Ok(EvalResult::Numeric(v0.sqrt()));
+                        }
+                    },
+                    Operation::Round => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            return Ok(EvalResult::Numeric(v0.round()));
+                        }
+                    },
+                    Operation::RoundDown => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            return Ok(EvalResult::Numeric(v0.floor()));
+                        }
+                    },
+                    Operation::RoundUp => {
+                        if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                            return Ok(EvalResult::Numeric(v0.ceil()));
+                        }
+                    },
                     Operation::Ternary => todo!(),
                     Operation::Query => {
                         // Look at the left operand node, query the 
@@ -418,7 +489,13 @@ impl SyntaxNode {
                         }
                         todo!()
                     },
-                    Operation::Equal => todo!(),
+                    Operation::Equal => {
+                        // Could expect either a meta type or a numeric value
+                        // TODO
+                        // if let Some(v0) = children_vals[0].expects_any(data, &mut node, &mut prev_requests) {
+                        //     return Ok(EvalResult::Numeric(v0.ceil()));
+                        // }
+                    },
                     Operation::NotEqual => todo!(),
                     Operation::LessThan => todo!(),
                     Operation::LessThanEq => todo!(),
@@ -428,19 +505,19 @@ impl SyntaxNode {
                     Operation::Or => todo!(),
                     Operation::And => todo!(),
                 }
-                todo!()
+                return Ok(EvalResult::Input(prev_requests, RequestEval {root: SyntaxNode::Operator(node)}));
             }, 
             SyntaxNode::Operand(o) => {
                 // Result could be a number, eval of another meta type, a request for input or a die roll request.
                 match o {
                     OperandNode::Number(num) => 
-                        if expects == &EvalResultType::Numeric {
+                        if expects == EvalResultType::Numeric {
                             return Ok(EvalResult::Numeric(*num))
                         } else {
                             return Err(EvaluationError)
                         },
                     OperandNode::Boolean(b) => 
-                        if expects == &EvalResultType::Boolean {
+                        if expects == EvalResultType::Boolean {
                             return Ok(EvalResult::Boolean(*b));
                         } else {
                             return Err(EvaluationError)
@@ -471,12 +548,19 @@ impl SyntaxNode {
                                         return Ok(EvalResult::MetaType(meta_inst));
                                     }
                                 },
+                                EvalResultType::Any => {
+                                    if let Some(meta_inst) = val.as_meta_inst(data) {
+                                        return Ok(EvalResult::MetaType(meta_inst));
+                                    } else if let Some(num) = val.as_f32(container, data) {
+                                        return Ok(EvalResult::Numeric(num));
+                                    }
+                                },
                             }
 
                             if let Some(input) = val.as_input() {
                                 return Ok(EvalResult::Request(EvalRequest::Input(input.clone())));
                             } else if let Some(die_roll) = val.as_die_roll() {
-                                return Ok(EvalResult::Request(EvalRequest::DieRoll(die_roll.clone())))
+                                return Ok(EvalResult::Request(EvalRequest::DieRoll(die_roll.clone())));
                             }
                         }
                         
@@ -486,7 +570,6 @@ impl SyntaxNode {
                 }
             }, 
         }
-        todo!()
     }
 
     fn add_to_input_index(&mut self, add: usize) {
@@ -494,6 +577,33 @@ impl SyntaxNode {
             SyntaxNode::Operator(op) => op.vals.iter_mut().for_each(|f| f.add_to_input_index(add)),
             SyntaxNode::Operand(_) => {},
             SyntaxNode::Input(i) => *i = *i + add,
+        }
+    }
+}
+
+impl Operation {
+    fn expect_child_type(&self, child_index: usize) -> EvalResultType {
+        match self {
+            Operation::Add | Operation::Subtract | Operation::Multiply | Operation::Divide | 
+            Operation::Negate | Operation::Pow | Operation::Sqrt | Operation::Round | 
+            Operation::RoundDown | Operation::RoundUp => return EvalResultType::Numeric,
+            Operation::Ternary => {
+                if child_index == 0 {
+                    return EvalResultType::Boolean;
+                } else {
+                    return EvalResultType::Any;
+                }
+            },
+            Operation::Query => {
+                todo!()
+            },
+            Operation::Find => {
+                todo!()
+            },
+            Operation::Equal | Operation::NotEqual => EvalResultType::Any,
+            Operation::LessThan | Operation::LessThanEq | 
+            Operation::GreaterThan | Operation::GreaterThanEq => EvalResultType::Numeric, // Only can compare numbers with <, <=, >, >= (for now),
+            Operation::Not | Operation::Or | Operation::And => EvalResultType::Boolean,
         }
     }
 }
