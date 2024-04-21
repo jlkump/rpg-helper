@@ -26,8 +26,8 @@ impl Equation {
         })
     }
 
-    pub fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
-        self.ast.evaluate(container, data)
+    pub fn evaluate(&self, expects: &EvalResultType, container: &MetaTypeInstance, data: Option<&DataView>) -> Result<EvalResult, EvaluationError> {
+        self.ast.evaluate(expects, container, data)
     }
 
     // When input is required for the equation, returns a list of the required input
@@ -52,19 +52,60 @@ impl Display for Equation {
 #[derive(Debug)]
 pub struct EvaluationError;
 
+#[derive(Clone)]
 pub enum EvalResult<'a, 'b> {
     Numeric(f32),
     MetaType(&'a MetaTypeInstance<'b>),
     Boolean(bool),
-    Request(Vec<EvalRequest>, RequestEval)
+    Input(Vec<EvalRequest>, RequestEval),
+    Request(EvalRequest)
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq)]
+pub enum EvalResultType {
+    Numeric,
+    Boolean,
+    MetaType,
+}
+
+impl EvalResult<'_, '_> {
+    pub fn as_f32(&self, data: Option<&DataView>) -> Option<f32> {
+        match &self {
+            EvalResult::Numeric(n) => Some(*n),
+            EvalResult::MetaType(m) => m.as_f32(data),
+            _ => None
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match &self {
+            EvalResult::Boolean(b) => Some(*b),
+            _ => None,
+        }
+    }
+
+    pub fn as_input(&self) -> Option<(Vec<EvalRequest>, RequestEval)> {
+        match &self {
+            EvalResult::Input(v, r) => Some((v.clone(), r.clone())),
+            _ => None,
+        }
+    }
+
+    pub fn as_request(&self) -> Option<EvalRequest> {
+        match &self {
+            EvalResult::Request(request) => Some(request.clone()),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum EvalRequest {
     DieRoll(DieRoll), // The requested die roll. 1d10, 2d3, Stress Die, etc
     Input(RestrictedInput) // Name of meta-type input
 }
 
+#[derive(Clone)]
 pub struct RequestEval {
     root: SyntaxNode // Built from the equation's AST, evaluated to the point where input is required. 
 }
@@ -90,9 +131,8 @@ impl EquationSyntaxTree {
         })
     }
 
-    fn evaluate(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Result<f32, EvaluationError> {
-        // self.root.eval_recursive(container, data)
-        todo!()
+    fn evaluate(&self, expects: &EvalResultType, container: &MetaTypeInstance, data: Option<&DataView>) -> Result<EvalResult, EvaluationError> {
+        self.root.eval_recursive(expects, container, data, None)
     }
 }
 
@@ -124,6 +164,7 @@ fn tree_recursive_display_helper(result: &mut String, prefix: &String, node: &Sy
             }
         },
         SyntaxNode::Operand(_) => (),
+        SyntaxNode::Input(_) => (),
     }
 }
 
@@ -131,6 +172,7 @@ fn tree_recursive_display_helper(result: &mut String, prefix: &String, node: &Sy
 enum SyntaxNode {
     Operator(OperatorNode),
     Operand(OperandNode),
+    Input(usize)
 }
 
 impl SyntaxNode {
@@ -286,8 +328,24 @@ impl SyntaxNode {
 
     // TODO: Return Eval Request when equation requests input, such as a dice roll or selecting a reference to another value instance.
     // Optional data view so that we can force queries to be a value?
-    fn eval_recursive(&self, container: &MetaTypeInstance, data: Option<&DataView>) -> Result<EvalResult, EvaluationError> {
+    fn eval_recursive<'a>(&'a self, expects: &EvalResultType, container: &'a MetaTypeInstance, data: Option<&'a DataView>, inputs: Option<&'a Vec<Value>>) -> Result<EvalResult, EvaluationError> {
         match &self {
+            SyntaxNode::Input(index) => {
+                if let Some(inputs) = inputs {
+                    if let Some(input) = inputs.iter().nth(*index) {
+                        match expects {
+                            EvalResultType::Numeric => if let Some(num) = input.as_f32(container, data) {
+                                return Ok(EvalResult::Numeric(num));
+                            },
+                            EvalResultType::Boolean => {},
+                            EvalResultType::MetaType => if let Some(inst) = input.as_meta_inst(data) {
+                                return Ok(EvalResult::MetaType(inst));
+                            },
+                        }
+                    }
+                }
+                return Err(EvaluationError);
+            },
             SyntaxNode::Operator(op) => {
                 // Perform operation if we can. If the eval result of children are requests, 
                 // we need to build up the tree for the eval result to pass back up the chain. 
@@ -296,10 +354,43 @@ impl SyntaxNode {
 
                 // Expect a boolean result?
                 // Expect a numeric result?
-
+                // let mut results = vec![];
+                // for n in &op.vals {
+                //     results.push(n.eval_recursive(container, data, inputs)?);
+                // }
+                
+                // let mut requests = vec![];
+                // let mut node = op.clone();
+                // for res in &results {
+                //     match res {
+                //         EvalResult::Numeric(num) => {
+                //             node.vals.push(SyntaxNode::Operand(OperandNode::Number(*num)));
+                //         },
+                //         EvalResult::MetaType(m) => {
+                //             node.vals.push(SyntaxNode::Operand(OperandNode::Query()))
+                //         },
+                //         EvalResult::Boolean(b) => {
+                //             node.vals.push(SyntaxNode::Operand(OperandNode::Boolean(*b)));
+                //         },
+                //         EvalResult::Input(_, _) => todo!(),
+                //         EvalResult::Request(_) => todo!(),
+                //     }
+                //     if let Some((mut r, mut t)) = res.as_input() {
+                //         t.root.add_to_input_index(requests.len());
+                //         node.vals.push(t.root);
+                //         requests.append(&mut r);
+                //     } else if let Some(r) = res.as_request() {
+                //         node.vals.push(SyntaxNode::Input(requests.len()));
+                //         requests.push(r);
+                //     } else if let Some(num) = res.as_f32(data) {
+                //     } else if let Some(b) = res.as_bool() {
+                //     }
+                // }
                 // Evaluate
                 match op.op {
-                    Operation::Add => todo!(),
+                    Operation::Add => {
+
+                    },
                     Operation::Subtract => todo!(),
                     Operation::Multiply => todo!(),
                     Operation::Divide => todo!(),
@@ -341,73 +432,69 @@ impl SyntaxNode {
             }, 
             SyntaxNode::Operand(o) => {
                 // Result could be a number, eval of another meta type, a request for input or a die roll request.
-
-                // Is a number, return EvalResult of a numeric type
                 match o {
-                    OperandNode::Number(num) => {
-                        return Ok(EvalResult::Numeric(*num))
-                    },
+                    OperandNode::Number(num) => 
+                        if expects == &EvalResultType::Numeric {
+                            return Ok(EvalResult::Numeric(*num))
+                        } else {
+                            return Err(EvaluationError)
+                        },
+                    OperandNode::Boolean(b) => 
+                        if expects == &EvalResultType::Boolean {
+                            return Ok(EvalResult::Boolean(*b));
+                        } else {
+                            return Err(EvaluationError)
+                        },
                     OperandNode::Query(query) => {
-                        // Check if container has the meta-type first
+                        let mut v = None;
 
-                        // Then check if the index has it
+                        if let Some(val) = container.get_field_value(query) {
+                            // Check if container has the meta-type first
+                            v = Some(val);
+                        } else if let Some(data) = data {
+                            // Then check if the index has it
+                            if let Some(val) = data.get_owned_index().get_values().get_value(query) {
+                                v = Some(val);
+                            }
+                        }
                         
-                        // If neither has it, pass the query up the chain?
+                        if let Some(val) = v {
+                            match expects {
+                                EvalResultType::Numeric => {
+                                    if let Some(num) = val.as_f32(container, data) {
+                                        return Ok(EvalResult::Numeric(num));
+                                    }
+                                },
+                                EvalResultType::Boolean => {},
+                                EvalResultType::MetaType => {
+                                    if let Some(meta_inst) = val.as_meta_inst(data) {
+                                        return Ok(EvalResult::MetaType(meta_inst));
+                                    }
+                                },
+                            }
 
-                        // If we found a value, check the type. If it is an input or die roll,
-                        // pass a Request up the chain.
+                            if let Some(input) = val.as_input() {
+                                return Ok(EvalResult::Request(EvalRequest::Input(input.clone())));
+                            } else if let Some(die_roll) = val.as_die_roll() {
+                                return Ok(EvalResult::Request(EvalRequest::DieRoll(die_roll.clone())))
+                            }
+                        }
+                        
+                        // When data is None, we expect the meta inst to have the field with the name
+                        return Err(EvaluationError);
                     },
                 }
-                todo!()
             }, 
         }
-
-        // match &self {
-        //     SyntaxNode::Operand(op) => {
-        //         match &op {
-        //             OperandNode::Number(i) => Ok(EvalResult::Numeric(*i)),
-        //             OperandNode::Query(q) => {
-        //                 let mut val = None;
-        //                 if let Some(fv) = container.get_field_value(q) {
-        //                     if let Some(v) = fv.as_f32(container, data) {
-        //                         val = Some(v);
-        //                     }
-        //                 }
-        //                 if val.is_none() {
-        //                     if let Some(i) = data.get_instance(q) {
-        //                         if let Some(v) = i.get_field_value("Value") {
-        //                             if let Some(v) = v.as_f32(container, data) {
-        //                                 val = Some(v);
-        //                             }
-        //                         }
-        //                     }
-        //                 }
-        //                 if let Some(v) = val {
-        //                     Ok(v);
-        //                 } else {
-        //                     Err(EvaluationError); // Some Error
-        //                 }
-                        
-        //             },
-        //         }
-        //     },
-        // }
-        //     SyntaxNode::Operator(op) => {
-        //         match op.op {
-        //             Operation::Add => Ok(Self::eval_recursive(&op.vals[0], container, data)? + Self::eval_recursive(&op.vals[1], container, data)?),
-        //             Operation::Subtract => Ok(Self::eval_recursive(&op.vals[0], container, data)? - Self::eval_recursive(&op.vals[1], container, data)?),
-        //             Operation::Multiply => Ok(Self::eval_recursive(&op.vals[0], container, data)? * Self::eval_recursive(&op.vals[1], container, data)?),
-        //             Operation::Divide => Ok(Self::eval_recursive(&op.vals[0], container, data)? / Self::eval_recursive(&op.vals[1], container, data)?),
-        //             Operation::Negate => Ok(-Self::eval_recursive(&op.vals[0], container, data)?),
-        //             Operation::Pow => Ok(Self::eval_recursive(&op.vals[0], container, data)?.powf(Self::eval_recursive(&op.vals[1], container, data)?)),
-        //             Operation::Sqrt => Ok(Self::eval_recursive(&op.vals[0], container, data)?.sqrt()),
-        //             Operation::Round => Ok(Self::eval_recursive(&op.vals[0], container, data)?.round()),
-        //             Operation::RoundDown => Ok(Self::eval_recursive(&op.vals[0], container, data)?.floor()),
-        //             Operation::RoundUp => Ok(Self::eval_recursive(&op.vals[0], container, data)?.ceil()),
-        //         }
-        //     }
-        // }
         todo!()
+    }
+
+    fn add_to_input_index(&mut self, add: usize) {
+        match self {
+            SyntaxNode::Operator(op) => op.vals.iter_mut().for_each(|f| f.add_to_input_index(add)),
+            SyntaxNode::Operand(_) => {},
+            SyntaxNode::Input(i) => *i = *i + add,
+        }
     }
 }
 
@@ -416,6 +503,7 @@ impl Display for SyntaxNode {
         match &self {
             SyntaxNode::Operator(node) => write!(f, "{}", node),
             SyntaxNode::Operand(node) => write!(f, "{}", node),
+            SyntaxNode::Input(_) => todo!(),
         }
     }
 }
@@ -467,6 +555,7 @@ impl Display for OperatorNode {
 #[derive(Debug, Clone, PartialEq)]
 enum OperandNode {
     Number(f32),
+    Boolean(bool),
     Query(String)
 }
 
@@ -491,6 +580,7 @@ impl Display for OperandNode {
         match &self {
             Self::Number(n) => write!(f, "{}", n),
             Self::Query(s) => write!(f, "{}", s),
+            Self::Boolean(_) => todo!(),
         }
     }
 }
@@ -675,6 +765,57 @@ mod tests {
                     SyntaxNode::Operand(OperandNode::new("Field".to_string()).unwrap()), 
                     SyntaxNode::Operand(OperandNode::new("Desired".to_string()).unwrap())
                 ]))
+            ]));
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn and_equal_field_query_parse() {
+        let test= EquationSyntaxTree::build_syntax_tree("Spell::Technique == Technique && Spell::Form == Form".to_string()).unwrap().root;
+        let expected = SyntaxNode::Operator(OperatorNode::new(Operation::And, 
+            vec![
+                SyntaxNode::Operator(OperatorNode::new(Operation::Equal, vec![
+                    SyntaxNode::Operator(OperatorNode::new(Operation::Query, vec![
+                        SyntaxNode::Operand(OperandNode::new("Spell".to_string()).unwrap()),
+                        SyntaxNode::Operand(OperandNode::new("Technique".to_string()).unwrap())
+                    ])), 
+                    SyntaxNode::Operand(OperandNode::new("Technique".to_string()).unwrap())
+                ])),
+                SyntaxNode::Operator(OperatorNode::new(Operation::Equal, vec![
+                    SyntaxNode::Operator(OperatorNode::new(Operation::Query, vec![
+                        SyntaxNode::Operand(OperandNode::new("Spell".to_string()).unwrap()),
+                        SyntaxNode::Operand(OperandNode::new("Form".to_string()).unwrap())
+                    ])), 
+                    SyntaxNode::Operand(OperandNode::new("Form".to_string()).unwrap())
+                ]))
+            ]));
+        assert_eq!(test, expected);
+    }
+
+    #[test]
+    fn and_mult_equal_field_query_parse() {
+        let test= EquationSyntaxTree::build_syntax_tree("Spell::Technique == Technique && Spell::Form == Form && 1 != 2".to_string()).unwrap().root;
+        let expected = SyntaxNode::Operator(OperatorNode::new(Operation::And, vec![
+                SyntaxNode::Operator(OperatorNode::new(Operation::Equal, vec![
+                    SyntaxNode::Operator(OperatorNode::new(Operation::Query, vec![
+                        SyntaxNode::Operand(OperandNode::new("Spell".to_string()).unwrap()),
+                        SyntaxNode::Operand(OperandNode::new("Technique".to_string()).unwrap())
+                    ])), 
+                    SyntaxNode::Operand(OperandNode::new("Technique".to_string()).unwrap())
+                ])),
+                SyntaxNode::Operator(OperatorNode::new(Operation::And, vec![
+                    SyntaxNode::Operator(OperatorNode::new(Operation::Equal, vec![
+                        SyntaxNode::Operator(OperatorNode::new(Operation::Query, vec![
+                            SyntaxNode::Operand(OperandNode::new("Spell".to_string()).unwrap()),
+                            SyntaxNode::Operand(OperandNode::new("Form".to_string()).unwrap())
+                        ])), 
+                        SyntaxNode::Operand(OperandNode::new("Form".to_string()).unwrap())
+                    ])),
+                    SyntaxNode::Operator(OperatorNode::new(Operation::NotEqual, vec![
+                        SyntaxNode::Operand(OperandNode::new("1".to_string()).unwrap()),
+                        SyntaxNode::Operand(OperandNode::new("2".to_string()).unwrap())
+                    ]))
+                ])),
             ]));
         assert_eq!(test, expected);
     }

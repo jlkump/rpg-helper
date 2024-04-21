@@ -51,16 +51,8 @@ impl<'b> DataView<'b> {
         todo!()
     }
 
-    pub fn query_inst<'a>(&'a self, id: u32, meta_inst_name: &str) -> Option<&'a MetaTypeInstance<'b>> {
-        if self.index.get_id() == id {
-            self.index.get_values().get_instance(meta_inst_name)
-        } else {
-            if let Some(i) = self.shared_indexes.iter().find(|f| f.get_id() == id) {
-                i.get_values().get_instance(meta_inst_name)
-            } else {
-                None
-            }
-        }
+    pub fn get_owned_index(&self) -> &Index<'b> {
+        return &self.index
     }
 
     pub fn get_id(&self) -> u32 {

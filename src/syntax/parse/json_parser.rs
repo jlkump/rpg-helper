@@ -146,7 +146,7 @@ pub fn parse_values<'a>(types: &'a TypeIndex, path: &str) -> ValueIndex<'a> {
     result.build()
 }
 
-fn build_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex, m: serde_json::Map<String, serde_json::Value>) -> MetaTypeInstance<'a> {
+fn build_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex, m: serde_json::Map<String, serde_json::Value>) -> Value<'a> {
     let mut val = MetaTypeInstance::new(meta_type);
     for (k, v) in m {
         match k.as_str() {
@@ -157,7 +157,8 @@ fn build_instance<'a>(meta_type: &'a MetaType, types: &'a TypeIndex, m: serde_js
             }
         }
     }
-    val.build(&types)
+    val.build(&types);
+    todo!()
 }
 
 fn to_value<'a>(val: serde_json::Value, t: Type, types: &'a TypeIndex) -> Value<'a> {
@@ -184,7 +185,8 @@ fn to_value<'a>(val: serde_json::Value, t: Type, types: &'a TypeIndex) -> Value<
         serde_json::Value::Object(m) => {
             if let Type::Meta(meta_type_name) = t {
                 let result = build_instance(types.get_type(&meta_type_name).expect("Unknown type"), types, m);
-                Value::new_meta_instance(meta_type_name, result)
+                // Value::new_meta_instance(meta_type_name, result)
+                todo!()
             } else {
                 println!("Type mis-match, expected meta found {} for value {:?}", t, m);
                 panic!()

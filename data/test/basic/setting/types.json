@@ -28,7 +28,7 @@
     },
     "Formuliac Casting Total": {
         "Spell": "Ref<Spell>",
-        "Value": "((Spell::Mastery < 0) ? Stress Die : Exploding Die Roll) + rounddown(Spell::Mastery) + Stamina + Aura Modifier + find(Casting Score, Spell::Technique == F::Technique && Spell::Form == F::Form)"
+        "Value": "((Spell::Mastery < 0) ? Stress Die : Exploding Die Roll) + rounddown(Spell::Mastery) + Stamina + Aura Modifier + find(Casting Score, Spell::Technique == Technique && Spell::Form == Form)"
     },
     "Ritual Casting Total": {
         "Spell": "Ref<Spell>",

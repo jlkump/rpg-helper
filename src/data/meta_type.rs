@@ -4,8 +4,10 @@ use crate::data::equation::Equation;
 use crate::error::*;
 
 use super::dice::DieRoll;
+use super::equation::EvalResultType;
 use super::indexes::type_index::TypeIndex;
 use super::indexes::value_index::ValueIndex;
+use super::DataView;
 
 
 #[derive(PartialEq, Debug)]
@@ -126,6 +128,17 @@ impl<'g> MetaTypeInstance<'g> {
 
     pub fn get_mut_field_value(&mut self, field_name: &str) -> Option<&mut Value<'g>> {
         self.fields.get_mut(field_name)
+    }
+
+    pub fn as_f32(&self, data: Option<&'g DataView>) -> Option<f32> {
+        if let Some(val) = self.fields.get("Value") {
+            if let Some(num) = val.as_f32(&self, data) {
+                return Some(num)
+            } else if let Some(inst) = val.as_meta_inst(data) {
+                return inst.as_f32(data)
+            }
+        }
+        return None
     }
 
     pub fn get_type(&self) -> &'g MetaType {
@@ -276,47 +289,32 @@ impl<'g> Value<'g> {
         }
     }
 
-    pub fn as_f32(&self, container: &MetaTypeInstance, data: &ValueIndex) -> Option<f32> {
+    pub fn as_f32(&self, container: &MetaTypeInstance, data: Option<&DataView>) -> Option<f32> {
         match &self.d {
             Data::Num(n) => Some(*n),
-            Data::Text(_) | Data::Enum(_) | Data::DieRoll | Data::Input => None,
             Data::List(l) => l.iter().fold(Some(0 as f32), |a: Option<f32>, v| {
                 if let Some(a) = a {
                     if let Some(v) = v.as_f32(container, data) {
-                        Some(a + v)
-                    } else {
-                        None
+                        return Some(a + v);
                     }
-                } else {
-                    None
                 }
+                return None;
             }),
-            Data::Meta(t) => if let Some(v) = t.get_field_value("Value") {
-                v.as_f32(t, data)
+            Data::Equation => if let Ok(v) = self.t.to_equation().unwrap().evaluate(&EvalResultType::Numeric ,container, data) {
+                v.as_f32(data)
             } else {
                 None
             },
-            Data::Equation => if let Ok(v) = self.t.to_equation().unwrap().evaluate(container, data) {
-                Some(v)
-            } else {
-                None
-            }
+            Data::Meta(m) => m.as_f32(data),
             Data::MetaRef(r) => {
-                let mut result = None;
-                // First try to see if the reference is to a value contained in self
-                if let Some(v) = container.get_field_value(r) {
-                    result = v.as_f32(container, data);
-                }
-                // If the value is not contained in self, see if it is contained in the data
-                if result.is_none() {
-                    if let Some(m) = data.get_instance(r) {
-                        if let Some(v) = m.get_field_value("Value") {
-                            result = v.as_f32(m, data)
-                        }
+                if let Some(data) = data {
+                    if let Some(val) = data.get_owned_index().get_values().get_value(r) {
+                        return val.as_f32(container, Some(data));
                     }
                 }
-                result
-            }
+                return None;
+            },
+            Data::Text(_) | Data::Enum(_) | Data::DieRoll | Data::Input => None,
         }
     }
 
@@ -344,6 +342,42 @@ impl<'g> Value<'g> {
             Some(l)
         } else {
             None
+        }
+    }
+
+    pub fn as_meta_inst(&self, data: Option<&'g DataView>) -> Option<&'g MetaTypeInstance> {
+        match &self.d {
+            Data::Num(_) | Data::Text(_) | Data::List(_) | 
+            Data::Enum(_) | Data::Equation | Data::Input | Data::DieRoll => return None,
+            Data::Meta(m) => return Some(m),
+            Data::MetaRef(r) => if let Some(data) = data {
+                if let Some(v) = data.get_owned_index().get_values().get_value(&r) {
+                    return v.as_meta_inst(Some(data))
+                }
+            },
+        }
+        return None
+    }
+
+    pub fn as_mut_meta_inst(&mut self) -> Option<&'g mut MetaTypeInstance> {
+        match &mut self.d {
+            Data::Meta(m) => return Some(m),
+            // Might allow to get mut meta inst from reference?
+            _ => None
+        }
+    }
+
+    pub fn as_input<'a>(&'a self) -> Option<&'a RestrictedInput> {
+        match &self.t {
+            Type::Input(r) => Some(r),
+            _ => None,
+        }
+    }
+
+    pub fn as_die_roll<'a>(&'a self) -> Option<&'a DieRoll> {
+        match &self.t {
+            Type::DieRoll(roll) => Some(roll),
+            _ => None,
         }
     }
 
