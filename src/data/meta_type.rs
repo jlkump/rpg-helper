@@ -141,6 +141,18 @@ impl<'g> MetaTypeInstance<'g> {
         return None
     }
 
+    pub fn compare(&self, other: &Self, data: Option<&'g DataView>) -> bool {
+        if self == other {
+            return true;
+        }
+        if let Some(num) = self.as_f32(data) {
+            if let Some(other_num) = other.as_f32(data) {
+                return num == other_num;
+            }
+        }
+        false
+    }
+
     pub fn get_type(&self) -> &'g MetaType {
         &self.t
     }
@@ -200,10 +212,32 @@ impl<'a> MetaTypeInstanceBuilder<'a> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Value<'a> {
     t: Type,
     d: Data<'a>
+}
+
+impl PartialEq for Value<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.t == other.t && self.d == other.d {
+            return true;
+        }
+        if self.t == other.t {
+            if let Data::Enum(e) = &self.d {
+                if let Data::Text(t) = &other.d {
+                    return e == t;
+                }
+            } else if let Data::Text(t) = &self.d {
+                if let Data::Enum(e) = &other.d {
+                    return e == t;
+                }
+            }
+        }
+
+
+        false
+    }
 }
 
 impl<'g> Value<'g> {
