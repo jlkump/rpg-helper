@@ -142,7 +142,7 @@ impl<'a, 'b> EvalResult<'a, 'b> {
         }
     }
 
-    fn expects_bool(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> Option<&MetaTypeInstance> {
+    fn expects_bool(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> Option<bool> {
         todo!()
     }
 }
@@ -545,9 +545,6 @@ impl SyntaxNode {
             },
             Operation::Equal => {
                 // Could expect either a meta type or a numeric value
-
-                // We need some way of making the expects_inst callable multiple times. RN, calling multiple times
-                // will ruin the Eval Tree that gets returned.
                 if let Some(v0) = children_vals[0].expects_inst(&mut node, &mut prev_requests, &mut v0_requested) {
                     if let Some(v1) = children_vals[1].expects_inst(&mut node, &mut prev_requests, &mut v1_requested) {
                         // Currently compare for meta inst compares
@@ -561,17 +558,50 @@ impl SyntaxNode {
                     }
                 }
             },
-            Operation::NotEqual => todo!(),
+            Operation::NotEqual => {
+                if let Some(v0) = children_vals[0].expects_inst(&mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_inst(&mut node, &mut prev_requests, &mut v1_requested) {
+                        // Currently compare for meta inst compares
+                        //  First, if the types match and the data matches exactly or
+                        //  Second, if the types both can be numbers, if their values are the same
+                        return Ok(EvalResult::Boolean(!v0.compare(v1, data)));
+                    }
+                } else if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests, &mut v1_requested) {
+                        return Ok(EvalResult::Boolean(v0 != v1));
+                    }
+                }
+            },
             Operation::LessThan => todo!(),
             Operation::LessThanEq => todo!(),
             Operation::GreaterThan => todo!(),
             Operation::GreaterThanEq => todo!(),
             Operation::Not => if let Some(v0) = children_vals[0].expects_bool(&mut node, &mut prev_requests, &mut v0_requested) {
-                // TODO
+                return Ok(EvalResult::Boolean(!v0));
             },
-            Operation::Or => todo!(),
-            Operation::And => todo!(),
+            Operation::Or => {
+                if let Some(v0) = children_vals[0].expects_bool(&mut node, &mut prev_requests, &mut v0_requested) {
+                    if v0 {
+                        return Ok(EvalResult::Boolean(true));
+                    }
+                    if let Some(v1) = children_vals[1].expects_bool(&mut node, &mut prev_requests, &mut v1_requested) {
+                        return Ok(EvalResult::Boolean(v0 || v1));
+                    }
+                }
+            },
+            Operation::And => {
+                if let Some(v0) = children_vals[0].expects_bool(&mut node, &mut prev_requests, &mut v0_requested) {
+                    if !v0 {
+                        return Ok(EvalResult::Boolean(false));
+                    }
+                    if let Some(v1) = children_vals[1].expects_bool(&mut node, &mut prev_requests, &mut v1_requested) {
+                        return Ok(EvalResult::Boolean(v0 && v1));
+                    }
+                }
+            },
         }
+        // TODO: If the first value was an input / request, then the second value has not been added to the 
+        // list of requests and to the eval tree
         return Ok(EvalResult::Input(prev_requests, RequestEval {root: SyntaxNode::Operator(node)}));
     }
 
