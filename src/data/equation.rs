@@ -106,39 +106,44 @@ impl<'a, 'b> EvalResult<'a, 'b> {
         }
     }
 
-    fn process_input_or_request(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>) -> bool {
-        // TODO: Need some way of not doing this repeatedly on the same input node request
+    fn process_input_or_request(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> bool {
+        // TODO: Need some way of not doing this repeatedly on the same input node requests
+        //       That way we don't need to worry about calling expect repeatedly
+        if *val_requested {
+            return true;
+        }
+
         if let Some((_, tree)) = self.as_input() {
-            // if !node.vals.contains(&tree.root) {
-            // }
             node.vals.push(tree.root);
+            *val_requested = true;
             return true;
         } else if let Some(eval_request) = self.as_request() {
             node.vals.push(SyntaxNode::Input(prev_requests.len()));
             prev_requests.push(eval_request);
+            *val_requested = true;
             return true;
         }
         false
     }
 
-    fn expects_f32(&self, data: Option<&DataView<'_>>, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>) -> Option<f32> {
-        if self.process_input_or_request(node, prev_requests) {
+    fn expects_f32(&self, data: Option<&DataView<'_>>, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> Option<f32> {
+        if self.process_input_or_request(node, prev_requests, val_requested) {
             None
         } else {
             self.as_f32(data)
         }
     }
 
-    fn expects_inst(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>) -> Option<&MetaTypeInstance> {
-        if self.process_input_or_request(node, prev_requests) {
+    fn expects_inst(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> Option<&MetaTypeInstance> {
+        if self.process_input_or_request(node, prev_requests, val_requested) {
             None
         } else {
             self.as_meta_inst()
         }
     }
 
-    fn expects_bool(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>) -> Option<&MetaTypeInstance> {
-
+    fn expects_bool(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> Option<&MetaTypeInstance> {
+        todo!()
     }
 }
 
@@ -455,65 +460,68 @@ impl SyntaxNode {
             }
         }
 
+        let mut v0_requested = false;
+        let mut v1_requested = false;
+
         // Evaluate
         match op.op {
             Operation::Add => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
-                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests, &mut v1_requested) {
                         return Ok(EvalResult::Numeric(v0 + v1));
                     }
                 }
             },
             Operation::Subtract => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
-                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests, &mut v1_requested) {
                         return Ok(EvalResult::Numeric(v0 - v1));
                     }
                 }
             },
             Operation::Multiply => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
-                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests, &mut v1_requested) {
                         return Ok(EvalResult::Numeric(v0 * v1));
                     }
                 }
             },
             Operation::Divide => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
-                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests, &mut v1_requested) {
                         return Ok(EvalResult::Numeric(v0 / v1));
                     }
                 }
             },
             Operation::Negate => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
                     return Ok(EvalResult::Numeric(-v0));
                 }
             },
             Operation::Pow => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
-                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests, &mut v1_requested) {
                         return Ok(EvalResult::Numeric(v0.powf(v1)));
                     }
                 }
             },
             Operation::Sqrt => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
                     return Ok(EvalResult::Numeric(v0.sqrt()));
                 }
             },
             Operation::Round => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
                     return Ok(EvalResult::Numeric(v0.round()));
                 }
             },
             Operation::RoundDown => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
                     return Ok(EvalResult::Numeric(v0.floor()));
                 }
             },
             Operation::RoundUp => {
-                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
+                if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
                     return Ok(EvalResult::Numeric(v0.ceil()));
                 }
             },
@@ -537,15 +545,18 @@ impl SyntaxNode {
             },
             Operation::Equal => {
                 // Could expect either a meta type or a numeric value
-                if let Some(v0) = children_vals[0].expects_inst(&mut node, &mut prev_requests) {
-                    if let Some(v1) = children_vals[1].expects_inst(&mut node, &mut prev_requests) {
+
+                // We need some way of making the expects_inst callable multiple times. RN, calling multiple times
+                // will ruin the Eval Tree that gets returned.
+                if let Some(v0) = children_vals[0].expects_inst(&mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_inst(&mut node, &mut prev_requests, &mut v1_requested) {
                         // Currently compare for meta inst compares
                         //  First, if the types match and the data matches exactly or
                         //  Second, if the types both can be numbers, if their values are the same
                         return Ok(EvalResult::Boolean(v0.compare(v1, data)));
                     }
-                } else if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests) {
-                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests) {
+                } else if let Some(v0) = children_vals[0].expects_f32(data, &mut node, &mut prev_requests, &mut v0_requested) {
+                    if let Some(v1) = children_vals[1].expects_f32(data, &mut node, &mut prev_requests, &mut v1_requested) {
                         return Ok(EvalResult::Boolean(v0 == v1));
                     }
                 }
@@ -555,7 +566,9 @@ impl SyntaxNode {
             Operation::LessThanEq => todo!(),
             Operation::GreaterThan => todo!(),
             Operation::GreaterThanEq => todo!(),
-            Operation::Not => if let Some(v0) = children_vals[0].expects_bool(&mut node, &mut prev_requests),
+            Operation::Not => if let Some(v0) = children_vals[0].expects_bool(&mut node, &mut prev_requests, &mut v0_requested) {
+                // TODO
+            },
             Operation::Or => todo!(),
             Operation::And => todo!(),
         }
