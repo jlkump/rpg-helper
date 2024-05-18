@@ -85,7 +85,7 @@ impl<'a, 'b> EvalResult<'a, 'b> {
         }
     }
 
-    pub fn as_meta_inst(&self) -> Option<&MetaTypeInstance> {
+    pub fn as_meta_inst(&self) -> Option<&'a MetaTypeInstance<'b>> {
         if let EvalResult::MetaType(m) = self {
             return Some(m);
         }
@@ -134,7 +134,7 @@ impl<'a, 'b> EvalResult<'a, 'b> {
         }
     }
 
-    fn expects_inst(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> Option<&MetaTypeInstance> {
+    fn expects_inst(&self, node: &mut OperatorNode, prev_requests: &mut Vec<EvalRequest>, val_requested: &mut bool) -> Option<&'a MetaTypeInstance<'b>> {
         if self.process_input_or_request(node, prev_requests, val_requested) {
             None
         } else {
@@ -446,7 +446,9 @@ impl SyntaxNode {
         return Err(EvaluationError);
     }
 
-    fn eval_operator_node<'a, 'b>(op: &OperatorNode, container: &'a MetaTypeInstance, data: Option<&'a DataView>, inputs: Option<&'a Vec<Value>>) -> Result<EvalResult<'a, 'b>, EvaluationError> {
+    fn eval_operator_node<'a, 'b>(op: &'a OperatorNode, container: &'a MetaTypeInstance, data: Option<&'a DataView<'b>>, inputs: Option<&'a Vec<Value>>) -> Result<EvalResult<'a, 'b>, EvaluationError> 
+    where 'a: 'b
+    {
         // Generally
         // - get the expected type
         // - if the type is instead an input or request type, build the resulting tree
@@ -527,21 +529,43 @@ impl SyntaxNode {
             },
             Operation::Ternary => todo!(),
             Operation::Query => {
-                // Look at the left operand node, query the 
-                todo!()
-            },
-            Operation::Find => {
-                if let SyntaxNode::Operand(type_query) = &op.vals[0] {
-                    if let OperandNode::Query(q) = type_query {
-                        // for t in data.get_value_index().all_of_type(q) {
-                        //     // See which one matches first with op.vals[1] evaluated 
-                        //     // to true as t being the input container
-                        //     // Might need a container heirarchy being passes through the eval recursive,
-                        //     // That way the "Super" qualifier can be used.
-                        // }
+                // Left operand should be an instance
+                let eval = op.vals[0].eval_recursive(EvalResultType::MetaType, container, data, inputs)?;
+                if let Some(inst) = eval.expects_inst(&mut node, &mut prev_requests, &mut v0_requested) {
+
+                    if let SyntaxNode::Operator(node) = &op.vals[1] {
+                        // Recursively eval right operand if it is an operator
+                        return Self::eval_operator_node(node, inst, data, inputs);
+                    } else if let SyntaxNode::Operand(node) = &op.vals[1] {
+                        // If the right operand is a operand, it must be a query on the inst as a container
+                        return Self::eval_operand_node(EvalResultType::Any, node, inst, None);
                     }
                 }
-                todo!()
+            },
+            Operation::Find => {
+                if let Some(data) = data {
+
+                    if let SyntaxNode::Operand(type_query) = &op.vals[0] {
+                        if let OperandNode::Query(q) = type_query {
+                            for t in data.get_all_of_type(q) {
+                                // See which one matches first with op.vals[1] evaluated 
+                                // to true as t being the input container
+                                // Might need a container heirarchy being passes through the eval recursive,
+                                // That way the "Super" qualifier can be used.
+                                if let EvalResult::Boolean(b) = op.vals[1].eval_recursive(EvalResultType::Boolean, t.inst, Some(data), inputs)? {
+                                    if b {
+                                        return Ok(EvalResult::MetaType(&t.inst));
+                                    }
+                                }
+                                
+                            }
+                        }
+                    }
+                }
+                else 
+                {
+                    panic!()
+                }
             },
             Operation::Equal => {
                 // Could expect either a meta type or a numeric value

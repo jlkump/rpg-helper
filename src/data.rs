@@ -46,12 +46,12 @@ pub struct InstanceView<'a> {
     pub inst: &'a MetaTypeInstance<'a>,
 }
 
-impl<'b> DataView<'b> {
-    pub fn get_all_of_type(&self, t: &MetaType) -> Vec<InstanceView<'b>> {
+impl DataView<'_> {
+    pub fn get_all_of_type(&self, t: &str) -> Vec<InstanceView> {
         todo!()
     }
 
-    pub fn get_owned_index(&self) -> &Index<'b> {
+    pub fn get_owned_index(&self) -> &Index {
         return &self.index
     }
 
