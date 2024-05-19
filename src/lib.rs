@@ -5,6 +5,7 @@ mod data;
 mod error;
 mod util;
 mod network;
+mod gui;
 
 pub fn run() {
     // cli::run_basic_test();
