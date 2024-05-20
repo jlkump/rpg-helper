@@ -1,4 +1,4 @@
-use crate::data::meta_type::MetaType;
+use crate::data::meta_type::{MetaType, MetaTypeInstance};
 
 #[derive(Clone, Copy)]
 struct SOMETHING;
@@ -36,8 +36,8 @@ pub struct StyleSheet {
 }
 
 impl StyleSheet {
-    pub fn get_style_for(t: MetaType) -> Style {
-        let t = t.get_type_name();
+    pub fn get_style_for(t: MetaTypeInstance) -> Style {
+        let t = t.get_type().get_type_name();
         todo!()
     }
 }
