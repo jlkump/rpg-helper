@@ -15,4 +15,4 @@ stylist = { version = "0.13", features = ["yew", "yew_use_style", "parser", "mac
 tokio = "1.34"
 yew = { version = "0.21.0",  features = ["csr"] }
 yew-router = "0.18"
-yew_icons = { version = "0.8.0", features = ["LucideMenu"] }
+yew_icons = { version = "0.8.0", features = ["LucideMenu", "FeatherChevronDown"] }
