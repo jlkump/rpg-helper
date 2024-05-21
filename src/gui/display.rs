@@ -5,6 +5,8 @@ use crate::data::meta_type::MetaTypeInstance;
 
 use super::style::StyleSheet;
 
+pub mod client;
+
 #[derive(Clone, Copy, PartialEq)]
 struct Display;
 
