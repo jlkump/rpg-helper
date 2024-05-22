@@ -3,6 +3,8 @@ use yew::prelude::*;
 use yew_icons::{Icon, IconId};
 use stylist::Style;
 
+use crate::gui::style::theme::{use_theme, Theme};
+
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
 
@@ -10,8 +12,9 @@ pub struct Props {
 
 #[styled_component(CharacterSelectDropdown)]
 pub fn character_select_dropdown(props: &Props) -> Html {
+    let theme = use_theme();
     html! {
-        <div class={get_character_select_style()}>
+        <div class={get_character_select_style(&theme)}>
             <h3 style="margin-right: 5px">{"Current Character"}</h3>
             <Icon icon_id={IconId::FeatherChevronDown}/>
             <ul class={get_character_select_dropdown_style()}>
@@ -24,28 +27,30 @@ pub fn character_select_dropdown(props: &Props) -> Html {
 }
 
 
-fn get_character_select_style() -> Style {
+fn get_character_select_style(theme: &Theme) -> Style {
     Style::new(
-        r#"
-            /* background: #ccb897; */
-            color: #7a0002;
-            border-radius: 20px;
-            padding: 10px;
-
-            display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
-            justify-content: space-between;
-            align-items: center;
-
-            -webkit-user-select: none; /* Safari */
-            -ms-user-select: none; /* IE 10 and IE 11 */
-            user-select: none; /* Standard syntax */
-
-            position: relative;
-            
-            cursor: pointer;
-        "#
+        format!(
+            r#"
+                color: {};
+                border-radius: 20px;
+                padding: 10px;
+    
+                display: flex;
+                flex-direction: row;
+                flex-wrap: nowrap;
+                justify-content: space-between;
+                align-items: center;
+    
+                -webkit-user-select: none; /* Safari */
+                -ms-user-select: none; /* IE 10 and IE 11 */
+                user-select: none; /* Standard syntax */
+    
+                position: relative;
+                
+                cursor: pointer;
+            "#,
+            theme.text_colored
+        )
     ).expect("Failed to create logo style")
 }
 

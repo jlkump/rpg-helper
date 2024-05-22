@@ -8,7 +8,7 @@ mod network;
 mod gui;
 
 pub fn run() {
-    gui::display::client::run_app();
+    gui::client::run_app();
 }
 
 

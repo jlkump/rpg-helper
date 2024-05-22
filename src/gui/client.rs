@@ -2,16 +2,14 @@ use stylist::{css, yew::Global};
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-pub mod molecules;
-pub mod organisms;
-pub mod pages;
+mod display;
 
-use crate::gui::display::client::pages::home::*;
+use crate::gui::{client::display::pages::home::*, style::theme::*};
 
-use self::pages::character_sheet::CharacterSheet;
+use self::display::pages::character_viewer::CharacterViewer;
 
 pub fn run_app() {
-    yew::Renderer::<App>::new().render();
+    yew::Renderer::<Root>::new().render();
 }
 
 #[derive(Clone, Routable, PartialEq)]
@@ -28,28 +26,38 @@ enum Route {
 fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => html! { <Home/> },
-        Route::CharacterSheet => html! { <CharacterSheet/> },
+        Route::CharacterSheet => html! { <CharacterViewer/> },
         Route::NotFound => html! { <h1>{ "404" }</h1> },
     }
 }
 
 #[function_component(App)]
 fn app() -> Html {
+    let theme = use_theme();
+
     html! {
         <>
-            // TODO: Use Yew Contexts for theme coloring rather than hardcoding
             <Global css={css!(
                 r#"
                     html, body {
                         background-color: ${bg};
                         margin: 0px;
                     }
-                "#, bg = "#ece9e4"
+                "#, bg = theme.paper
             )} />
             <BrowserRouter>
                 <Switch<Route> render={switch} /> // <- must be child of <BrowserRouter>
             </BrowserRouter>
         </>
+    }
+}
+
+#[function_component(Root)]
+fn root() -> Html {
+    html! {
+        <ThemeProvider>
+            <App />
+        </ThemeProvider>
     }
 }
 

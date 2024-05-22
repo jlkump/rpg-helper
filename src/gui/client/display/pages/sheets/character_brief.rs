@@ -1,0 +1,1 @@
+// The character brief is what is displayed when a player needs the most basic information
