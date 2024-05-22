@@ -6,7 +6,7 @@ mod display;
 
 use crate::gui::{client::display::pages::home::*, style::theme::*};
 
-use self::display::pages::character_viewer::CharacterViewer;
+use self::display::pages::{character_viewer::CharacterViewer, page_not_found::PageNotFound};
 
 pub fn run_app() {
     yew::Renderer::<Root>::new().render();
@@ -27,7 +27,7 @@ fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => html! { <Home/> },
         Route::CharacterSheet => html! { <CharacterViewer/> },
-        Route::NotFound => html! { <h1>{ "404" }</h1> },
+        Route::NotFound => html! { <PageNotFound/> },
     }
 }
 
@@ -54,6 +54,8 @@ fn app() -> Html {
 
 #[function_component(Root)]
 fn root() -> Html {
+    // TODO: Define a UserProvider for providing the user context to each element
+    // This will make it much easier to know if a user is logged in or not
     html! {
         <ThemeProvider>
             <App />

@@ -9,6 +9,8 @@ pub struct Props {
 
 #[styled_component(CharacterViewer)]
 pub fn character_viewer(_: &Props) -> Html {
+    // Displays nothing but navbar if not logged-in
+    // Might be useful to have a context for the game currently active
     html! {
         <NavBar center_item={Some(html!{<CharacterSelectDropdown/>})}/>
     }

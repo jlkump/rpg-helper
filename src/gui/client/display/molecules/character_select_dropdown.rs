@@ -13,6 +13,8 @@ pub struct Props {
 #[styled_component(CharacterSelectDropdown)]
 pub fn character_select_dropdown(props: &Props) -> Html {
     let theme = use_theme();
+    // TODO: Make actually functional :P
+
     html! {
         <div class={get_character_select_style(&theme)}>
             <h3 style="margin-right: 5px">{"Current Character"}</h3>
