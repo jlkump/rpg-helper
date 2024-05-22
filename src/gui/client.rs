@@ -3,8 +3,9 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 mod display;
+mod contexts;
 
-use crate::gui::{client::display::pages::home::*, style::theme::*};
+use crate::gui::{client::display::pages::home::*, client::contexts::style::theme::*};
 
 use self::display::pages::{character_viewer::CharacterViewer, page_not_found::PageNotFound};
 

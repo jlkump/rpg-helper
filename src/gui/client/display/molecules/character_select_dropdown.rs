@@ -3,7 +3,7 @@ use yew::prelude::*;
 use yew_icons::{Icon, IconId};
 use stylist::Style;
 
-use crate::gui::style::theme::{use_theme, Theme};
+use crate::gui::client::{use_theme, Theme};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {

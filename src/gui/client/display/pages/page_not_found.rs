@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::gui::{client::display::organisms::nav_bar::*, style::theme::use_theme};
+use crate::gui::client::{display::organisms::nav_bar::*, use_theme};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {

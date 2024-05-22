@@ -11,6 +11,9 @@ pub struct Props {
 pub fn character_viewer(_: &Props) -> Html {
     // Displays nothing but navbar if not logged-in
     // Might be useful to have a context for the game currently active
+    // This would provide the information for all atom based elements, as they
+    // could retrieve character data based on the active character.
+    // TODO: Define game context and character context in client/contexts
     html! {
         <NavBar center_item={Some(html!{<CharacterSelectDropdown/>})}/>
     }

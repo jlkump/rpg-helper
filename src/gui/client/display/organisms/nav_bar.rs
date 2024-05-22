@@ -7,7 +7,7 @@ use yew::{html, use_context, Html};
 use yew_router::components::Link;
 use stylist::Style;
 
-use crate::gui::{client::Route, style::theme::{use_theme, Theme}};
+use crate::gui::client::{use_theme, Route, Theme};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
