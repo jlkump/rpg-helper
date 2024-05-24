@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::gui::client::{display::atoms::character_portrait::CharacterPortrait, use_theme};
+use crate::gui::client::{display::atoms::{character_portrait::CharacterPortrait, colored_panel::ColoredPanel, panel::Panel}, use_theme};
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
@@ -43,19 +43,7 @@ pub fn character_details(props: &Props) -> Html {
         bgdark = theme.paper_dark
     );
 
-    let colored_panel_style = css!(
-        r#"
-            display: flex;
-            align-content: center;
-            justify-content: center;
-            background: ${bgcolor};
-            color: ${textcolor};
-            margin-top: 3px;
-            margin-bottom: 3px;
-        "#,
-        bgcolor=theme.panel_color_primary,
-        textcolor=theme.text_invert
-    );
+
 
     let panel_style = css!(
         r#"
@@ -74,26 +62,26 @@ pub fn character_details(props: &Props) -> Html {
                 <h5 style="margin: 3px">{"Antonio Tremis"}</h5>
             </div>
             <img src="./img/default/Antonio Tremis - AI Portrait.png" width=128px height=128px/>
-            <div class={colored_panel_style.clone()}>
+            <ColoredPanel>
                 {"Stats"}
-            </div>
+            </ColoredPanel>
             <div style="display: grid">
-                <div class={panel_style.clone()} style="grid-column: 1; grid-row: 1;">
+                <Panel style="grid-column: 1; grid-row: 1;">
                     {"Size"}
-                </div>
-                <div class={panel_style.clone()} style="grid-column: 2; grid-row: 1;">
+                </Panel>
+                <Panel style="grid-column: 2; grid-row: 1;">
                     {"0"}
-                </div>
-                <div class={panel_style.clone()} style="grid-column: 1; grid-row: 2;">
+                </Panel>
+                <Panel style="grid-column: 1; grid-row: 2;">
                     {"Soak"}
-                </div>
-                <div class={panel_style.clone()} style="grid-column: 2; grid-row: 2;">
+                </Panel>
+                <Panel style="grid-column: 2; grid-row: 2;">
                     {"-1"}
-                </div>
+                </Panel>
             </div>
-            <div class={colored_panel_style}>
+            <ColoredPanel>
                 {"Characteristics"}
-            </div>
+            </ColoredPanel>
             <div style="display: grid">
                 <div class={panel_style.clone()} style="grid-column: 1; grid-row: 1;">
                     {"Intelligence"}
