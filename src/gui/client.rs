@@ -35,6 +35,7 @@ fn switch(routes: Route) -> Html {
 #[function_component(App)]
 fn app() -> Html {
     let theme = use_theme();
+    // TODO: Define text sizes
 
     html! {
         <>
@@ -44,7 +45,38 @@ fn app() -> Html {
                         background-color: ${bg};
                         margin: 0px;
                     }
-                "#, bg = theme.paper
+
+                    h1 {
+                        color: ${h1};
+                        font-size: 2.5em;
+                    }
+
+                    h2 {
+                        color: ${h2};
+                        font-size: 2em;
+                    }
+
+                    h3 {
+                        color: ${h3};
+                        font-size: 1em;
+                    }
+
+                    h4 {
+                        color: ${h4};
+                        font-size: 1em;
+                    }
+
+                    h5 {
+                        color: ${h5};
+                        font-size: 1em;
+                    }
+
+                    h6 {
+                        color: ${h6};
+                        font-size: 1em;
+                    }
+                "#, bg = theme.paper, h1 = theme.h1, h2 = theme.h2, 
+                h3 = theme.h3, h4 = theme.h4, h5 = theme.h5, h6 = theme.h6
             )} />
             <BrowserRouter>
                 <Switch<Route> render={switch} /> // <- must be child of <BrowserRouter>

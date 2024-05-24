@@ -7,7 +7,7 @@ use super::meta_type::MetaTypeInstance;
 use super::meta_type::RestrictedInput;
 use super::meta_type::Type;
 use super::meta_type::Value;
-use super::DataView;
+use super::view::data_view::DataView;
 use crate::syntax::parse;
 use crate::syntax::parse::remove_paren;
 use crate::syntax::tokenize::tokenize_expression;

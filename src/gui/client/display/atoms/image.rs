@@ -1,11 +1,15 @@
+use yew::prelude::*;
+use stylist::yew::styled_component;
+
+use crate::gui::client::use_theme;
+
 // Various ways to display an image
 
-// Character Portrait
-// For displaying the character's picture
-// The user can define the dimensions of the portrait image
-// through the config files, allowing for different portraits depending on
-// the game being played
-
+// #[derive(Clone, PartialEq)]
+// pub enum ImageSrc {
+//     URL(String),
+//     File(String)
+// }
 
 
 // Image brief

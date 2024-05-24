@@ -7,7 +7,7 @@ use super::dice::DieRoll;
 use super::equation::EvalResultType;
 use super::indexes::type_index::TypeIndex;
 use super::indexes::value_index::ValueIndex;
-use super::DataView;
+use super::view::data_view::DataView;
 
 
 #[derive(PartialEq, Debug)]

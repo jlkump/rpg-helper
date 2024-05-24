@@ -2,7 +2,7 @@ use std::{collections::HashMap, io, net::TcpStream};
 
 use crate::network::{AuthorityInstance, ClientInstance};
 
-use self::{file_storage::{CharacterDataFile, GameMasterDataFile}, indexes::Index, meta_type::{MetaType, MetaTypeInstance}};
+use self::{file_storage::{CharacterDataFile, GameMasterDataFile}, indexes::Index, meta_type::{MetaType, MetaTypeInstance}, view::ActiveView};
 
 pub mod meta_type;
 pub mod equation;
@@ -13,6 +13,8 @@ pub mod file_storage;
 pub mod modifier;
 pub mod setting;
 pub mod ruleset;
+pub mod character_data;
+pub mod view;
 
 
 pub struct AppData<'a> {
@@ -33,33 +35,6 @@ pub struct Game<'a> {
     active_view: ActiveView<'a>,
     game_data: GameData,
     gm: Option<GameMasterDataFile> // If this player can be a gm, then they have some gm data. If not, this is NONE
-}
-pub enum ActiveView<'a> {
-    Character(&'a DataView<'a>),
-    GameMaster(&'a DataView<'a>)
-}
-pub struct DataView<'a> {
-    index: Index<'a>,
-    shared_indexes: Vec<Index<'a>> // For characters that the player knows about, such as other players or NPCs
-}
-
-pub struct InstanceView<'a> {
-    pub owner: &'a u32,
-    pub inst: &'a MetaTypeInstance<'a>,
-}
-
-impl DataView<'_> {
-    pub fn get_all_of_type(&self, t: &str) -> Vec<InstanceView> {
-        todo!()
-    }
-
-    pub fn get_owned_index(&self) -> &Index {
-        return &self.index
-    }
-
-    pub fn get_id(&self) -> u32 {
-        self.index.get_id()
-    }
 }
 
 pub struct GameData {

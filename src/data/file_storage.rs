@@ -1,8 +1,6 @@
 use std::{collections::HashMap, io};
 
-use super::DataView;
-
-
+use super::view::data_view::DataView;
 
 pub struct CharacterDataFile {
     character_name: String,

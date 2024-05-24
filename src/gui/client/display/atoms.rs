@@ -1,3 +1,4 @@
 mod table;
-mod image;
+pub mod image;
+pub mod character_portrait;
 mod panel;
