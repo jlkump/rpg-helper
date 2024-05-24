@@ -1,0 +1,2 @@
+// A setting is defined in the same way as a rule-set, however, they are made to override or add to an existing rule-set.
+// They do not define a game in and of itself and can not remove anything from a rule-set.

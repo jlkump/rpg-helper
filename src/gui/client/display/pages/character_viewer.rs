@@ -14,6 +14,9 @@ pub fn character_viewer(_: &Props) -> Html {
     // This would provide the information for all atom based elements, as they
     // could retrieve character data based on the active character.
     // TODO: Define game context and character context in client/contexts
+    
+    // A character viewer can be either rule-set specific or setting specific.
+    // Any default character viewer sheet i
     html! {
         <NavBar center_item={Some(html!{<CharacterSelectDropdown/>})}/>
     }

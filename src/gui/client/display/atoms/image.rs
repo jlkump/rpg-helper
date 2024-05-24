@@ -6,6 +6,8 @@
 // through the config files, allowing for different portraits depending on
 // the game being played
 
+
+
 // Image brief
 // For displaying the images of wiki creatures and npcs
 

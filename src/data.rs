@@ -11,6 +11,8 @@ pub mod indexes;
 pub mod dice;
 pub mod file_storage;
 pub mod modifier;
+pub mod setting;
+pub mod ruleset;
 
 
 pub struct AppData<'a> {

@@ -57,6 +57,7 @@ fn app() -> Html {
 fn root() -> Html {
     // TODO: Define a UserProvider for providing the user context to each element
     // This will make it much easier to know if a user is logged in or not
+    // This will also probably replace the theme provider as the User defines the theme used
     html! {
         <ThemeProvider>
             <App />

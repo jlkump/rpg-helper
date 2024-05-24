@@ -20,6 +20,8 @@ pub struct Theme {
     pub scroll_bar_hover: String,
     pub scroll_bar_drag: String,
     pub border_colored: String,
+    pub image_border: String,
+    pub hover_dropshadow: String,
     pub navbar_line: String,
     pub logo: String,
     pub hamburger_menu: String
@@ -89,6 +91,8 @@ fn get_default_theme() -> Theme {
         scroll_bar_hover: "#da9840".to_owned(),
         scroll_bar_drag: "#da9840".to_owned(),
         border_colored: "#7a0002".to_owned(),
+        image_border: "#bd9f89".to_owned(),
+        hover_dropshadow: "rgb(163, 122, 93, 0.5)".to_owned(),
         navbar_line: "#7a0002".to_owned(),
         logo: "#7a0002".to_owned(),
         hamburger_menu: "#7a0002".to_owned()
