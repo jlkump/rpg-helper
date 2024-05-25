@@ -34,6 +34,18 @@ pub fn character_viewer(_: &Props) -> Html {
                 <CharacterDetails />
                 <TabbedSheet />
             </div>
+                <div>
+                <CharacterDetails />
+                <TabbedSheet />
+            </div>
+            <div>
+                <CharacterDetails />
+                <TabbedSheet />
+            </div>
+            <div>
+                <CharacterDetails />
+                <TabbedSheet />
+            </div>
         </>
     }
 }

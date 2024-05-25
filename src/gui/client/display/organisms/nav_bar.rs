@@ -42,6 +42,9 @@ fn get_bar_span_style(theme: &Theme) -> Style {
     Style::new(
         format!(
             r#"
+                position: sticky;
+                position: -webkit-sticky;
+                top: 0;
                 display: flex;
                 flex-direction: row;
                 flex-wrap: nowrap;
