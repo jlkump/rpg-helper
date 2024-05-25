@@ -1,8 +1,8 @@
-use gloo::timers::callback::{Interval, Timeout};
+use gloo::timers::callback::Timeout;
 use yew::prelude::*;
-use stylist::{css, yew::styled_component, Style};
+use stylist::{css, yew::styled_component};
 
-use crate::gui::client::{display::atoms::{colored_panel::ColoredPanel, loader::Loader}, use_theme, Theme};
+use crate::gui::client::{display::atoms::loader::Loader, use_theme};
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
@@ -12,6 +12,8 @@ pub struct Props {
     pub position: Position,
 }
 
+// Doing position will likely require getting the width of the child HTML element
+// So rn, won't work till I figure that out
 #[derive(Clone, PartialEq)]
 pub enum Position {
     Top,
@@ -27,7 +29,6 @@ pub enum Msg {
     MouseExitedPane,
     Done,
     Close,
-    Cancel,
 }
 
 pub struct Tooltip {
@@ -55,7 +56,7 @@ impl Component for Tooltip {
 
     type Properties = Props;
 
-    fn create(ctx: &Context<Self>) -> Self {
+    fn create(_: &Context<Self>) -> Self {
         Self {
             hovered_pane: false,
             hard_pane: false,
@@ -119,11 +120,7 @@ impl Component for Tooltip {
 
                 self.cancel();
                 true
-            },
-            Msg::Cancel => {
-                self.cancel();
-                true
-            },
+            }
         }
     }
 
@@ -132,7 +129,7 @@ impl Component for Tooltip {
         let on_exited_tooltip = ctx.link().callback(|_| Msg::MouseExitedTooltip);
         let on_entered_pane = ctx.link().callback(|_| Msg::MouseEnteredPane);
         let on_exited_pane = ctx.link().callback(|_| Msg::MouseExitedPane);
-        let on_tooltip_clicked = ctx.link().callback(|_| Msg::MouseEnteredPane);
+
         html! {
             <>
                 if self.should_display_pane() {
@@ -140,7 +137,7 @@ impl Component for Tooltip {
                         { ctx.props().tooltip_content.clone() }
                     </TooltipPane>
                 }
-                <div onmouseenter={on_entered_tooltip} onmouseleave={on_exited_tooltip} onmousedown={on_tooltip_clicked}>
+                <div onmouseenter={on_entered_tooltip} onmouseleave={on_exited_tooltip}>
                     { ctx.props().children.clone() }
                 </div>
             </>
