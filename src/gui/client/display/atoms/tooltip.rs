@@ -192,25 +192,3 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
         </div>
     }
 }
-
-// #[styled_component(Tooltip)]
-// pub fn tooltip(props: &Props) -> Html {
-//     let theme = use_theme();
-//     let tooltip = css!(
-//         r#"
-//             position: absolute;
-//             background: ${bg};
-//         "#,
-//         bg=theme.paper_dark
-//     );
-//     html! {
-//         <>
-//             <div class={tooltip}>
-//                 <h2>{"Tooltip content!"}</h2>
-//             </div>
-//             <div onmouseenter={Callback::from(|_| ())} onmouseleave={Callback::from(|_| ())}>
-//                 { props.children.clone() }
-//             </div>
-//         </>
-//     }
-// }
