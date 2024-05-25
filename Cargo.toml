@@ -11,8 +11,10 @@ clap = "4.5"
 gloo = "0.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sled = { version = "0.34.7" } # Embedded database, so we don't have to deal with cloud servers so much
 stylist = { version = "0.13", features = ["yew", "yew_use_style", "parser", "macros"] }
 tokio = "1.34"
 yew = { version = "0.21.0",  features = ["csr"] }
 yew-router = "0.18"
 yew_icons = { version = "0.8.0", features = ["LucideMenu", "FeatherChevronDown"] }
+wasm-bindgen = "0.2"

@@ -26,8 +26,6 @@ pub fn colored_panel(props: &Props) -> Html {
                 justify-content: center;
                 background: ${bgcolor};
                 color: ${textcolor};
-                margin-top: 3px;
-                margin-bottom: 3px;
             "#,
             bgcolor=theme.panel_color_secondary,
             textcolor=theme.text_invert
@@ -40,8 +38,6 @@ pub fn colored_panel(props: &Props) -> Html {
                 justify-content: center;
                 background: ${bgcolor};
                 color: ${textcolor};
-                margin-top: 3px;
-                margin-bottom: 3px;
             "#,
             bgcolor=theme.panel_color_primary,
             textcolor=theme.text_invert

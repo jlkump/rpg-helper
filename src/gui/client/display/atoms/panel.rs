@@ -27,8 +27,6 @@ pub fn panel(props: &Props) -> Html {
                 display: flex;
                 align-content: center;
                 justify-content: center;
-                margin-top: 2px;
-                margin-bottom: 0px;
             "#
         )
     } else {
@@ -39,8 +37,6 @@ pub fn panel(props: &Props) -> Html {
                     align-content: center;
                     justify-content: center;
                     background: ${bgcolor};
-                    margin-top: 3px;
-                    margin-bottom: 3px;
                 "#,
                 bgcolor=theme.panel_secondary
             )
@@ -51,8 +47,6 @@ pub fn panel(props: &Props) -> Html {
                     align-content: center;
                     justify-content: center;
                     background: ${bgcolor};
-                    margin-top: 3px;
-                    margin-bottom: 3px;
                 "#,
                 bgcolor=theme.panel_primary
             )
