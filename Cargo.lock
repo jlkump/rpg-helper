@@ -1123,6 +1123,7 @@ dependencies = [
  "stylist",
  "tokio",
  "wasm-bindgen",
+ "web-sys",
  "yew",
  "yew-router",
  "yew_icons",

@@ -59,7 +59,7 @@ pub fn character_details(props: &Props) -> Html {
     html! {
         <div class={side_panel_style}>
             <div class={header_panel_style}>
-                <Tooltip tooltip_content={html! { <CharacterDetails/>}}>
+                <Tooltip tooltip_content={html! { <CharacterDetails/>}} simple=false>
                     <h5 style="margin: 3px">{"Antonio Tremis"}</h5>
                 </Tooltip>
             </div>
