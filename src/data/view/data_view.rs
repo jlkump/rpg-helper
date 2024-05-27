@@ -1,3 +1,5 @@
+use web_sys::CharacterData;
+
 use crate::data::indexes::Index;
 
 use super::instance_view::InstanceView;

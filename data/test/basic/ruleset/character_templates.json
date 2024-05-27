@@ -1,0 +1,19 @@
+{
+    "Magus": {
+        "Type": "Character",
+        "Subtype": "Magus",
+        "Requires": {
+            "Art": ["Creo", "..."],
+            "Ability": ["Magic Theory"],
+            "Virtue": [],
+            "Flaw": [],
+            "DEBUG": "The things to select for character creation? List all abilities that the character has access to?"
+        }
+    },
+    "Companion" : {
+        "Type": "Companion"
+    },
+    "Grog": {
+        "Type": "Grog"
+    }
+}

@@ -17,6 +17,7 @@ pub struct Props {
 
 pub enum Msg {
     MouseEnteredTooltip(i32, i32),
+    MouseMoveTooltip(i32, i32),
     MouseExitedTooltip,
     MouseEnteredPane,
     MouseExitedPane,
@@ -44,7 +45,18 @@ impl Tooltip {
     fn cancel(&mut self) {
         self.delay_display = None;
         self.stay_hover_timeout = None;
-        self.empty_timeout = None;
+    }
+
+    fn close(&mut self) {
+        if !self.hovered_pane {
+            self.hovered_pane = false;
+            self.hovered_tooltip = false;
+            self.hard_pane = false;
+            self.display = false;
+            self.empty_timeout = None;
+        }
+
+        self.cancel();
     }
 }
 
@@ -70,25 +82,36 @@ impl Component for Tooltip {
         match msg {
             Msg::MouseEnteredTooltip(x, y) => {
                 self.hovered_tooltip = true;
-                if self.delay_display.is_none() && !self.display {
-                    let handle = {
-                        let link = ctx.link().clone();
-                        Timeout::new(250, move || link.send_message(Msg::Display))
-                    };
-                    self.delay_display = Some(handle);
+                if !ctx.props().simple {
+                    if self.delay_display.is_none() && !self.display {
+                        let handle = {
+                            let link = ctx.link().clone();
+                            Timeout::new(250, move || link.send_message(Msg::Display))
+                        };
+                        self.delay_display = Some(handle);
+                    }
+                } else {
+                    self.display = true;
                 }
                 self.mouse_pos = (x, y);
                 false
             },
+            Msg::MouseMoveTooltip(x, y) => {
+                self.mouse_pos = (x, y);
+                true
+            },
             Msg::MouseExitedTooltip => {
                 self.hovered_tooltip = false;
-
-                if self.display {
-                    let handle = {
-                        let link = ctx.link().clone();
-                        Timeout::new(700, move || link.send_message(Msg::Close))
-                    };
-                    self.empty_timeout = Some(handle);
+                if !ctx.props().simple {
+                    if self.display {
+                        let handle = {
+                            let link = ctx.link().clone();
+                            Timeout::new(700, move || link.send_message(Msg::Close))
+                        };
+                        self.empty_timeout = Some(handle);
+                    }
+                } else {
+                    self.close();
                 }
                 true
             },
@@ -109,9 +132,7 @@ impl Component for Tooltip {
                 true
             },
             Msg::Display => {
-                if ctx.props().simple {
-                    self.hard_pane = true;
-                } else {
+                if !ctx.props().simple {
                     if self.stay_hover_timeout.is_none() && !self.hovered_pane {
                         let handle = {
                             let link = ctx.link().clone();
@@ -130,37 +151,47 @@ impl Component for Tooltip {
                 true
             },
             Msg::Close => {
-                if !self.hovered_pane {
-                    self.hovered_pane = false;
-                    self.hovered_tooltip = false;
-                    self.hard_pane = false;
-                    self.display = false;
-                    self.stay_hover_timeout = None;
-                }
-
-                self.cancel();
+                self.close();
                 true
             }
         }
     }
 
     fn view(&self, ctx: &Context<Self>) -> Html {
+        let simple = ctx.props().simple;
+
         let on_entered_tooltip = ctx.link().callback(|m: MouseEvent|
             Msg::MouseEnteredTooltip(m.x(), m.y()));
         let on_exited_tooltip = ctx.link().callback(|_| Msg::MouseExitedTooltip);
-        let on_entered_pane = ctx.link().callback(|_| Msg::MouseEnteredPane);
-        let on_exited_pane = ctx.link().callback(|_| Msg::MouseExitedPane);
+
+
+        let on_mouse_move = if simple {
+            Some(ctx.link().callback(|m: MouseEvent| Msg::MouseMoveTooltip(m.x(), m.y())))
+        } else {
+            None
+        };
+
+        let on_entered_pane = if simple {
+            None
+        } else {
+            Some(ctx.link().callback(|_| Msg::MouseEnteredPane))
+        };
+
+        let on_exited_pane = if simple {
+            None
+        } else {
+            Some(ctx.link().callback(|_| Msg::MouseExitedPane))
+        };
         
-        let on_click = ctx.link().callback(|_| Msg::MouseEnteredPane);
         html! {
             <>
                 if self.should_display_pane() {
                     <TooltipPane onmouseenter={on_entered_pane} onmouseleave={on_exited_pane} 
-                        hard_border={self.hard_pane} pos={self.mouse_pos}>
+                        hard_border={self.hard_pane} pos={self.mouse_pos} is_simple={simple}>
                         { ctx.props().tooltip_content.clone() }
                     </TooltipPane>
                 }
-                <div onmouseenter={on_entered_tooltip} onmouseleave={on_exited_tooltip} onmousedown={on_click}>
+                <div onmouseenter={on_entered_tooltip} onmouseleave={on_exited_tooltip} onmousemove={on_mouse_move}>
                     { ctx.props().children.clone() }
                 </div>
             </>
@@ -193,6 +224,7 @@ fn get_mouse_quadrant(mouse_x: f64, mouse_y: f64) -> Quadrant {
 struct TooltipPaneProps {
     children: Html,
     hard_border: bool,
+    is_simple: bool,
     onmouseenter: Option<Callback<MouseEvent>>,
     onmouseleave: Option<Callback<MouseEvent>>,
     pos: (i32, i32),
@@ -215,43 +247,40 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
         theme.border_tooltip_light.clone()
     };
 
+    let is_subtooltip = use_context::<PositionOffsetContext>().is_some();
+
     let quadrant = get_mouse_quadrant(props.pos.0 as f64, props.pos.1 as f64);
-    let translate = match quadrant {
-        Quadrant::TopLeft => "translate(2%, 2%)",
-        Quadrant::TopRight => "translate(-102%, 2%)",
-        Quadrant::BottomLeft => "translate(2%, -102%)",
-        Quadrant::BottomRight => "translate(-102%, -102%)",
+    let translate = if is_subtooltip {
+        match quadrant {
+            Quadrant::TopLeft => "translate(50%, 5%)",
+            Quadrant::TopRight => "translate(-50%, 5%)",
+            Quadrant::BottomLeft => "translate(100%, 0%)",
+            Quadrant::BottomRight => "translate(-100%, 0%)",
+        }
+    } else {
+        match quadrant {
+            Quadrant::TopLeft => "translate(2%, 2%)",
+            Quadrant::TopRight => "translate(-102%, 2%)",
+            Quadrant::BottomLeft => "translate(2%, -102%)",
+            Quadrant::BottomRight => "translate(-102%, -102%)",
+        }
+    };
+    let positioning = if is_subtooltip {
+        "absolute"
+    } else {
+        "fixed"
     };
 
-    // let origin = match quadrant {
-    //     Quadrant::TopLeft => "top left",
-    //     Quadrant::TopRight => "top right",
-    //     Quadrant::BottomLeft => "bottom left",
-    //     Quadrant::BottomRight => "bottom right",
-    // };
-
-    // log!(format!("Quadrant pos {:?}", get_mouse_quadrant(props.pos.0 as f64, props.pos.1 as f64)));
-
-    let mut offset_x = 0;
-    let mut offset_y = 0;
-    if let Some(offset) = use_context::<PositionOffsetContext>() {
-        offset_x = offset.x;
-        offset_y = offset.y;
-        offset_x = match quadrant {
-            Quadrant::TopLeft | Quadrant::BottomLeft => offset_x,
-            Quadrant::TopRight | Quadrant::BottomRight => offset_x - 170, // Doesn't quite work since we have to move based on the tooltip content size :P
-        };
-    
-        offset_y = match quadrant {
-            Quadrant::TopLeft | Quadrant::TopRight => offset_y,
-            Quadrant::BottomLeft | Quadrant::BottomRight => offset_y - 400,
-        };
-    }
+    let pos = if is_subtooltip {
+        (0, 0)
+    } else {
+        props.pos
+    };
 
 
     let style = css!(
         r#"
-            position: fixed;
+            position: ${pos};
 
             -webkit-transform: ${translate};
             transform: ${translate};
@@ -265,23 +294,21 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
             z-index: 1;
             background-color: ${bg};
         "#,
+        pos=positioning,
         translate=translate,
-        // origin=origin,
         bg=theme.paper_dark,
         border=border,
         hover=theme.hover_dropshadow,
-        pos_x=props.pos.0 - offset_x,
-        pos_y=props.pos.1 - offset_y,
+        pos_x=pos.0,
+        pos_y=pos.1,
     );
-
-    log!(format!("Calculated relative pos: {} {}", props.pos.0 - offset_x, props.pos.1 - offset_y));
 
     html! {
         <div class={style} onmouseenter={props.onmouseenter.clone()} onmouseleave={props.onmouseleave.clone()}>
-            <PositionProvider offset_x={props.pos.0} offset_y={props.pos.1}>
+            <PositionProvider>
                 { props.children.clone() }
             </PositionProvider>
-            if !props.hard_border {
+            if !props.hard_border && !props.is_simple {
                 <div style="position: relative; width: 0; height: 0;">
                     <Loader color={theme.border_colored.clone()} style="position: absolute; top: -25px;" />
                 </div>
@@ -295,10 +322,7 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
 // components are having the Fixed and Translate positioning problem.
 
 #[derive(Clone, Debug, PartialEq)]
-struct PositionOffset {
-    pub x: i32,
-    pub y: i32,
-}
+struct PositionOffset;
 
 #[derive(Clone, Debug)]
 struct PositionOffsetContext {
@@ -328,13 +352,11 @@ impl PartialEq for PositionOffsetContext {
 #[derive(Debug, PartialEq, Properties)]
 struct PositionProviderProps {
     pub children: Children,
-    pub offset_x: i32,
-    pub offset_y: i32
 }
 
 #[styled_component]
 fn PositionProvider(props: &PositionProviderProps) -> Html {
-    let pos_offset = use_state(|| PositionOffset { x: props.offset_x, y: props.offset_y });
+    let pos_offset = use_state(|| PositionOffset {});
 
     let pos_ctx = PositionOffsetContext::new(pos_offset);
     

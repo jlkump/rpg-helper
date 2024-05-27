@@ -6,6 +6,17 @@
 
 use crate::data::character_data::CharacterData;
 
-pub(crate) fn use_character() -> Option<CharacterData> {
+pub struct CharacterView<'a> {
+    pub data: CharacterData<'a>, // The data in-memory. When modified, must also be saved to disk to be persistent
+}
+
+impl CharacterView<'_> {
+    pub fn save() {
+        // Saves any changes made to the character to disk
+        todo!()
+    }
+}
+
+pub(crate) fn use_character<'a>() -> Option<CharacterData<'a>> {
     Some(CharacterData::default())
 }
