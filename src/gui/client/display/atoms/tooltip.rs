@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use gloo::{console::log, timers::callback::Timeout};
+use gloo::timers::callback::Timeout;
 use web_sys::window;
 use yew::prelude::*;
 use stylist::{css, yew::styled_component};
@@ -247,7 +247,7 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
         theme.border_tooltip_light.clone()
     };
 
-    let is_subtooltip = use_context::<PositionOffsetContext>().is_some();
+    let is_subtooltip = use_context::<TransformOffsetContext>().is_some();
 
     let quadrant = get_mouse_quadrant(props.pos.0 as f64, props.pos.1 as f64);
     let translate = if is_subtooltip {
@@ -305,9 +305,9 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
 
     html! {
         <div class={style} onmouseenter={props.onmouseenter.clone()} onmouseleave={props.onmouseleave.clone()}>
-            <PositionProvider>
+            <TransformProvider>
                 { props.children.clone() }
-            </PositionProvider>
+            </TransformProvider>
             if !props.hard_border && !props.is_simple {
                 <div style="position: relative; width: 0; height: 0;">
                     <Loader color={theme.border_colored.clone()} style="position: absolute; top: -25px;" />
@@ -320,49 +320,48 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
 
 // This may need to be moved to a seperate file for use in the rest of the crate if multiple 
 // components are having the Fixed and Translate positioning problem.
-
 #[derive(Clone, Debug, PartialEq)]
-struct PositionOffset;
+struct TransformOffset; // Add the transform changes if needed. Rn, we only really care IF there was a transform used, not what the properties of the transform are.
 
 #[derive(Clone, Debug)]
-struct PositionOffsetContext {
-    inner: UseStateHandle<PositionOffset>,
+struct TransformOffsetContext {
+    inner: UseStateHandle<TransformOffset>,
 }
 
-impl PositionOffsetContext {
-    pub fn new(inner: UseStateHandle<PositionOffset>) -> Self {
+impl TransformOffsetContext {
+    pub fn new(inner: UseStateHandle<TransformOffset>) -> Self {
         Self { inner }
     }
 }
 
-impl Deref for PositionOffsetContext {
-    type Target = PositionOffset;
+impl Deref for TransformOffsetContext {
+    type Target = TransformOffset;
 
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
 }
 
-impl PartialEq for PositionOffsetContext {
+impl PartialEq for TransformOffsetContext {
     fn eq(&self, rhs: &Self) -> bool {
         *self.inner == *rhs.inner
     }
 }
 
 #[derive(Debug, PartialEq, Properties)]
-struct PositionProviderProps {
+struct TransformProviderProps {
     pub children: Children,
 }
 
 #[styled_component]
-fn PositionProvider(props: &PositionProviderProps) -> Html {
-    let pos_offset = use_state(|| PositionOffset {});
+fn TransformProvider(props: &TransformProviderProps) -> Html {
+    let pos_offset = use_state(|| TransformOffset {});
 
-    let pos_ctx = PositionOffsetContext::new(pos_offset);
+    let pos_ctx = TransformOffsetContext::new(pos_offset);
     
     html! {
-        <ContextProvider<PositionOffsetContext> context={pos_ctx}>
+        <ContextProvider<TransformOffsetContext> context={pos_ctx}>
             {props.children.clone()}
-        </ContextProvider<PositionOffsetContext>>
+        </ContextProvider<TransformOffsetContext>>
     }
 }

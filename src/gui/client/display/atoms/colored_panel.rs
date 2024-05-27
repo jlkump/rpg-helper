@@ -1,5 +1,5 @@
 use stylist::yew::styled_component;
-use yew::{classes, html, Classes, Html, Properties};
+use yew::{classes, html, AttrValue, Classes, Html, Properties};
 
 use crate::gui::client::use_theme;
 
@@ -9,7 +9,7 @@ pub struct Props {
     #[prop_or_default]
     pub class: Classes,
     #[prop_or_default]
-    pub style: Option<String>,
+    pub style: Option<AttrValue>,
     #[prop_or_default]
     pub secondary_coloring: bool,
 }

@@ -44,3 +44,9 @@ impl<'a> ops::Add<Index<'a>> for Index<'a> {
         todo!()
     }
 }
+
+impl PartialEq for Index<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}

@@ -3,6 +3,7 @@ use std::sync::Arc;
 use super::{indexes::Index, meta_type::MetaTypeInstance, view::data_view::DataView};
 
 // Character data is an abstracted way of viewing the data contained in a data view
+#[derive(PartialEq)]
 pub struct CharacterData<'a> {
     data: Index<'a>
 }

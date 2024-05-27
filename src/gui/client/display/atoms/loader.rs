@@ -6,11 +6,11 @@ use crate::gui::client::use_theme;
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
-    pub color: String,
-    #[prop_or("".to_owned())]
-    pub style: String,
-    #[prop_or("25px".to_owned())]
-    pub size: String,
+    pub color: AttrValue,
+    #[prop_or_default]
+    pub style: AttrValue,
+    #[prop_or("25px".to_owned().into())]
+    pub size: AttrValue,
 }
 
 #[styled_component(Loader)]
