@@ -49,34 +49,67 @@ fn app() -> Html {
                     h1 {
                         color: ${h1};
                         font-size: 2.5em;
+                        margin-top: 10px;
+                        margin-bottom: 10px;
                     }
 
                     h2 {
                         color: ${h2};
                         font-size: 2em;
+                        margin-top: 5px;
+                        margin-bottom: 5px;
                     }
 
                     h3 {
                         color: ${h3};
                         font-size: 1em;
+                        margin-top: 2px;
+                        margin-bottom: 2px;
                     }
 
                     h4 {
                         color: ${h4};
                         font-size: 1em;
+                        margin-top: 2px;
+                        margin-bottom: 2px;
                     }
 
                     h5 {
                         color: ${h5};
                         font-size: 1em;
+                        margin-top: 2px;
+                        margin-bottom: 2px;
                     }
 
                     h6 {
                         color: ${h6};
                         font-size: 1em;
+                        margin-top: 2px;
+                        margin-bottom: 2px;
+                    }
+
+                    /* width */
+                    ::-webkit-scrollbar {
+                        width: 10px;
+                    }
+
+                    /* Track */
+                    ::-webkit-scrollbar-track {
+                        background: rgb(0, 0, 0, 0);
+                    }
+
+                    /* Handle */
+                    ::-webkit-scrollbar-thumb {
+                        background: ${scroll_bar};
+                    }
+
+                    /* Handle on hover */
+                    ::-webkit-scrollbar-thumb:hover {
+                        background: ${scroll_hover};
                     }
                 "#, bg = theme.paper, h1 = theme.h1, h2 = theme.h2, 
-                h3 = theme.h3, h4 = theme.h4, h5 = theme.h5, h6 = theme.h6
+                h3 = theme.h3, h4 = theme.h4, h5 = theme.h5, h6 = theme.h6,
+                scroll_bar = theme.scroll_bar, scroll_hover = theme.scroll_bar_hover
             )} />
             <BrowserRouter>
                 <Switch<Route> render={switch} /> // <- must be child of <BrowserRouter>

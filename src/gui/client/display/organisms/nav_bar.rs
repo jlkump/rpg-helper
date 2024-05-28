@@ -12,8 +12,6 @@ use crate::gui::client::{use_theme, Route, Theme};
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
     #[prop_or_default]
-    pub center_item: Option<Html>,
-    #[prop_or_default]
     pub hamburger_menu_clicked: Callback<()>
 }
 
@@ -25,16 +23,46 @@ pub fn nav_bar(props: &Props) -> Html {
     // TODO: Stylize and format correctly
     html! {
         <span class={get_bar_span_style(&theme)}>
-            <div class={get_logo_style(&theme)}>
-            <Link<Route> to={Route::Home}><h3>{"RPG Helper"}</h3></Link<Route>>
-            </div>
-            if let Some(elem) = &props.center_item {
-                {elem.clone()}
-            }
             <div class={get_hamburger_menu_style(&theme)}>
                 <Icon onclick={onclick} icon_id={IconId::LucideMenu} width={"2em".to_owned()} height={"2em".to_owned()}/>
             </div>
+            <div class={get_logo_style(&theme)}>
+                <Link<Route> to={Route::Home} classes={css!("display: flex; flex-direction: row; align-items: center;")}><img src="img/generic/Dice RPG Icon.svg" width=30px height=30px/><h3>{"RPG Helper"}</h3></Link<Route>>
+            </div>
+            <UserMenu />
         </span>
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct UserMenuProps {
+
+}
+
+#[styled_component(UserMenu)]
+fn user_menu(props: &UserMenuProps) -> Html {
+    // Display is dependant upon whether a User is logged in
+    // If logged-in, display user profil picture and have user drop-down options
+    // If logged-out, display user sign-in
+    let style = css!(
+        r#"
+            margin: 4px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10 and IE 11 */
+            user-select: none; /* Standard syntax */
+
+            cursor: pointer;
+        "#
+    );
+    html! {
+        <div class={style}>
+            <h3>{"Sign in"}</h3>
+        </div>
     }
 }
 

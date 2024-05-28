@@ -13,20 +13,16 @@ pub struct Props {
 #[styled_component(CharacterDetails)]
 pub fn character_details(props: &Props) -> Html {
     let theme = use_theme();
-    let style = css!(
-        r#"
-            margin: 5px;
-
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        "#
-    );
 
     let side_panel_style = css!(
         r#"
             margin: 5px;
-            display: grid;
+
+            display: flex;
+            flex-direction: column;
+
+            justify-content: center;
+            align-items: stretch;
 
             border: 1px solid ${panelborder};
         "#,
@@ -42,8 +38,6 @@ pub fn character_details(props: &Props) -> Html {
         "#,
         bgdark = theme.paper_dark
     );
-
-
 
     let panel_style = css!(
         r#"
@@ -63,7 +57,9 @@ pub fn character_details(props: &Props) -> Html {
                     <h5 style="margin: 3px">{"Antonio Tremis"}</h5>
                 </Tooltip>
             </div>
-            <img src="./img/default/Antonio Tremis - AI Portrait.png" width=128px height=128px/>
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <img src="./img/default/Antonio Tremis - AI Portrait.png" width=128px height=128px/>
+            </div>
             <ColoredPanel>
                 {"Stats"}
             </ColoredPanel>
