@@ -7,4 +7,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+actix-web = "4" # Backend for Webserver
+actix-cors = "0.7"
+config = "0.14"
+chrono = { version = "0.4", features = ["serde"] }
+bcrypt = "0.15" # A hashing algo for password salting
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 sled = { version = "0.34.7" } # Embedded database, so we don't have to deal with cloud servers / setting up SQL
