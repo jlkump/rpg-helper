@@ -21,6 +21,7 @@ pub fn page_not_found(_: &Props) -> Html {
         <>
         <NavBar/>
         <div class={style}>
+            <img src="img/generic/Birb Wizard Transparent.png" />
             <h1>{"Could not find page"}</h1>
             <h3>{"404 Error"}</h3>
         </div>
