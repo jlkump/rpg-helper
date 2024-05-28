@@ -1,2 +1,5 @@
 /client/target
 /client/dist
+/target
+/server/target
+/server/dist

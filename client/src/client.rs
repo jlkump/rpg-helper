@@ -5,6 +5,7 @@ use yew_router::prelude::*;
 use crate::gui::{display::pages::home::*, contexts::style::theme::*};
 use crate::gui::display::pages::{character_viewer::CharacterViewer, page_not_found::PageNotFound};
 
+
 pub fn run_app() {
     yew::Renderer::<Root>::new().render();
 }

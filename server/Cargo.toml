@@ -1,0 +1,10 @@
+[package]
+name = "rpg-helper-server"
+authors = ["Landon Kump"]
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sled = { version = "0.34.7" } # Embedded database, so we don't have to deal with cloud servers / setting up SQL
