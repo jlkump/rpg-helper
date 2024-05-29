@@ -3,3 +3,5 @@
 /target
 /server/target
 /server/dist
+/server/Config.toml
+/server/database
