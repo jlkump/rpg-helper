@@ -1,17 +1,29 @@
-use std::io::Read;
-
-use actix_web::web::Buf;
 use bcrypt::DEFAULT_COST;
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
-use uuid::uuid;
 
 use crate::{config::Config, database::get_data};
 
-// TODO: Add support for multi-threaded access
+// TODO: Add support for multi-threaded access. 
+//      Sled says that multi-threaded access is managed by open_tree, so
+//      maybe just have only one UserDB open by the server at a time. Should be easy enough,
+//      especially if using a singular DB object to manage DB operations.
 pub struct UserDB {
     users: Db,
+}
+
+// NOTE: Add deletion response in case of failure?
+//       Maybe add a Result<Response, DatabaseErr>?
+pub enum RegistrationResponse {
+    Success(User),
+    UsernameTaken,
+}
+
+pub enum LoginResponse {
+    Success(User),
+    UnknownUsername,
+    WrongPassword,
 }
 
 impl UserDB {
@@ -21,9 +33,9 @@ impl UserDB {
         }
     }
 
-    pub fn create_user(&self, registration_data: UserRegistrationSchema) -> Option<User> {
+    pub fn create_user(&self, registration_data: UserRegistrationSchema) -> RegistrationResponse {
         if self.get_user(&registration_data.username).is_some() {
-            None // Returns None on creation failure due to duplicate username
+            RegistrationResponse::UsernameTaken
         } else {
             let data_tree = self.open_data_tree();
             let id_tree = self.open_id_tree();
@@ -33,7 +45,7 @@ impl UserDB {
             data_tree.insert(v.id, bincode::serialize(&v).unwrap()).unwrap();
             details_tree.insert(v.id, bincode::serialize(&UserDetails::new(&v.username)).unwrap()).unwrap();
             id_tree.insert(v.username, bincode::serialize(&v.id).unwrap()).unwrap();
-            Some(User {id: v.id})
+            RegistrationResponse::Success(User {id: v.id})
         }
     }
 
@@ -58,7 +70,20 @@ impl UserDB {
         details_tree.remove(user.id).unwrap();
     }
 
-    pub fn get_user(&self, username: &String) -> Option<User> {
+    pub fn login_user(&self, login_data: UserLoginSchema) -> LoginResponse {
+        if let Some(user_id) = self.get_user(&login_data.username) {
+            let data = self.get_data(&user_id).unwrap();
+            if bcrypt::verify(login_data.password, &data.password).unwrap() {
+                LoginResponse::Success(user_id)
+            } else {
+                LoginResponse::WrongPassword
+            }
+        } else {
+            LoginResponse::UnknownUsername
+        }
+    }
+
+    fn get_user(&self, username: &String) -> Option<User> {
         let users_to_id = self.open_id_tree();
         if let Some(user_id) = get_data(&users_to_id, username) {
             Some(User { id: user_id })
@@ -67,13 +92,14 @@ impl UserDB {
         }
     }
 
-    pub fn get_data(&self, user: User) -> Option<UserData> {
+    pub fn get_data(&self, user: &User) -> Option<UserData> {
         let tree = self.open_data_tree();
         get_data(&tree, &user.id)
     }
 
-    pub fn login_user(&self, login_data: UserLoginSchema) -> Option<User> {
-        todo!()
+    pub fn get_details(&self, user: &User) -> Option<UserDetails> {
+        let tree = self.open_details_tree();
+        get_data(&tree, &user.id)
     }
 
     fn open_data_tree(&self) -> Tree {
@@ -141,8 +167,8 @@ impl UserData {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserDetails {
-    pub profile_photo: String,       // Has default photo for new users
     pub profile_name: String,        // Starts as username, can be changed
+    pub profile_photo: String,       // Has default photo for new users
     pub games: Vec<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
     pub rulesets: Vec<uuid::Uuid>,   // The rulesets this user has created
     pub settings: Vec<uuid::Uuid>,   // The settings this user has created
@@ -166,18 +192,17 @@ impl UserDetails {
 mod test {
     use crate::config::Config;
 
-    use super::UserDB;
-
-
+    use super::{RegistrationResponse, UserDB};
+    
     #[test]
     fn create_user() {
         let db = UserDB::open(&Config::from_file("./Config.toml").unwrap());
-        if let Some(user) = db.create_user( super::UserRegistrationSchema { 
+        if let RegistrationResponse::Success(user) = db.create_user( super::UserRegistrationSchema { 
             username: String::from("JLKump1"), 
             email: String::from("landon2002@gmail.com"), 
             password: String::from("password")
         }) {
-            if let Some(user_data) = db.get_data(user) {
+            if let Some(user_data) = db.get_data(&user) {
                 assert_eq!(user_data.username, String::from("JLKump1"));
                 assert_eq!(user_data.email, String::from("landon2002@gmail.com"));
                 assert!(bcrypt::verify(String::from("password"), &user_data.password).unwrap());
@@ -185,7 +210,7 @@ mod test {
                 panic!("Couldn't find user after creation!");
             }
         } else {
-            panic!("Couldn't create user!");
+            panic!("Couldn't create user! Username already exists!");
         }
     }
 
@@ -196,16 +221,21 @@ mod test {
         if let Some(u) = db.get_user(&String::from("JLKump1")) {
             user = Some(u);
         } else {
-            user = db.create_user( super::UserRegistrationSchema { 
+            if let RegistrationResponse::Success(u) = db.create_user( super::UserRegistrationSchema { 
                 username: String::from("JLKump1"), 
                 email: String::from("landon2002@gmail.com"), 
                 password: String::from("password")
-            });
+            }) {
+                user = Some(u);
+            } else {
+                panic!("Could not register user! Name already exists");
+            }
+            
         }
         if let Some (u) = user {
             db.delete_user(u);
             assert!(db.get_user(&String::from("JLKump1")).is_none());
-            assert!(db.get_data(u).is_none());
+            assert!(db.get_data(&u).is_none());
         } else {
             panic!("Couldn't find user to delete!");
         }

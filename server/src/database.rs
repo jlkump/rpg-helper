@@ -2,7 +2,7 @@ use actix_web::web::Buf;
 use serde::de::DeserializeOwned;
 use sled::{Db, Tree};
 
-mod user;
+pub mod user;
 
 pub fn get_data<'a, T, K>(db: &Tree, key: &K) -> Option<T> 
 where 
