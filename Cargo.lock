@@ -1900,6 +1900,7 @@ dependencies = [
  "actix-web",
  "anyhow",
  "bcrypt",
+ "bincode",
  "chrono",
  "serde",
  "serde_json",

@@ -1,5 +1,5 @@
 use rpg_helper_server::*;
 
 fn main() {
-    run();
+    test_many_databases();
 }
