@@ -12,9 +12,10 @@ pub struct UserDB {
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct User {
-    id: uuid::Uuid
+    pub id: uuid::Uuid
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserData {
     pub email: String,
     pub username: String,

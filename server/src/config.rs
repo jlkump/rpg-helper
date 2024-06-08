@@ -23,7 +23,7 @@ pub struct DatabaseConfig {
 #[derive(Clone, Deserialize)]
 pub struct JWTConfig {
     pub secret_key: String,
-    pub expiration: u16
+    pub expiration: i64
 }
 
 impl Config {
