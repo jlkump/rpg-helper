@@ -1943,6 +1943,7 @@ checksum = "afab94fb28594581f62d981211a9a4d53cc8130bbcbbb89a0440d9b8e81a7746"
 name = "rpg-helper"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "clap",
  "dotenv_codegen",
  "gloo 0.11.0",
@@ -1950,6 +1951,7 @@ dependencies = [
  "serde_json",
  "stylist",
  "tokio",
+ "uuid",
  "wasm-bindgen",
  "web-sys",
  "yew",

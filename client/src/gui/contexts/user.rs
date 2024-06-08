@@ -3,3 +3,9 @@
 // It will be used primarily outside the character_view page for joining or hosting games,
 // creating characters, creating games, creating settings for games, and modifying profile 
 // settings such as the website theme.
+
+struct AuthToken {
+    user_id: String,
+    iat: usize,
+    exp: usize,
+}

@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 
+use super::types::ErrorResponse;
+
 // Implementation uses https://codevoweb.com/rust-jwt-authentication-with-actix-web/ as reference for authorization
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -16,12 +18,6 @@ pub struct TokenClaims {
     pub user_id: String,    // Logged-in user_id
     pub iat: usize,         // Issued time as DateTime<...>.timestamp
     pub exp: usize,         // Expiration time
-}
-
-#[derive(Debug, Serialize)]
-struct ErrorResponse {
-    status: String,
-    message: String,
 }
 
 impl fmt::Display for ErrorResponse {

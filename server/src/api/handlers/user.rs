@@ -3,26 +3,33 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
 
-use crate::{api::jwt_auth::{self, TokenClaims}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB, UserLoginSchema, UserRegistrationSchema}};
+use crate::{api::{jwt_auth::{self, TokenClaims}, types::{ErrorResponse, UserDataResponse, UserLoginResponse}}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB, UserLoginSchema, UserRegistrationSchema}};
 
 #[post("/auth/register")]
 async fn register_handler(
     body: web::Json<UserRegistrationSchema>, 
-    db: web::Data<UserDB>
+    user_db: web::Data<UserDB>
 ) -> impl Responder {
-    let registration_response = db.register_user(body.into_inner());
+    let registration_response = user_db.register_user(body.into_inner());
 
     match registration_response {
-        RegistrationResponse::Success(user_id) => {
-            // TODO: Replace with serialized structs instead for more uniform access patterns.
-            let user_respose = serde_json::json!({"status": "success", "data": serde_json::json!({"user": user_id})});
-            return HttpResponse::Ok().json(user_respose);
+        RegistrationResponse::Success(user) => {
+            return HttpResponse::Ok().json(UserDataResponse {
+                status: String::from("success"),
+                data: user_db.get_data(user).unwrap()
+            });
         },
         RegistrationResponse::EmailTaken => {
-            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error", "message": "Email Taken"}));
+            return HttpResponse::InternalServerError().json(ErrorResponse {
+                status: String::from("error"),
+                message: String::from("Email taken")
+            });
         },
         RegistrationResponse::UsernameTaken => {
-            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error", "message": "Username Taken"}));
+            return HttpResponse::InternalServerError().json(ErrorResponse {
+                status: String::from("error"),
+                message: String::from("Username taken")
+            });
         },
     }
 }
@@ -61,10 +68,19 @@ async fn login_handler(
 
             HttpResponse::Ok()
                 .cookie(cookie)
-                .json(json!({"status": "success", "token": token}))
+                .json(json!(UserLoginResponse {
+                    status: String::from("success"),
+                    auth_token: token
+                }))
         }, 
-        LoginResponse::UnknownUsername => HttpResponse::BadRequest().json(json!({"status": "fail", "message": "Invalid username"})),
-        LoginResponse::WrongPassword => HttpResponse::BadRequest().json(json!({"status": "fail", "message": "Invalid password"})) // TODO: Handle limited tries
+        LoginResponse::UnknownUsername => HttpResponse::BadRequest().json(ErrorResponse {
+            status: String::from("fail"),
+            message: String::from("Unknown username"),
+        }),
+        LoginResponse::WrongPassword => HttpResponse::BadRequest().json(ErrorResponse {
+            status: String::from("fail"),
+            message: String::from("Invalid password"),
+        }) // TODO: Handle limited tries
     }
 }
 
@@ -90,14 +106,16 @@ async fn get_me_handler(
     let ext = req.extensions();
     let user_id = ext.get::<uuid::Uuid>().unwrap();
 
-    let user_data = user_db.get_data(user_id.into());
-
-    let json_response = serde_json::json!({
-        "status":  "success",
-        "data": serde_json::json!({
-            "user": user_data
+    if let Some(user_data) = user_db.get_data(user_id.into()) { 
+        HttpResponse::Ok().json(UserDataResponse { 
+            status: String::from("success"),
+            data: user_data
         })
-    });
+    } else {
+        HttpResponse::InternalServerError().json(ErrorResponse {
+            status: String::from("fail"),
+            message: String::from(format!("User {} not found in database.", user_id))
+        })
+    }
 
-    HttpResponse::Ok().json(json_response)
 }

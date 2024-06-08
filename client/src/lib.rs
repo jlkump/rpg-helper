@@ -1,9 +1,9 @@
-mod syntax;
+mod api;
+mod client;
 mod data;
 mod error;
-mod network;
 mod gui;
-mod client;
+mod syntax;
 
 #[macro_use]
 extern crate dotenv_codegen;

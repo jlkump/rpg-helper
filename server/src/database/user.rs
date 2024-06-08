@@ -4,7 +4,7 @@ use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
 
-use crate::{config::Config, database::get_data};
+use crate::{api::types::UserData, config::Config, database::get_data};
 
 pub struct UserDB {
     users: Db,
@@ -29,19 +29,6 @@ impl From<&uuid::Uuid> for User {
             id: value.clone(),
         }
     }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct UserData {
-    pub email: String,
-    pub username: String,
-    pub created_at: Option<DateTime<Utc>>,
-    pub profile_name: String,        // Starts as username, can be changed
-    pub profile_photo: String,       // Has default photo for new users
-    pub games: Vec<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
-    pub rulesets: Vec<uuid::Uuid>,   // The rulesets this user has created
-    pub settings: Vec<uuid::Uuid>,   // The settings this user has created
-    pub characters: Vec<uuid::Uuid>, // Characters stored in a local per-user format. These are the character the user owns
 }
 
 #[derive(Debug, Deserialize)]

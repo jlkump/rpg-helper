@@ -1,7 +1,5 @@
 use std::{collections::HashMap, io, net::TcpStream};
 
-use crate::network::{AuthorityInstance, ClientInstance};
-
 use self::{file_storage::{CharacterDataFile, GameMasterDataFile}, indexes::Index, meta_type::{MetaType, MetaTypeInstance}, view::ActiveView};
 
 pub mod meta_type;
@@ -17,8 +15,8 @@ pub mod character_data;
 pub mod view;
 
 
-pub struct AppData<'a> {
-    client: Option<ClientInstance<'a>>, // None when not connected to a server
+pub struct AppData {
+    // client: Option<ClientInstance<'a>>, // None when not connected to a server
     // Option containing the current page data?
 
     // App should let users:

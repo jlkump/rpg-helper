@@ -8,12 +8,14 @@ edition = "2021"
 
 [dependencies]
 clap = "4.5"
+chrono = { version = "0.4", features = ["serde"] }
 gloo = "0.11"
 dotenv_codegen = "0.15.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 stylist = { version = "0.13", features = ["yew", "yew_use_style", "parser", "macros"] }
 tokio = "1.34"
+uuid = { version="1.8.0", features=["serde","v4"] }
 yew = { version = "0.21.0",  features = ["csr"] } # Frontend Webdev
 yew-router = "0.18"
 yew_icons = { version = "0.8.0", features = ["LucideMenu", "FeatherChevronDown"] }
