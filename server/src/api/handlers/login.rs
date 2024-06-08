@@ -5,8 +5,8 @@ use serde_json::json;
 
 use crate::{api::jwt_auth::TokenClaims, config::Config, database::user::{LoginResponse, UserDB, UserLoginSchema}};
 
-#[post("/api/auth/login")]
-async fn login(
+#[post("/auth/login")]
+async fn login_handler(
     login: web::Json<UserLoginSchema>, 
     user_db: web::Data<UserDB>, 
     config: web::Data<Config>

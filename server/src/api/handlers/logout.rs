@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::api::jwt_auth;
 
-#[get("/api/auth/logout")]
+#[get("/auth/logout")]
 async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
     let cookie = Cookie::build("token", "")
         .path("/")
