@@ -12,8 +12,9 @@ mod api;
 async fn main() -> std::io::Result<()> {
     let config = Config::from_file("Config.toml").unwrap();
     let user_db = web::Data::new(UserDB::open(&config));
+    let config_data = web::Data::new(config.clone());
 
-    println!("Starting server at http://{}:{}/", config.server.host, config.server.port);
+    println!("Starting server at {}:{}/", config.server.host, config.server.port);
     HttpServer::new(move || {
         let cors = Cors::default()
             .allow_any_origin() // TODO: Change later to allow only certain Origins, Methods, and Headers
@@ -23,7 +24,8 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
-            .app_data(user_db.clone()) // Passing user DB to worker threads
+            .app_data(user_db.clone())      // Passing handle to user DB to worker threads
+            .app_data(config_data.clone())  // Config data for jwt secret and other assorted info
             .configure(routes::initialize)
     })
     .bind((config.server.host, config.server.port))?

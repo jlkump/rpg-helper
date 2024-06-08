@@ -6,6 +6,7 @@ use std::fs::read_to_string;
 pub struct Config {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
+    pub jwt: JWTConfig,
 }
 
 #[derive(Clone, Deserialize)]
@@ -17,6 +18,12 @@ pub struct ServerConfig {
 #[derive(Clone, Deserialize)]
 pub struct DatabaseConfig {
     pub root_path: String,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct JWTConfig {
+    pub secret_key: String,
+    pub expiration: u16
 }
 
 impl Config {

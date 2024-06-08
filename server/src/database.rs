@@ -1,6 +1,6 @@
 use actix_web::web::Buf;
 use serde::de::DeserializeOwned;
-use sled::{Db, Tree};
+use sled::Tree;
 
 pub mod user;
 
