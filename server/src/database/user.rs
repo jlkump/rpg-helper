@@ -15,6 +15,22 @@ pub struct User {
     pub id: uuid::Uuid
 }
 
+impl From<uuid::Uuid> for User {
+    fn from(id: uuid::Uuid) -> Self {
+        User {
+            id
+        }
+    }
+}
+
+impl From<&uuid::Uuid> for User {
+    fn from(value: &uuid::Uuid) -> Self {
+        User {
+            id: value.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct UserData {
     pub email: String,

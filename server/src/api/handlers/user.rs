@@ -1,4 +1,4 @@
-use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post, web, HttpResponse, Responder};
+use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
@@ -6,7 +6,10 @@ use serde_json::json;
 use crate::{api::jwt_auth::{self, TokenClaims}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB, UserLoginSchema, UserRegistrationSchema}};
 
 #[post("/auth/register")]
-async fn register_handler(body: web::Json<UserRegistrationSchema>, db: web::Data<UserDB>) -> impl Responder {
+async fn register_handler(
+    body: web::Json<UserRegistrationSchema>, 
+    db: web::Data<UserDB>
+) -> impl Responder {
     let registration_response = db.register_user(body.into_inner());
 
     match registration_response {
@@ -76,4 +79,25 @@ async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
     HttpResponse::Ok()
         .cookie(cookie)
         .json(json!({"status": "success"}))
+}
+
+#[get("/user/me")]
+async fn get_me_handler(
+    req: HttpRequest,
+    user_db: web::Data<UserDB>,
+    _: jwt_auth::JwtMiddleware,
+) -> impl Responder {
+    let ext = req.extensions();
+    let user_id = ext.get::<uuid::Uuid>().unwrap();
+
+    let user_data = user_db.get_data(user_id.into());
+
+    let json_response = serde_json::json!({
+        "status":  "success",
+        "data": serde_json::json!({
+            "user": user_data
+        })
+    });
+
+    HttpResponse::Ok().json(json_response)
 }
