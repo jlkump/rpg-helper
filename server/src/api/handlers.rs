@@ -1,14 +1,12 @@
 use actix_web::web;
 
-mod login;
-mod logout;
-mod register;
+mod user;
 
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
     let scope = web::scope("/api")
-        .service(login::login_handler)
-        .service(logout::logout_handler)
-        .service(register::register_handler);
+        .service(user::login_handler)
+        .service(user::logout_handler)
+        .service(user::register_handler);
 
     cfg.service(scope)
 }

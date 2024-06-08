@@ -1,9 +1,28 @@
-use actix_web::{cookie::{Cookie, time::Duration as ActixWebDuration}, post, web, HttpResponse, Responder};
+use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post, web, HttpResponse, Responder};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
 
-use crate::{api::jwt_auth::TokenClaims, config::Config, database::user::{LoginResponse, UserDB, UserLoginSchema}};
+use crate::{api::jwt_auth::{self, TokenClaims}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB, UserLoginSchema, UserRegistrationSchema}};
+
+#[post("/auth/register")]
+async fn register_handler(body: web::Json<UserRegistrationSchema>, db: web::Data<UserDB>) -> impl Responder {
+    let registration_response = db.register_user(body.into_inner());
+
+    match registration_response {
+        RegistrationResponse::Success(user_id) => {
+            // TODO: Replace with serialized structs instead for more uniform access patterns.
+            let user_respose = serde_json::json!({"status": "success", "data": serde_json::json!({"user": user_id})});
+            return HttpResponse::Ok().json(user_respose);
+        },
+        RegistrationResponse::EmailTaken => {
+            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error", "message": "Email Taken"}));
+        },
+        RegistrationResponse::UsernameTaken => {
+            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error", "message": "Username Taken"}));
+        },
+    }
+}
 
 #[post("/auth/login")]
 async fn login_handler(
@@ -44,4 +63,17 @@ async fn login_handler(
         LoginResponse::UnknownUsername => HttpResponse::BadRequest().json(json!({"status": "fail", "message": "Invalid username"})),
         LoginResponse::WrongPassword => HttpResponse::BadRequest().json(json!({"status": "fail", "message": "Invalid password"})) // TODO: Handle limited tries
     }
+}
+
+#[get("/auth/logout")]
+async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
+    let cookie = Cookie::build("token", "")
+        .path("/")
+        .max_age(ActixWebDuration::new(-1, 0))
+        .http_only(true)
+        .finish();
+
+    HttpResponse::Ok()
+        .cookie(cookie)
+        .json(json!({"status": "success"}))
 }
