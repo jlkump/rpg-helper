@@ -18,6 +18,7 @@ pub struct UserDB {
 pub enum RegistrationResponse {
     Success(User),
     UsernameTaken,
+    EmailTaken,
 }
 
 pub enum LoginResponse {
