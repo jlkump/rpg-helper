@@ -12,7 +12,8 @@ pub struct Config {
 #[derive(Clone, Deserialize)]
 pub struct ServerConfig {
     pub host: String,
-    pub port: u16
+    pub port: u16,
+    pub origin_path: String,
 }
 
 #[derive(Clone, Deserialize)]

@@ -12,6 +12,7 @@ async fn health_checker_handler() -> impl Responder {
 
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
     let scope = web::scope("/api")
+        .service(health_checker_handler)
         .service(user::login_handler)
         .service(user::logout_handler)
         .service(user::register_handler)

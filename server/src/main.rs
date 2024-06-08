@@ -1,5 +1,5 @@
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
+use actix_web::{http::header, web, App, HttpServer};
 use api::routes;
 use config::Config;
 use database::user::UserDB;
@@ -17,10 +17,14 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server at {}:{}/", config.server.host, config.server.port);
     HttpServer::new(move || {
         let cors = Cors::default()
-            .allow_any_origin() // TODO: Change later to allow only certain Origins, Methods, and Headers
-            .allow_any_method()
-            .allow_any_header()
-            .max_age(3600);
+            .allowed_origin(&config.server.origin_path)
+            .allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![
+                header::CONTENT_TYPE,
+                header::AUTHORIZATION,
+                header::ACCEPT,
+            ])
+            .supports_credentials();
 
         App::new()
             .wrap(cors)
