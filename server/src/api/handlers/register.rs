@@ -5,7 +5,7 @@ use crate::database::user::{RegistrationResponse, UserDB, UserRegistrationSchema
 
 #[post("/auth/register")]
 async fn register_user_handler(body: web::Json<UserRegistrationSchema>, db: web::Data<UserDB>) -> impl Responder {
-    let registration_response = db.create_user(body.into_inner());
+    let registration_response = db.register_user(body.into_inner());
 
     match registration_response {
         RegistrationResponse::Success(user_id) => {
