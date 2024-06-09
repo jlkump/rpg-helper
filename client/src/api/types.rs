@@ -19,7 +19,7 @@ pub struct UserLoginResponse {
     pub auth_token: String,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct UserData {
     pub email: String,
     pub username: String,

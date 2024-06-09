@@ -1,6 +1,7 @@
 pub mod home;
 pub mod character_viewer;
 pub mod page_not_found;
+pub mod user;
 
 // TODO: Define a GM screen which looks like a wiki display
 // that will allow the GM to jump between links and edit the wiki live.

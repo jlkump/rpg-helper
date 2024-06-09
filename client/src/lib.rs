@@ -3,6 +3,7 @@ mod client;
 mod data;
 mod error;
 mod gui;
+mod store;
 mod syntax;
 
 extern crate dotenv;

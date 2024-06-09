@@ -2,8 +2,9 @@ use stylist::{css, yew::Global};
 use yew::prelude::*;
 use yew_router::prelude::*;
 
+use crate::gui::display::pages::user::UserProfile;
 use crate::gui::{display::pages::home::*, contexts::style::theme::*};
-use crate::gui::display::pages::{character_viewer::CharacterViewer, page_not_found::PageNotFound};
+use crate::gui::display::pages::{character_viewer::CharacterViewer, page_not_found::PageNotFound, user::RegisterUser, user::LoginUser};
 
 
 pub fn run_app() {
@@ -14,6 +15,12 @@ pub fn run_app() {
 pub(crate) enum Route {
     #[at("/")]
     Home,
+    #[at("/Login")]
+    Login,
+    #[at("/Register")]
+    Register,
+    #[at("/Profile")]
+    Profile,
     #[at("/CharacterSheet")]
     CharacterSheet,
     #[not_found]
@@ -26,6 +33,9 @@ fn switch(routes: Route) -> Html {
         Route::Home => html! { <Home/> },
         Route::CharacterSheet => html! { <CharacterViewer/> },
         Route::NotFound => html! { <PageNotFound/> },
+        Route::Login => html! { <LoginUser/>},
+        Route::Register => html! { <RegisterUser/> },
+        Route::Profile => html! { <UserProfile/>},
     }
 }
 
