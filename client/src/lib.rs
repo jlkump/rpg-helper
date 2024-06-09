@@ -5,9 +5,11 @@ mod error;
 mod gui;
 mod syntax;
 
-#[macro_use]
-extern crate dotenv_codegen;
+extern crate dotenv;
+
+use dotenv::dotenv;
 
 pub fn run() {
+    dotenv().ok();
     client::run_app();
 }

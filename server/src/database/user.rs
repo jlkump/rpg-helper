@@ -4,7 +4,7 @@ use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
 
-use crate::{api::types::UserData, config::Config, database::get_data};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::UserData}, config::Config, database::get_data};
 
 pub struct UserDB {
     users: Db,
@@ -31,23 +31,10 @@ impl From<&uuid::Uuid> for User {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct UserRegistrationSchema {
-    pub username: String,      // Username for the user profile
-    pub email: String,         // Email of the user
-    pub password: String,      // The actual password, won't be stored in DB
-}
-
 pub enum RegistrationResponse {
     Success(User),
     UsernameTaken,
     EmailTaken,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct UserLoginSchema {
-    pub username: String,
-    pub password: String,
 }
 
 pub enum LoginResponse {

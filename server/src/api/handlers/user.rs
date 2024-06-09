@@ -3,7 +3,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
 
-use crate::{api::{jwt_auth::{self, TokenClaims}, types::{ErrorResponse, UserDataResponse, UserLoginResponse}}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB, UserLoginSchema, UserRegistrationSchema}};
+use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema}, types::{ErrorResponse, UserDataResponse, UserLoginResponse}}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB}};
 
 #[post("/auth/register")]
 async fn register_handler(
