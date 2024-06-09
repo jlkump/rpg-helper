@@ -51,6 +51,7 @@ fn app() -> Html {
                     html, body {
                         background-color: ${bg};
                         margin: 0px;
+                        height: 100%;
                     }
 
                     h1 {
@@ -114,6 +115,11 @@ fn app() -> Html {
                     ::-webkit-scrollbar-thumb:hover {
                         background: ${scroll_hover};
                     }
+
+                    -webkit-user-select: none; /* Safari */
+                    -ms-user-select: none; /* IE 10 and IE 11 */
+                    user-select: none; /* Standard syntax */
+
                 "#, bg = theme.paper, h1 = theme.h1, h2 = theme.h2, 
                 h3 = theme.h3, h4 = theme.h4, h5 = theme.h5, h6 = theme.h6,
                 scroll_bar = theme.scroll_bar, scroll_hover = theme.scroll_bar_hover

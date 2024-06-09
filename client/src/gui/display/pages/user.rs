@@ -1,8 +1,10 @@
+use std::{cell::RefCell, rc::Rc};
+
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::{api::schema::UserRegistrationSchema, gui::display::organisms::nav_bar::NavBar};
-use validator::Validate;
+use crate::{api::schema::UserRegistrationSchema, gui::display::{organisms::nav_bar::NavBar, atoms::form_input::FormInput}};
+use validator::{Validate, ValidationErrors};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -56,7 +58,9 @@ pub fn register_user(_: &RegisterProps) -> Html {
     // Display changes based on whether logged-in or not
     // TODO: Complete based on tutorial here: https://codevoweb.com/rust-yew-frontend-jwt-access-and-refresh-tokens/
     html! {
-        <NavBar />
+        <NavBar>
+            <FormInput label="Test Input" name="Name" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+        </NavBar>
     }
 }
 
@@ -67,7 +71,9 @@ pub struct LoginProps {
 #[styled_component(LoginUser)]
 pub fn login_user(_: &LoginProps) -> Html {
     html! {
-        <NavBar />
+        <NavBar>
+            <h1>{"TODO"}</h1>
+        </NavBar>
     }
 }
 
@@ -79,6 +85,8 @@ pub struct ProfileProps {
 #[styled_component(UserProfile)]
 pub fn user_profile(_: &ProfileProps) -> Html {
     html! {
-        <NavBar />
+        <NavBar>
+            <h1>{"TODO"}</h1>
+        </NavBar>
     }
 }

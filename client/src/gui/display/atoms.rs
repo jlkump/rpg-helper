@@ -1,7 +1,9 @@
-mod table;
-pub mod image;
 pub mod character_portrait;
 pub mod colored_panel;
-pub mod panel;
-pub mod tooltip;
+pub mod form_input;
+pub mod image;
 pub mod loader;
+pub mod logo;
+pub mod panel;
+mod table;
+pub mod tooltip;

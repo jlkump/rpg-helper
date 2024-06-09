@@ -11,6 +11,10 @@ pub struct Props {
 pub fn home(_: &Props) -> Html {
     // Display changes based on whether logged-in or not
     html! {
-        <NavBar />
+        <NavBar>
+            <div style="display: flex; height: 100%; width: 100%; justify-content: center;">
+                <h1>{"Welcome!"}</h1>
+            </div>
+        </NavBar>
     }
 }

@@ -23,10 +23,9 @@ pub fn character_viewer(_: &Props) -> Html {
     let temp_character_ids = vec!["CharacterID 1", "Character ID 2"].into_iter().map(|s| s.to_owned()).collect();
 
     html! {
-        <>
-            <NavBar/>
+        <NavBar>
             <TabbedPane tabs={get_character_tabs(&temp_character_ids)} content={get_character_panes(temp_character_ids)} no_hard_border=true/>
-        </>
+        </NavBar>
     }
 }
 
