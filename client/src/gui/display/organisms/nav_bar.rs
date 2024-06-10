@@ -4,7 +4,7 @@ use yew_icons::{Icon, IconId};
 use yew::{html, Html};
 use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
 
-use crate::{router::Route, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::logo::Logo}};
+use crate::{router::Route, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{logo::Logo, hamburger_menu::HamburgerMenu}}};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -88,8 +88,9 @@ pub fn nav_bar(props: &Props) -> Html {
             <SideBar sidebar_open={*menu_open} exit_callback={onclick.clone()} signed_in=true/>
             <div class={body_classes}>
                 <span class={get_bar_style(&theme)}>
-                    <div class={get_hamburger_style(&theme)}>
-                        <Icon onclick={onclick} icon_id={IconId::LucideMenu} width={"2em".to_owned()} height={"2em".to_owned()}/>
+                    <div class={get_hamburger_style(&theme)} onclick={onclick}>
+                        <HamburgerMenu color={theme.hamburger_menu.clone()} open={*menu_open}/>
+                        // <Icon onclick={onclick} icon_id={IconId::LucideMenu} width={"2em".to_owned()} height={"2em".to_owned()}/>
                     </div>
                     <Logo />
                     <UserMenu />

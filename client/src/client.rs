@@ -20,6 +20,7 @@ fn app() -> Html {
                 r#"
                     html, body {
                         background-color: ${bg};
+                        color: ${text_default};
                         margin: 0px;
                         height: 100%;
                     }
@@ -80,6 +81,27 @@ fn app() -> Html {
                         color: ${link_highlight};
                     }
 
+                    button {
+                        background: ${button};
+                        border: 2px none;
+                        border-radius: 4px;
+                        padding: 8px;
+                        color: ${text_invert};
+                        font-family: "Times New Roman", Times, serif;
+                        font-weight: bold;
+                        font-size: 1em;
+                        margin: 5px;
+                        outline: none;
+                    }
+
+                    button:hover {
+                        background: ${button_hover};
+                    }
+
+                    button:active {
+                        background: ${button_pressed};
+                    }
+
                     /* width */
                     ::-webkit-scrollbar {
                         width: 10px;
@@ -106,6 +128,9 @@ fn app() -> Html {
 
                 "#, bg = theme.paper, h1 = theme.h1, h2 = theme.h2, 
                 h3 = theme.h3, h4 = theme.h4, h5 = theme.h5, h6 = theme.h6,
+                text_default = theme.text_default, text_invert = theme.text_invert,
+                button = theme.button_color, button_hover = theme.button_color_hover,
+                button_pressed = theme.button_color_press,
                 scroll_bar = theme.scroll_bar, scroll_hover = theme.scroll_bar_hover,
                 border_light=theme.border_light, link = theme.text_link, link_highlight = theme.text_link_highlight
             )} />

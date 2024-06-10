@@ -16,8 +16,6 @@ pub struct Props {
     pub name: String,
     #[prop_or("".to_string())]
     pub placeholder: String,
-    #[prop_or("".to_string())]
-    pub value: String,
     pub input_ref: NodeRef,
     pub onchange: Callback<String>,
     pub onblur: Callback<String>,
@@ -121,7 +119,6 @@ pub fn form_input(props: &Props) -> Html {
         type={props.input_type.clone()}
         placeholder={props.placeholder.clone()}
         ref={props.input_ref.clone()}
-        value={props.value.clone()}
         onchange={onchange}
         onblur={on_blur}
       />

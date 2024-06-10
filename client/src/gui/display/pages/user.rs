@@ -4,7 +4,7 @@ use yew::prelude::*;
 use stylist::yew::styled_component;
 use yew_router::components::Link;
 
-use crate::{api::schema::UserRegistrationSchema, gui::display::{atoms::{form_input::FormInput, scroll_div::ScrollDiv}, organisms::nav_bar::NavBar}, router::Route};
+use crate::{api::schema::UserRegistrationSchema, gui::display::{atoms::{button::SubmitButton, form_input::FormInput, scroll_div::ScrollDiv}, organisms::nav_bar::NavBar}, router::Route};
 use validator::{Validate, ValidationErrors};
 
 
@@ -62,11 +62,11 @@ pub fn register_user(_: &RegisterProps) -> Html {
         <NavBar content_class={css!("display: flex; justify-content: center; align-items: center;")}>
             <ScrollDiv class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} style="padding: 20px;">
                 <h1 class={css!("font-size: 2em;")}>{"Sign Up"}</h1>
-                <FormInput input_type="text" placeholder="Username" label="" name="Username" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
-                <FormInput input_type="text" placeholder="Email" label="" name="Email" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
-                <FormInput input_type="password" placeholder="Password" label="" name="Password" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
-                <FormInput input_type="password" placeholder="Confirm Password" label="" name="Confirm Password" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
-                <FormInput input_type="submit" value="Submit" placeholder="Sign Up" label="" name="Signup" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="text" placeholder="Username" label="" name="username" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="text" placeholder="Email" label="" name="email" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="password" placeholder="Password" label="" name="password" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="password" placeholder="Confirm Password" label="" name="confirm password" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <SubmitButton loading=false> {"Submit"} </SubmitButton>
                 
                 <div class={css!("margin-top: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1em;")}>
                     {"Already have an account?"}

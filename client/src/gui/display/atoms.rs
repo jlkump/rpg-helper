@@ -1,6 +1,8 @@
+pub mod button;
 pub mod character_portrait;
 pub mod colored_panel;
 pub mod form_input;
+pub mod hamburger_menu;
 pub mod image;
 pub mod loader;
 pub mod logo;
