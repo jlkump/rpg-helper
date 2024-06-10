@@ -79,6 +79,7 @@ pub fn login_user(_: &LoginProps) -> Html {
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct ProfileProps {
+    pub edit: bool,
 }
 
 

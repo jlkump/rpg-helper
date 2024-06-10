@@ -1,6 +1,9 @@
-pub mod home;
+pub mod character_creator;
 pub mod character_viewer;
+pub mod home;
 pub mod page_not_found;
+pub mod ruleset_creator;
+pub mod setting_editor;
 pub mod user;
 
 // TODO: Define a GM screen which looks like a wiki display

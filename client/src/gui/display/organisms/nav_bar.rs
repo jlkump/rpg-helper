@@ -2,9 +2,9 @@ use stylist::{style, yew::styled_component, Style};
 use yew::prelude::*;
 use yew_icons::{Icon, IconId};
 use yew::{html, Html};
-use yew_router::components::Link;
+use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
 
-use crate::{client::Route, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::logo::Logo}};
+use crate::{router::Route, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::logo::Logo}};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -186,6 +186,8 @@ fn sider_bar(props: &SideBarProps) -> Html {
 
     let exit_icon_color = css!("color: ${color}; position: absolute; margin: 7px; top: 0; right: 0;", color=theme.h3);
 
+    let navigator = use_navigator().unwrap();
+
     html! {
         <div class={classes}>
             <div style="display: flex; flex-direction: column; flex; width: 100%;">
@@ -197,9 +199,9 @@ fn sider_bar(props: &SideBarProps) -> Html {
                 {"Menu"}
             </h3>
             if props.signed_in {
-                {get_signed_in_menu_options()}
+                {get_signed_in_menu_options(&navigator)}
             } else {
-                {get_signed_out_menu_options()}
+                {get_signed_out_menu_options(&navigator)}
             }
 
 
@@ -210,7 +212,12 @@ fn sider_bar(props: &SideBarProps) -> Html {
     }
 }
 
-fn get_signed_in_menu_options() -> Html {
+fn get_route_callback(navigator: &Navigator, route: Route) -> Callback<MouseEvent> {
+    let nav_clone = navigator.clone();
+    Callback::from(move |_: MouseEvent| nav_clone.push(&route))
+}
+
+fn get_signed_in_menu_options(navigator: &Navigator) -> Html {
     html! {
         <>
             <div style="width: 100%;">
@@ -218,19 +225,19 @@ fn get_signed_in_menu_options() -> Html {
             </div>
 
             <ul>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::Dashboard)}>
                     <Icon icon_id={IconId::LucideLayoutDashboard} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Dashboard"}</div>
                 </li>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::CharacterCreator)}>
                     <Icon icon_id={IconId::OcticonsPersonAdd16} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Character Creator"}</div>
                 </li>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::RulesetCreator)}>
                     <Icon icon_id={IconId::LucideHammer} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Ruleset Creator"}</div>
                 </li>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::SettingEditor)}>
                     <Icon icon_id={IconId::LucideMountainSnow} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Setting Editor"}</div>
                 </li>
@@ -241,11 +248,11 @@ fn get_signed_in_menu_options() -> Html {
             </div>
 
             <ul>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::HostGame)}>
                     <Icon icon_id={IconId::FeatherServer} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Host Game"}</div>
                 </li>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::JoinGame)}>
                     <Icon icon_id={IconId::BootstrapBoxArrowInLeft} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Join Game"}</div>
                 </li>
@@ -256,11 +263,11 @@ fn get_signed_in_menu_options() -> Html {
             </div>
 
             <ul>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::ProfileEdit)}>
                     <Icon icon_id={IconId::BootstrapGear} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Preferences"}</div>
                 </li>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::ProfileEdit)}>
                     <Icon icon_id={IconId::OcticonsInfo24} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"About"}</div>
                 </li>
@@ -269,7 +276,7 @@ fn get_signed_in_menu_options() -> Html {
     }
 }
 
-fn get_signed_out_menu_options() -> Html {
+fn get_signed_out_menu_options(navigator: &Navigator) -> Html {
     html! {
         <>
             <div style="width: 100%;">
