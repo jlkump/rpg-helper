@@ -9,7 +9,10 @@ use yew::prelude::*;
 use crate::gui::contexts::style::theme::use_theme;
 
 #[derive(Properties, PartialEq)]
-pub struct Props {
+pub struct Props<T> 
+where 
+    T: PartialEq + 'static
+{
     #[prop_or("text".to_string())]
     pub input_type: String,
     pub label: String,
@@ -17,13 +20,17 @@ pub struct Props {
     #[prop_or("".to_string())]
     pub placeholder: String,
     pub input_ref: NodeRef,
-    pub onchange: Callback<String>,
-    pub onblur: Callback<String>,
+    pub onchange: Callback<T>,
+    pub onblur: Callback<(String, T)>,
+    pub to_type: Callback<String, T>,
     pub errors: Rc<RefCell<ValidationErrors>>,
 }
 
 #[function_component(FormInput)]
-pub fn form_input(props: &Props) -> Html {
+pub fn form_input<T>(props: &Props<T>) -> Html 
+where
+    T: PartialEq + Clone + 'static,
+{
     let val_errors = props.errors.borrow();
     let errors = val_errors.field_errors().clone();
     let empty_errors = vec![];
@@ -37,18 +44,21 @@ pub fn form_input(props: &Props) -> Html {
     };
 
     let handle_onchange = props.onchange.clone();
+    let to_type = props.to_type.clone();
     let onchange = Callback::from(move |event: Event| {
         let target = event.target().unwrap();
         let value = target.unchecked_into::<HtmlInputElement>().value();
-        handle_onchange.emit(value);
+        handle_onchange.emit(to_type.emit(value));
     });
 
     let handle_onblur = props.onblur.clone();
+    let to_type = props.to_type.clone();
+    let name = props.name.clone();
     let on_blur: Callback<FocusEvent> = {
         Callback::from(move |event: FocusEvent| {
             let target = event.target().unwrap();
             let value = target.unchecked_into::<HtmlInputElement>().value();
-            handle_onblur.emit(value);
+            handle_onblur.emit((name.clone(), to_type.emit(value)));
         })
     };
 
@@ -59,6 +69,7 @@ pub fn form_input(props: &Props) -> Html {
             flex-direction: column;
             margin-top: 2px;
             margin-bottom: 2px;
+            width: 250px;
 
             input {
                 background: ${bg};
@@ -110,6 +121,14 @@ pub fn form_input(props: &Props) -> Html {
         "#
     );
 
+    let error_style = css!(
+        r#"
+            color: ${color};
+            word-wrap: break-word;
+        "#,
+        color = theme.text_colored
+    );
+
     html! {
     <div class={div_style}>
       <label html={props.name.clone()} class={label_style}>
@@ -122,9 +141,9 @@ pub fn form_input(props: &Props) -> Html {
         onchange={onchange}
         onblur={on_blur}
       />
-    <span class="">
-        {error_message}
-    </span>
+        <span class={error_style}>
+            {error_message}
+        </span>
     </div>
     }
 }

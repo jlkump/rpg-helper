@@ -11,7 +11,7 @@ pub struct Props {
 }
 
 #[styled_component(Button)]
-pub fn button(props: &Props) -> Html {
+pub fn button(_: &Props) -> Html {
     html! {
 
     }
@@ -21,7 +21,7 @@ pub fn button(props: &Props) -> Html {
 pub fn submit_button(props: &Props) -> Html {
     let theme = use_theme();
     html! {
-        <button type="submit">
+        <button type="submit" style="margin-top: 8px;">
             if props.loading {
                 <div style="display: flex; flex-direction: row; align-items: center; justify-content: center;">
                     <Loader color={theme.text_invert.clone()}/ >
