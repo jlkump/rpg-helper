@@ -135,6 +135,11 @@ struct SideBarProps {
 #[styled_component(SideBar)]
 fn sider_bar(props: &SideBarProps) -> Html {
     let theme = use_theme();
+    let padding = if props.sidebar_open {
+        15
+    } else {
+        0
+    };
     let sidebar_style = css!(
         r#"
             background: ${paper_dark};
@@ -142,13 +147,32 @@ fn sider_bar(props: &SideBarProps) -> Html {
             flex-direction: column;
             align-items: center;
             width: 100%;
+            padding: ${padding}px;
 
             ul {
                 list-style-type: none;
+                width: 100%;
                 padding: 0;
             }
+
+            li {
+                border-radius: 10px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                padding: 10px;
+                font-size: 1.5em;
+            }
+
+            li:hover {
+                background: ${list_hover};
+                color: ${text_invert};
+            }
         "#,
-        paper_dark=theme.paper_dark
+        paper_dark=theme.paper_dark,
+        padding=padding,
+        list_hover=theme.panel_color_primary,
+        text_invert=theme.text_invert,
     );
 
     let classes = if props.sidebar_open {
@@ -157,21 +181,44 @@ fn sider_bar(props: &SideBarProps) -> Html {
         classes!("sidebar", "closed", sidebar_style)
     };
 
-    let exit_icon_color = css!("color: ${color};", color=theme.h2);
+    let exit_icon_color = css!("color: ${color}; position: absolute; margin: 7px; top: 0; right: 0;", color=theme.h3);
 
     html! {
         <div class={classes}>
             <div style="display: flex; flex-direction: column; flex; width: 100%;">
-                <h3 style="font-size: 2em;">{"Menu"}</h3>
                 <div class={classes!("exit_sidebar", exit_icon_color)} onclick={props.exit_callback.clone()}>
-                    <h2>{"Close"}</h2>
-                    <Icon icon_id={IconId::FontAwesomeSolidXmark} width={"2em".to_owned()} height={"2em".to_owned()}/>
+                    <Icon icon_id={IconId::FontAwesomeSolidXmark} width={"2.5em".to_owned()} height={"2.5em".to_owned()}/>
                 </div>
+            </div>
+            <h3 style="font-size: 2em;">
+                {"Menu"}
+            </h3>
+            <div style="width: 100%;">
+                <hr/>
             </div>
 
             <ul>
-                <li>{"Item 1"}</li>
+                <li>
+                    <Icon icon_id={IconId::LucideLayoutDashboard} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Dashboard"}</div>
+                </li>
+                <li>
+                    <Icon icon_id={IconId::OcticonsPersonAdd16} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Character Creator"}</div>
+                </li>
+                <li>
+                    <Icon icon_id={IconId::LucideHammer} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Ruleset Creator"}</div>
+                </li>
+                <li>
+                    <Icon icon_id={IconId::LucideMountainSnow} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Setting Editor"}</div>
+                </li>
             </ul>
+
+            <div style="width: 100%;">
+                <hr/>
+            </div>
         </div>
     }
 }
