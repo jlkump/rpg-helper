@@ -10,6 +10,8 @@ use crate::{router::Route, gui::{contexts::style::theme::{use_theme, Theme}, dis
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
     pub children: Html,
+    #[prop_or_default]
+    pub content_class: Classes,
 }
 
 #[styled_component(NavBar)]
@@ -92,7 +94,7 @@ pub fn nav_bar(props: &Props) -> Html {
                     <Logo />
                     <UserMenu />
                 </span>
-                <div style="flex: 90%;">
+                <div class={props.content_class.clone()} style="flex: 90%;">
                     {props.children.clone()}
                 </div>
             </div>

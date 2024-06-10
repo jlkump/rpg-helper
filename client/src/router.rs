@@ -39,6 +39,7 @@ pub(crate) enum Route {
 }
 
 fn switch(routes: Route) -> Html {
+    // TODO: Redirect most routes if not logged-in
     match routes {
         Route::Home => html! { <Home/> },
         Route::About => html! { <Redirect<Route> to={Route::Home} />},

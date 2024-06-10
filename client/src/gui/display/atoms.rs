@@ -5,5 +5,6 @@ pub mod image;
 pub mod loader;
 pub mod logo;
 pub mod panel;
+pub mod scroll_div;
 mod table;
 pub mod tooltip;

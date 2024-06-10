@@ -2,8 +2,9 @@ use std::{cell::RefCell, rc::Rc};
 
 use yew::prelude::*;
 use stylist::yew::styled_component;
+use yew_router::components::Link;
 
-use crate::{api::schema::UserRegistrationSchema, gui::display::{organisms::nav_bar::NavBar, atoms::form_input::FormInput}};
+use crate::{api::schema::UserRegistrationSchema, gui::display::{atoms::{form_input::FormInput, scroll_div::ScrollDiv}, organisms::nav_bar::NavBar}, router::Route};
 use validator::{Validate, ValidationErrors};
 
 
@@ -58,8 +59,22 @@ pub fn register_user(_: &RegisterProps) -> Html {
     // Display changes based on whether logged-in or not
     // TODO: Complete based on tutorial here: https://codevoweb.com/rust-yew-frontend-jwt-access-and-refresh-tokens/
     html! {
-        <NavBar>
-            <FormInput label="Test Input" name="Name" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+        <NavBar content_class={css!("display: flex; justify-content: center; align-items: center;")}>
+            <ScrollDiv class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} style="padding: 20px;">
+                <h1 class={css!("font-size: 2em;")}>{"Sign Up"}</h1>
+                <FormInput input_type="text" placeholder="Username" label="" name="Username" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="text" placeholder="Email" label="" name="Email" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="password" placeholder="Password" label="" name="Password" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="password" placeholder="Confirm Password" label="" name="Confirm Password" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                <FormInput input_type="submit" value="Submit" placeholder="Sign Up" label="" name="Signup" input_ref={NodeRef::default()} onchange={Callback::from(|_| ())} onblur={Callback::from(|_| ())} errors={Rc::new(RefCell::new(ValidationErrors::default()))} />
+                
+                <div class={css!("margin-top: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1em;")}>
+                    {"Already have an account?"}
+                    <Link<Route> to={Route::Login}>
+                        {" Login Here"}
+                    </Link<Route>>
+                </div>
+            </ScrollDiv>
         </NavBar>
     }
 }
