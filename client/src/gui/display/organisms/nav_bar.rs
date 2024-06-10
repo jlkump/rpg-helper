@@ -83,7 +83,7 @@ pub fn nav_bar(props: &Props) -> Html {
 
     html! {
         <div class={page_style}>
-            <SideBar sidebar_open={*menu_open} exit_callback={onclick.clone()}/>
+            <SideBar sidebar_open={*menu_open} exit_callback={onclick.clone()} signed_in=true/>
             <div class={body_classes}>
                 <span class={get_bar_style(&theme)}>
                     <div class={get_hamburger_style(&theme)}>
@@ -130,6 +130,7 @@ fn user_menu(_: &UserMenuProps) -> Html {
 struct SideBarProps {
     sidebar_open: bool,
     exit_callback: Callback<MouseEvent>,
+    signed_in: bool,
 }
 
 #[styled_component(SideBar)]
@@ -181,6 +182,8 @@ fn sider_bar(props: &SideBarProps) -> Html {
         classes!("sidebar", "closed", sidebar_style)
     };
 
+    let copyright_style = css!("color: ${color}; font-size: 0.5em; display: flex; align-items: center; justify-content: center;", color=theme.text_faint);
+
     let exit_icon_color = css!("color: ${color}; position: absolute; margin: 7px; top: 0; right: 0;", color=theme.h3);
 
     html! {
@@ -193,6 +196,23 @@ fn sider_bar(props: &SideBarProps) -> Html {
             <h3 style="font-size: 2em;">
                 {"Menu"}
             </h3>
+            if props.signed_in {
+                {get_signed_in_menu_options()}
+            } else {
+                {get_signed_out_menu_options()}
+            }
+
+
+            <div class={copyright_style} style="margin-top: auto; width: 100%;">
+                {"Copyright (c) 2024 by J. Landon Kump"}
+            </div>
+        </div>
+    }
+}
+
+fn get_signed_in_menu_options() -> Html {
+    html! {
+        <>
             <div style="width: 100%;">
                 <hr/>
             </div>
@@ -219,7 +239,54 @@ fn sider_bar(props: &SideBarProps) -> Html {
             <div style="width: 100%;">
                 <hr/>
             </div>
-        </div>
+
+            <ul>
+                <li>
+                    <Icon icon_id={IconId::FeatherServer} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Host Game"}</div>
+                </li>
+                <li>
+                    <Icon icon_id={IconId::BootstrapBoxArrowInLeft} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Join Game"}</div>
+                </li>
+            </ul>
+            
+            <div style="width: 100%;">
+                <hr/>
+            </div>
+
+            <ul>
+                <li>
+                    <Icon icon_id={IconId::BootstrapGear} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Preferences"}</div>
+                </li>
+                <li>
+                    <Icon icon_id={IconId::OcticonsInfo24} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"About"}</div>
+                </li>
+            </ul>
+        </>
+    }
+}
+
+fn get_signed_out_menu_options() -> Html {
+    html! {
+        <>
+            <div style="width: 100%;">
+                <hr/>
+            </div>
+
+            <ul>
+                <li>
+                    <Icon icon_id={IconId::HeroiconsOutlinePencilSquare} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Sign Up"}</div>
+                </li>
+                <li>
+                    <Icon icon_id={IconId::OcticonsInfo24} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"About"}</div>
+                </li>
+            </ul>
+        </>
     }
 }
 
