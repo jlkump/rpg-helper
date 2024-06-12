@@ -1,4 +1,4 @@
-use std::{cell::RefCell, f64::consts::E, ops::Deref, rc::Rc};
+use std::{borrow::Cow, cell::RefCell, f64::consts::E, ops::Deref, rc::Rc};
 
 use web_sys::HtmlInputElement;
 use yew::{platform::spawn_local, prelude::*};
@@ -7,7 +7,7 @@ use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navig
 use yewdux::{dispatch, use_store, Dispatch};
 
 use crate::{api::{schema::UserRegistrationSchema, user_api::api_register_user}, gui::{contexts::style::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, scroll_div::ScrollDiv}, organisms::nav_bar::NavBar}}, router::Route, store::{set_page_loading, GlobalStore}};
-use validator::{Validate, ValidationErrors};
+use validator::{Validate, ValidationError, ValidationErrors};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -137,8 +137,30 @@ fn registration_onsubmit_callback(
                             set_page_loading(false, dispatch.clone());
                             navigator.push(&Route::Login);
                         },
-                        Err(_) => {
+                        Err(e) => {
                             set_page_loading(false, dispatch.clone());
+                            match e {
+                                crate::api::user_api::Error::Standard(registration) => {
+                                    let err;
+                                    let key;
+                                    match registration {
+                                        crate::api::types::RegistrationError::UsernameTaken => {
+                                            err = ValidationError::new("UsernameTaken").with_message(Cow::from("Username is taken"));
+                                            key = "username";
+                                        },
+                                        crate::api::types::RegistrationError::EmailTaken => {
+                                            err = ValidationError::new("EmailTaken").with_message(Cow::from("Email is taken"));
+                                            key = "email";
+                                        },
+                                    }
+                                    vald_errors
+                                        .borrow_mut()
+                                        .errors_mut()
+                                        .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
+                                },
+                                crate::api::user_api::Error::API | crate::api::user_api::Error::RequestFailed | crate::api::user_api::Error::ParseFailed => todo!(),
+                            }
+                            
                             // TODO: Show error based on resultant error recieved from API
                         },
                     }
@@ -174,7 +196,7 @@ pub fn register_user(_: &RegisterProps) -> Html {
         <NavBar content_class={css!("display: flex; justify-content: center; align-items: center;")}>
             <ScrollDiv class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} style="padding: 20px;">
                 <h1 class={css!("font-size: 2em;")}>{"Sign Up"}</h1>
-                <form class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")}>
+                <form class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} onsubmit={on_submit}>
                     <FormInput<RegistrationFormUpdate> 
                         input_type="text" placeholder="Username" label="" name="username" input_ref={username_input_ref} 
                         to_type={Callback::from(|s| RegistrationFormUpdate::Username(s))}

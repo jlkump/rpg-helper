@@ -1,21 +1,45 @@
 use chrono::prelude::*;
+use std::fmt::{Debug, Display};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ErrorResponse {
-    pub status: String,
-    pub message: String,
+pub enum RegistrationError {
+    UsernameTaken,
+    EmailTaken,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum LoginError {
+    UnknownUsernameOrPassword,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum UserDataError {
+    UserNotFound(uuid::Uuid)
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum AuthError {
+    NotLoggedIn,
+    InvalidToken,
+}
+
+impl Display for AuthError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthError::NotLoggedIn => write!(f, "Unauthorized: User not logged in."),
+            AuthError::InvalidToken => write!(f, "Unauthorized: Invalid token."),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserDataResponse {
-    pub status: String,
     pub data: UserData,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserLoginResponse {
-    pub status: String,
     pub auth_token: String,
 }
 

@@ -1,8 +1,15 @@
-use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{ErrorResponse, UserData, UserDataResponse, UserLoginResponse}};
+use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, RegistrationError, UserData, UserDataError, UserDataResponse, UserLoginResponse}};
 use reqwasm::http;
 
-pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, String> {
-    let url = format!("{}/api/auth/register", std::env::var("API_URL").unwrap());
+pub enum Error<T> {
+    Standard(T),
+    API,
+    RequestFailed,
+    ParseFailed
+}
+
+pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, Error<RegistrationError>> {
+    let url = "http://localhost:8090/api/auth/register";//format!("{}/api/auth/register", std::env::var("API_URL").unwrap());
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
         .body(serde_json::to_string(user_data).unwrap())
@@ -10,26 +17,26 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
         .await
     {
         Ok(res) => res,
-        Err(_) => return Err("Failed to make request".to_string()),
+        Err(_) => return Err(Error::RequestFailed),
     };
 
     if response.status() != 200 {
-        let error_response = response.json::<ErrorResponse>().await;
+        let error_response = response.json::<RegistrationError>().await;
         if let Ok(error_response) = error_response {
-            return Err(error_response.message);
+            return Err(Error::Standard(error_response));
         } else {
-            return Err(format!("API error: {}", response.status()));
+            return Err(Error::API);
         }
     }
 
     let res_json = response.json::<UserDataResponse>().await;
     match res_json {
         Ok(data) => Ok(data.data),
-        Err(_) => Err("Failed to parse response".to_string()),
+        Err(_) => Err(Error::ParseFailed),
     }
 }
 
-pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginResponse, String> {
+pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginResponse, Error<LoginError>> {
     let url = format!("{}/api/auth/login", std::env::var("API_URL").unwrap());
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
@@ -39,27 +46,27 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
         .await
     {
         Ok(res) => res,
-        Err(_) => return Err("Failed to make request".to_string()),
+        Err(_) => return Err(Error::RequestFailed),
     };
 
     if response.status() != 200 {
-        let error_response = response.json::<ErrorResponse>().await;
+        let error_response = response.json::<LoginError>().await;
         if let Ok(error_response) = error_response {
-            return Err(error_response.message);
+            return Err(Error::Standard(error_response));
         } else {
-            return Err(format!("API error: {}", response.status()));
+            return Err(Error::API);
         }
     }
 
     let res_json = response.json::<UserLoginResponse>().await;
     match res_json {
         Ok(data) => Ok(data),
-        Err(_) => Err("Failed to parse response".to_string()),
+        Err(_) => Err(Error::ParseFailed),
     }
 }
 
 
-pub async fn api_user_info() -> Result<UserData, String> {
+pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
     let url = format!("{}/api/users/me", std::env::var("API_URL").unwrap());
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
@@ -67,26 +74,26 @@ pub async fn api_user_info() -> Result<UserData, String> {
         .await
     {
         Ok(res) => res,
-        Err(_) => return Err("Failed to make request".to_string()),
+        Err(_) => return Err(Error::RequestFailed),
     };
 
     if response.status() != 200 {
-        let error_response = response.json::<ErrorResponse>().await;
+        let error_response = response.json::<UserDataError>().await;
         if let Ok(error_response) = error_response {
-            return Err(error_response.message);
+            return Err(Error::Standard(error_response));
         } else {
-            return Err(format!("API error: {}", response.status()));
+            return Err(Error::API);
         }
     }
 
     let res_json = response.json::<UserDataResponse>().await;
     match res_json {
         Ok(data) => Ok(data.data),
-        Err(_) => Err("Failed to parse response".to_string()),
+        Err(_) => Err(Error::ParseFailed),
     }
 }
 
-pub async fn api_logout_user() -> Result<(), String> {
+pub async fn api_logout_user() -> Result<(), Error<String>> {
     let url = format!("{}/api/users/me", std::env::var("API_URL").unwrap());
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
@@ -94,15 +101,15 @@ pub async fn api_logout_user() -> Result<(), String> {
         .await
     {
         Ok(res) => res,
-        Err(_) => return Err("Failed to make request".to_string()),
+        Err(_) => return Err(Error::RequestFailed),
     };
 
     if response.status() != 200 {
-        let error_response = response.json::<ErrorResponse>().await;
+        let error_response = response.json::<String>().await;
         if let Ok(error_response) = error_response {
-            return Err(error_response.message);
+            return Err(Error::Standard(error_response));
         } else {
-            return Err(format!("API error: {}", response.status()));
+            return Err(Error::API);
         }
     }
 
