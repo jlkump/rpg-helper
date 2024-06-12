@@ -3,7 +3,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
 
-use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema}, types::{ErrorResponse, UserDataResponse, UserLoginResponse}}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB}};
+use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema}, types::{ LoginError, RegistrationError, UserDataError, UserDataResponse, UserLoginResponse}}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB}};
 
 #[post("/auth/register")]
 async fn register_handler(
@@ -14,22 +14,13 @@ async fn register_handler(
 
     match registration_response {
         RegistrationResponse::Success(user) => {
-            return HttpResponse::Ok().json(UserDataResponse {
-                status: String::from("success"),
-                data: user_db.get_data(user).unwrap()
-            });
+            return HttpResponse::Ok().json(UserDataResponse { data: user_db.get_data(user).unwrap() });
         },
         RegistrationResponse::EmailTaken => {
-            return HttpResponse::InternalServerError().json(ErrorResponse {
-                status: String::from("error"),
-                message: String::from("Email taken")
-            });
+            return HttpResponse::InternalServerError().json(RegistrationError::EmailTaken);
         },
         RegistrationResponse::UsernameTaken => {
-            return HttpResponse::InternalServerError().json(ErrorResponse {
-                status: String::from("error"),
-                message: String::from("Username taken")
-            });
+            return HttpResponse::InternalServerError().json(RegistrationError::UsernameTaken);
         },
     }
 }
@@ -68,19 +59,10 @@ async fn login_handler(
 
             HttpResponse::Ok()
                 .cookie(cookie)
-                .json(json!(UserLoginResponse {
-                    status: String::from("success"),
-                    auth_token: token
-                }))
+                .json(UserLoginResponse { auth_token: token })
         }, 
-        LoginResponse::UnknownUsername => HttpResponse::BadRequest().json(ErrorResponse {
-            status: String::from("fail"),
-            message: String::from("Unknown username"),
-        }),
-        LoginResponse::WrongPassword => HttpResponse::BadRequest().json(ErrorResponse {
-            status: String::from("fail"),
-            message: String::from("Invalid password"),
-        }) // TODO: Handle limited tries
+        LoginResponse::UnknownUsername => HttpResponse::BadRequest().json(LoginError::UnknownUsernameOrPassword),
+        LoginResponse::WrongPassword => HttpResponse::BadRequest().json(LoginError::UnknownUsernameOrPassword) // TODO: Handle multiple tries
     }
 }
 
@@ -107,15 +89,9 @@ async fn get_me_handler(
     let user_id = ext.get::<uuid::Uuid>().unwrap();
 
     if let Some(user_data) = user_db.get_data(user_id.into()) { 
-        HttpResponse::Ok().json(UserDataResponse { 
-            status: String::from("success"),
-            data: user_data
-        })
+        HttpResponse::Ok().json(UserDataResponse { data: user_data} )
     } else {
-        HttpResponse::InternalServerError().json(ErrorResponse {
-            status: String::from("fail"),
-            message: String::from(format!("User {} not found in database.", user_id))
-        })
+        HttpResponse::InternalServerError().json(UserDataError::UserNotFound(*user_id))
     }
 
 }

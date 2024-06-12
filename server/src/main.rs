@@ -14,7 +14,7 @@ async fn main() -> std::io::Result<()> {
     let user_db = web::Data::new(UserDB::open(&config));
     let config_data = web::Data::new(config.clone());
 
-    println!("Starting server at {}:{}/", config.server.host, config.server.port);
+    println!("Starting server at {}:{}/ with allowed origin: {}", config.server.host, config.server.port, config.server.origin_path);
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin(&config.server.origin_path)
@@ -23,6 +23,10 @@ async fn main() -> std::io::Result<()> {
                 header::CONTENT_TYPE,
                 header::AUTHORIZATION,
                 header::ACCEPT,
+                header::ACCESS_CONTROL_REQUEST_HEADERS,
+                header::ACCESS_CONTROL_REQUEST_METHOD,
+                header::ORIGIN,
+                header::ACCESS_CONTROL_ALLOW_ORIGIN,
             ])
             .supports_credentials();
 
