@@ -1,5 +1,6 @@
 use std::{borrow::Cow, cell::RefCell, f64::consts::E, ops::Deref, rc::Rc};
 
+use gloo::console::log;
 use web_sys::HtmlInputElement;
 use yew::{platform::spawn_local, prelude::*};
 use stylist::{css, yew::styled_component};
@@ -127,10 +128,10 @@ fn registration_onsubmit_callback(
                     set_page_loading(true, dispatch.clone());
                     let res = api_register_user(&form_data.into()).await;
                     
-                    username_ref.cast::<HtmlInputElement>().unwrap().set_value("");
-                    email_ref.cast::<HtmlInputElement>().unwrap().set_value("");
-                    password_ref.cast::<HtmlInputElement>().unwrap().set_value("");
-                    password_confirm_ref.cast::<HtmlInputElement>().unwrap().set_value("");
+                    username_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
+                    email_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
+                    password_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
+                    password_confirm_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
 
                     match res {
                         Ok(u) => {
@@ -158,7 +159,7 @@ fn registration_onsubmit_callback(
                                         .errors_mut()
                                         .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
                                 },
-                                crate::api::user_api::Error::API | crate::api::user_api::Error::RequestFailed | crate::api::user_api::Error::ParseFailed => todo!(),
+                                crate::api::user_api::Error::API => log!("Got API Error: API Failed"),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
                             }
                             
                             // TODO: Show error based on resultant error recieved from API

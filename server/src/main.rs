@@ -1,12 +1,13 @@
 use actix_cors::Cors;
-use actix_web::{http::header, web, App, HttpServer};
+use actix_web::{http::header, middleware::Logger, web, App, HttpServer};
 use api::routes;
 use config::Config;
 use database::user::UserDB;
+use log::info;
 
+mod api;
 mod config;
 mod database;
-mod api;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -14,24 +15,25 @@ async fn main() -> std::io::Result<()> {
     let user_db = web::Data::new(UserDB::open(&config));
     let config_data = web::Data::new(config.clone());
 
-    println!("Starting server at {}:{}/ with allowed origin: {}", config.server.host, config.server.port, config.server.origin_path);
+    info!("Starting server at {}:{}/ with allowed origin: {}", config.server.host, config.server.port, config.server.origin_path);
+
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     HttpServer::new(move || {
         let cors = Cors::default()
-            .allowed_origin(&config.server.origin_path)
-            .allowed_methods(vec!["GET", "POST"])
+            .allowed_origin("http://127.0.0.1:3000")
+            .allowed_origin("http://localhost:3000")
+            .allowed_methods(vec!["GET", "POST", "OPTIONS"])
             .allowed_headers(vec![
-                header::CONTENT_TYPE,
                 header::AUTHORIZATION,
                 header::ACCEPT,
-                header::ACCESS_CONTROL_REQUEST_HEADERS,
-                header::ACCESS_CONTROL_REQUEST_METHOD,
+                header::CONTENT_TYPE,
                 header::ORIGIN,
-                header::ACCESS_CONTROL_ALLOW_ORIGIN,
             ])
             .supports_credentials();
 
         App::new()
             .wrap(cors)
+            .wrap(Logger::default())
             .app_data(user_db.clone())      // Passing handle to user DB to worker threads
             .app_data(config_data.clone())  // Config data for jwt secret and other assorted info
             .configure(routes::initialize)
@@ -39,10 +41,4 @@ async fn main() -> std::io::Result<()> {
     .bind((config.server.host, config.server.port))?
     .run()
     .await
-}
-
-// How to get the UserDB database info
-async fn index(data: web::Data<UserDB>) -> String {
-    todo!();
-    // let mut counter = data.get_data(0);
 }

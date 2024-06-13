@@ -2,6 +2,7 @@ use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post,
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
+use log::trace;
 
 use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema}, types::{ LoginError, RegistrationError, UserDataError, UserDataResponse, UserLoginResponse}}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB}};
 
@@ -10,17 +11,18 @@ async fn register_handler(
     body: web::Json<UserRegistrationSchema>, 
     user_db: web::Data<UserDB>
 ) -> impl Responder {
+    trace!("Recieved registration request with body of {:?}", body);
     let registration_response = user_db.register_user(body.into_inner());
-
+    trace!("Got response of {:?} from Database", registration_response);
     match registration_response {
         RegistrationResponse::Success(user) => {
             return HttpResponse::Ok().json(UserDataResponse { data: user_db.get_data(user).unwrap() });
         },
         RegistrationResponse::EmailTaken => {
-            return HttpResponse::InternalServerError().json(RegistrationError::EmailTaken);
+            return HttpResponse::Conflict().json(RegistrationError::EmailTaken);
         },
         RegistrationResponse::UsernameTaken => {
-            return HttpResponse::InternalServerError().json(RegistrationError::UsernameTaken);
+            return HttpResponse::Conflict().json(RegistrationError::UsernameTaken);
         },
     }
 }

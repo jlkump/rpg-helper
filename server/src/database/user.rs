@@ -1,6 +1,7 @@
 use actix_web::web::Buf;
 use bcrypt::DEFAULT_COST;
 use chrono::prelude::*;
+use log::{error, trace};
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
 
@@ -31,6 +32,7 @@ impl From<&uuid::Uuid> for User {
     }
 }
 
+#[derive(Debug)]
 pub enum RegistrationResponse {
     Success(User),
     UsernameTaken,
@@ -129,24 +131,38 @@ impl UserDB {
 
     fn get_user_by_username(&self, username: &String) -> Option<User> {
         for row_data in &self.open_secure_data_tree() {
-            let (l, r) = row_data.unwrap();
-            let id: uuid::Uuid = bincode::deserialize_from(l.reader()).unwrap();
-            let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
-            if data.username.eq(username) {
-                return Some(User { id });
+            trace!("Processing row data to find user by username");
+            match row_data {
+                Ok((_, r)) => {
+                    let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
+                    let id = data.id;
+                    trace!("Got row data of id: {} data: {:?}", id, data);
+                    if data.username.eq(username) {
+                        return Some(User { id });
+                    }
+                },
+                Err(e) => error!("Got error: {:?}", e),
             }
+            trace!("Finished processing row data to find user by username");
         }
         None
     }
 
     fn get_user_by_email(&self, email: &String) -> Option<User> {
         for row_data in &self.open_secure_data_tree() {
-            let (l, r) = row_data.unwrap();
-            let id: uuid::Uuid = bincode::deserialize_from(l.reader()).unwrap();
-            let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
-            if data.email.eq(email) {
-                return Some(User { id });
+            trace!("Processing row data to find user by email");
+            match row_data {
+                Ok((_, r)) => {
+                    let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
+                    let id = data.id;
+                    trace!("Got row data of id: {} data: {:?}", id, data);
+                    if data.email.eq(email) {
+                        return Some(User { id });
+                    }
+                },
+                Err(e) => error!("Got error: {:?}", e),
             }
+            trace!("Finished processing row data to find user by email");
         }
         None
     }
