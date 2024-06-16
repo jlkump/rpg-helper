@@ -12,3 +12,17 @@ pub struct UserLoginSchema {
     pub username: String,
     pub password: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum UserUpdateSchema {
+    Email(String),
+    Password(String),
+    ProfileName(String),
+    ProfilePicture(String)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FileUploadMetadata {
+    pub name: String,
+}
+

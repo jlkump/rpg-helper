@@ -18,7 +18,9 @@ pub struct ServerConfig {
 
 #[derive(Clone, Deserialize)]
 pub struct DatabaseConfig {
-    pub root_path: String,
+    pub database_path: String,
+    pub uploads_path: String,
+    pub global_files_path: String,
 }
 
 #[derive(Clone, Deserialize)]

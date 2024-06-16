@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use gloo::console::error;
 use stylist::{style, yew::styled_component, Style};
 use yew::{platform::spawn_local, prelude::*};
@@ -126,13 +128,39 @@ fn user_menu(props: &UserMenuProps) -> Html {
             display: flex;
             align-items: center;
             justify-content: center;
-
-            cursor: pointer;
         "#
+    );
+
+    let hover_color = css!(
+        r#"
+            cursor: pointer;
+            &:hover {
+                color: ${hover};
+            }
+        "#,
+        hover = theme.text_colored_highlight,
+    );
+    let profile_style = css!(
+        r#"
+            border: 4px solid ${color};
+            border-radius: 25%;
+            width: 3em; 
+            height: 3em;
+            box-shadow: 5px 0px 5px ${shadow}, -5px 0px 5px ${shadow};
+
+            margin-left: 10px;
+
+            &:hover {
+                border: 4px solid ${hover};
+            }
+        "#,
+        color = theme.text_colored,
+        hover = theme.text_colored_highlight,
+        shadow = theme.hover_dropshadow
     );
     let navigator = use_navigator().unwrap();
     let loading = use_state(|| false);
-    let (_, dispatch) = use_store::<GlobalStore>();
+    let (store, dispatch) = use_store::<GlobalStore>();
 
     let handle_logout = {
         let navigator = navigator.clone();
@@ -168,20 +196,31 @@ fn user_menu(props: &UserMenuProps) -> Html {
     };
     html! {
         if props.logged_in {
-            <div class={style} onclick={handle_logout}>
+            <div class={style}>
                 if *loading {
                     <Loader color={theme.text_colored.clone()} />
                 } else {
-                    <h3>{"Logout"}</h3>
+                    <div onclick={handle_logout}>
+                        <h3 class={hover_color.clone()}>{"Logout"}</h3>
+                    </div>
+                    if let Some(user) = &store.auth_user {
+                        <Link<Route> to={Route::Profile}><div>
+                            <img class={profile_style} src={user.profile_photo.clone()} />
+                        </div></Link<Route>>
+                    }
                 }
             </div>
         } else {            
             <div class={style}>
                 <div style="margin-right: 10px">
-                    <Link<Route> to={Route::Login} classes={css!("text-decoration: none;")}><h3>{"Login"}</h3></Link<Route>>
+                    <Link<Route> to={Route::Login} classes={css!("text-decoration: none;")}>
+                        <h3 class={hover_color.clone()}>{"Login"}</h3>
+                    </Link<Route>>
                 </div>
                 <div>
-                    <Link<Route> to={Route::Register} classes={css!("text-decoration: none;")}><h3>{"Sign up"}</h3></Link<Route>>
+                    <Link<Route> to={Route::Register} classes={css!("text-decoration: none;")}>
+                        <h3 class={hover_color.clone()}>{"Sign up"}</h3>
+                    </Link<Route>>
                 </div>
             </div>
         }

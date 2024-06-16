@@ -24,6 +24,15 @@ pub enum AuthError {
     InvalidToken,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub enum UploadError {
+    UserNotFound(uuid::Uuid),
+    FileTooLarge,
+    InsufficientUserStorage(i64, i64), // The amount requested and the amount the user has left
+    NameConflict(String), // Name conflict with existing user file upload
+    FileSystemErr(String)
+}
+
 impl Display for AuthError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

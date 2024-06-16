@@ -36,6 +36,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(db.clone())           // Passing handle to user DB to worker threads
             .app_data(config_data.clone())  // Config data for jwt secret and other assorted info
             .configure(routes::initialize)
+            .service(actix_files::Files::new("/uploads", config.database.uploads_path.to_string()))
+            .service(actix_files::Files::new("/files", config.database.global_files_path.to_string()).show_files_listing())
     })
     .bind((config.server.host, config.server.port))?
     .run()

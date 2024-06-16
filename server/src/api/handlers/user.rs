@@ -1,9 +1,14 @@
+use std::path::Path;
+
 use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
+use log::info;
 use serde_json::json;
 
-use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema}, types::{ LoginError, RegistrationError, UserDataError, UserDataResponse, UserLoginResponse}}, config::Config, database::{user::{LoginResponse, RegistrationResponse}, Database}};
+use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ LoginError, RegistrationError, UploadError, UserDataError, UserDataResponse, UserLoginResponse}}, config::Config, database::{user::{LoginResponse, RegistrationResponse}, Database}};
+
+use actix_multipart::form::{json::Json as MPJson, tempfile::TempFile, MultipartForm};
 
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
     let scope = web::scope("/api")
@@ -19,11 +24,12 @@ pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
 async fn register_handler(
     body: web::Json<UserRegistrationSchema>, 
     db: web::Data<Database>,
+    config: web::Data<Config>,
 ) -> impl Responder {
     let registration_response = db.user_db.register_user(body.into_inner());
     match registration_response {
         RegistrationResponse::Success(user) => {
-            return HttpResponse::Ok().json(UserDataResponse { data: db.user_db.get_data(user).unwrap() });
+            return HttpResponse::Ok().json(UserDataResponse { data: db.user_db.get_data(user, &config).unwrap() });
         },
         RegistrationResponse::EmailTaken => {
             return HttpResponse::Conflict().json(RegistrationError::EmailTaken);
@@ -92,15 +98,86 @@ async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
 async fn get_me_handler(
     req: HttpRequest,
     db: web::Data<Database>,
+    config: web::Data<Config>,
     _: jwt_auth::JwtMiddleware,
 ) -> impl Responder {
     let ext = req.extensions();
     let user_id = ext.get::<uuid::Uuid>().unwrap();
 
-    if let Some(user_data) = db.user_db.get_data(user_id.into()) { 
+    if let Some(user_data) = db.user_db.get_data(user_id.into(), &config) { 
         HttpResponse::Ok().json(UserDataResponse { data: user_data} )
     } else {
         HttpResponse::InternalServerError().json(UserDataError::UserNotFound(*user_id))
     }
+}
 
+#[post("/user/update")]
+async fn user_update_handler(
+    req: HttpRequest,
+    body: web::Json<UserUpdateSchema>,
+    db: web::Data<Database>,
+    config: web::Data<Config>,
+    _: jwt_auth::JwtMiddleware,
+) -> impl Responder {
+    let ext = req.extensions();
+    let user = ext.get::<uuid::Uuid>().unwrap().into();
+
+    if let Some(_) = db.user_db.get_data(user, &config) {
+        match body.into_inner() {
+            UserUpdateSchema::Email(new_email) => db.user_db.update_user_email(user, new_email),
+            UserUpdateSchema::Password(new_password) => db.user_db.update_user_password(user, new_password),
+            UserUpdateSchema::ProfileName(profile_name) => db.user_db.update_user_profile_name(user, profile_name),
+            UserUpdateSchema::ProfilePicture(_) => todo!(),
+        };
+        HttpResponse::Ok().into()
+    } else {
+        HttpResponse::InternalServerError().json(UserDataError::UserNotFound(user.id))
+    }
+}
+
+#[derive(Debug, MultipartForm)]
+struct UploadForm {
+    #[multipart(limit = "200MB")]
+    file: TempFile,
+    json: MPJson<FileUploadMetadata>,
+}
+
+#[post("/user/upload")]
+async fn user_upload_file(
+    req: HttpRequest,
+    MultipartForm(form): MultipartForm<UploadForm>,
+    db: web::Data<Database>,
+    config: web::Data<Config>,
+    _: jwt_auth::JwtMiddleware,
+) -> impl Responder {
+    let ext = req.extensions();
+    let user_id = ext.get::<uuid::Uuid>().unwrap();
+    info!("Recieved request to upload {:?}\nwith json: {:?}", form.file, form.json);
+
+    if let Some(user_data) = db.user_db.get_data(user_id.into(), &config) {
+        if user_data.storage_used + form.file.size as i64 <= user_data.storage_limit {
+            let filepath = &format!(
+                "{}/uploads/{}/{}", 
+                config.database.uploads_path,
+                user_data.username, // This is only ok b/c username doesn't change
+                sanitize_filename(&form.json.name)
+            );
+            if !Path::new(filepath).exists() {
+                match form.file.file.persist(filepath) {
+                    Ok(_) => HttpResponse::Ok().into(),
+                    Err(e) => HttpResponse::InternalServerError().json(UploadError::FileSystemErr(e.to_string())),
+                }
+            } else {
+                HttpResponse::Conflict().json(UploadError::NameConflict(sanitize_filename(&form.json.name)))
+            }
+        } else {
+            HttpResponse::InsufficientStorage().json(UploadError::InsufficientUserStorage(form.file.size as i64, user_data.storage_limit - user_data.storage_used))
+        }
+    } else {
+        HttpResponse::InternalServerError().json(UploadError::UserNotFound(*user_id))
+    }
+}
+
+fn sanitize_filename(name: &str) -> String {
+    name.chars().filter(|c| *c != '/' && *c != '\\').collect()
 }

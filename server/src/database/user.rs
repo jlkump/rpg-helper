@@ -58,7 +58,7 @@ pub enum UpdateResponse {
 impl UserDB {
     pub(super) fn open(config: &Config) -> Self {
         UserDB {
-            users: sled::open(format!("{}/users", config.database.root_path)).unwrap()
+            users: sled::open(format!("{}/users", config.database.database_path)).unwrap()
         }
     }
 
@@ -155,6 +155,17 @@ impl UserDB {
         }
     }
 
+    pub fn update_user_profile_name(&self, user: User, profile_name: String) -> UpdateResponse {
+        let tree = self.open_general_data_tree();
+        if let Some(mut general) = get_data::<UserGeneralData, uuid::Uuid>(&tree, &user.id) {
+            general.update_profile_name(profile_name);
+            tree.insert(user.id, bincode::serialize(&general).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
+        }
+    }
+
     pub(super) fn user_join_game(&self, user: User, game_id: uuid::Uuid) -> UpdateResponse {
         let tree = self.open_general_data_tree();
         if let Some(mut general) = get_data::<UserGeneralData, uuid::Uuid>(&tree, &user.id) {
@@ -177,7 +188,11 @@ impl UserDB {
         }
     }
 
-    pub fn get_data(&self, user: User) -> Option<UserData> {
+    pub fn user_exists(&self, user: &User) -> bool {
+        self.get_secure_data(&user).is_some()
+    }
+
+    pub fn get_data(&self, user: User, config: &Config) -> Option<UserData> {
         if let Some(secure) = self.get_secure_data(&user) {
             if let Some(general) = self.get_general_data(&user) {
                 Some(UserData {
@@ -185,7 +200,7 @@ impl UserDB {
                     email: secure.email.clone(),
                     created_at: secure.created_at,
                     profile_name: general.profile_name,
-                    profile_photo: general.profile_photo,
+                    profile_photo: general.profile_photo.to_string(&config),
                     favorited_rulesets: general.favorited_rulesets,
                     favorited_settings: general.favorited_settings,
                     joined_games: general.joined_games,
@@ -359,7 +374,7 @@ impl UserSecureData {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct UserGeneralData {
     profile_name: String,        // Starts as username, can be changed
-    profile_photo: String,       // Has default photo for new users
+    profile_photo: ProfilePhotoType,       // Has default photo for new users
     owned_games: HashSet<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
     owned_rulesets: HashSet<uuid::Uuid>,   // The rulesets this user has created
     owned_settings: HashSet<uuid::Uuid>,   // The settings this user has created
@@ -370,11 +385,27 @@ struct UserGeneralData {
     updated_at: Option<DateTime<Utc>>,
 }
 
+// This will be good for general storing of images and their paths
+#[derive(Debug, Deserialize, Serialize, Clone)]
+enum ProfilePhotoType {
+    ExternalPath(String),
+    InternalServerPath(String)
+}
+
+impl ProfilePhotoType {
+    fn to_string(self, config: &Config) -> String {
+        match self {
+            ProfilePhotoType::ExternalPath(path) => path,
+            ProfilePhotoType::InternalServerPath(path) => format!("http://{}:{}/{}", config.server.host, config.server.port, path),
+        }
+    }
+}
+
 impl UserGeneralData {
     fn new(username: &str) -> UserGeneralData {
         UserGeneralData {
             profile_name: username.to_string(),
-            profile_photo: String::from("default_profile.png"),
+            profile_photo: ProfilePhotoType::InternalServerPath(String::from("files/default_profile.png")),
             owned_games: HashSet::new(),
             owned_rulesets: HashSet::new(),
             owned_settings: HashSet::new(),
@@ -384,6 +415,12 @@ impl UserGeneralData {
             favorited_settings: HashSet::new(),
             updated_at: Some(chrono::offset::Utc::now()),
         }
+    }
+
+    fn update_profile_name(&mut self, profile_name: String) -> &mut Self {
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self.profile_name = profile_name;
+        self
     }
 
     fn add_owned_ruleset(&mut self, ruleset_id: uuid::Uuid) -> &mut Self {
