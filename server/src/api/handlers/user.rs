@@ -39,7 +39,7 @@ async fn login_handler(
         LoginResponse::Success(user) => {
             let now = Utc::now();
             let iat = now.timestamp() as usize;
-            let exp = (now + Duration::minutes(config.jwt.expiration)).timestamp() as usize;
+            let exp = (now + Duration::minutes(config.jwt.expiration * 60 * 24)).timestamp() as usize;
             let claims: TokenClaims = TokenClaims {
                 user_id: user.id.to_string(),
                 exp,
@@ -55,7 +55,7 @@ async fn login_handler(
 
             let cookie = Cookie::build("token", token.to_owned())
                 .path("/")
-                .max_age(ActixWebDuration::new(config.jwt.expiration * 60, 0))
+                .max_age(ActixWebDuration::new(config.jwt.expiration * 60 * 60 * 24, 0))
                 .http_only(true) // This ensures the cookie is safe to use (can't be accessed through javascript)
                 .finish();
 
