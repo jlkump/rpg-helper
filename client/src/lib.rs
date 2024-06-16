@@ -7,11 +7,7 @@ mod router;
 mod store;
 mod syntax;
 
-extern crate dotenv;
-
-use dotenv::dotenv;
-
 pub fn run() {
-    dotenv().ok();
+    dotenv::dotenv().ok();
     client::run_app();
 }

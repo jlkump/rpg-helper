@@ -3,8 +3,9 @@ use yew::prelude::*;
 use yew_icons::{Icon, IconId};
 use yew::{html, Html};
 use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
+use yewdux::use_store;
 
-use crate::{router::Route, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{logo::Logo, hamburger_menu::HamburgerMenu}}};
+use crate::{api::user_api::api_logout_user, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{hamburger_menu::HamburgerMenu, logo::Logo}}, router::Route, store::GlobalStore};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -22,6 +23,9 @@ pub fn nav_bar(props: &Props) -> Html {
         Callback::from(move |_| menu_open_clone.set(!*menu_open_clone))
     };
     let theme = use_theme();
+    let (store, _) = use_store::<GlobalStore>();
+    let user = store.auth_user.clone();
+    let logged_in = user.is_some();
 
     let page_style = css!(
         r#"
@@ -85,7 +89,7 @@ pub fn nav_bar(props: &Props) -> Html {
 
     html! {
         <div class={page_style}>
-            <SideBar sidebar_open={*menu_open} exit_callback={onclick.clone()} signed_in=true/>
+            <SideBar sidebar_open={*menu_open} exit_callback={onclick.clone()} {logged_in}/>
             <div class={body_classes}>
                 <span class={get_bar_style(&theme)}>
                     <div class={get_hamburger_style(&theme)} onclick={onclick}>
@@ -93,7 +97,7 @@ pub fn nav_bar(props: &Props) -> Html {
                         // <Icon onclick={onclick} icon_id={IconId::LucideMenu} width={"2em".to_owned()} height={"2em".to_owned()}/>
                     </div>
                     <Logo />
-                    <UserMenu />
+                    <UserMenu {logged_in}/>
                 </span>
                 <div class={props.content_class.clone()} style="flex: 90%;">
                     {props.children.clone()}
@@ -104,10 +108,12 @@ pub fn nav_bar(props: &Props) -> Html {
 }
 
 #[derive(Properties, PartialEq)]
-struct UserMenuProps;
+struct UserMenuProps {
+    logged_in: bool
+}
 
 #[styled_component(UserMenu)]
-fn user_menu(_: &UserMenuProps) -> Html {
+fn user_menu(props: &UserMenuProps) -> Html {
     // Display is dependant upon whether a User is logged in
     // If logged-in, display user profil picture and have user drop-down options
     // If logged-out, display user sign-in
@@ -123,9 +129,20 @@ fn user_menu(_: &UserMenuProps) -> Html {
         "#
     );
     html! {
-        <div class={style}>
-            <Link<Route> to={Route::Register} classes={css!("text-decoration: none;")}><h3>{"Sign in"}</h3></Link<Route>>
-        </div>
+        if props.logged_in {
+            <div class={style}>
+                <h3>{"Logout"}</h3>
+            </div>
+        } else {            
+            <div class={style}>
+                <div style="margin-right: 10px">
+                    <Link<Route> to={Route::Login} classes={css!("text-decoration: none;")}><h3>{"Login"}</h3></Link<Route>>
+                </div>
+                <div>
+                    <Link<Route> to={Route::Register} classes={css!("text-decoration: none;")}><h3>{"Sign up"}</h3></Link<Route>>
+                </div>
+            </div>
+        }
     }
 }
 
@@ -133,7 +150,7 @@ fn user_menu(_: &UserMenuProps) -> Html {
 struct SideBarProps {
     sidebar_open: bool,
     exit_callback: Callback<MouseEvent>,
-    signed_in: bool,
+    logged_in: bool,
 }
 
 #[styled_component(SideBar)]
@@ -201,7 +218,7 @@ fn sider_bar(props: &SideBarProps) -> Html {
             <h3 style="font-size: 2em;">
                 {"Menu"}
             </h3>
-            if props.signed_in {
+            if props.logged_in {
                 {get_signed_in_menu_options(&navigator)}
             } else {
                 {get_signed_out_menu_options(&navigator)}
@@ -287,11 +304,11 @@ fn get_signed_out_menu_options(navigator: &Navigator) -> Html {
             </div>
 
             <ul>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::Register)}>
                     <Icon icon_id={IconId::HeroiconsOutlinePencilSquare} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Sign Up"}</div>
                 </li>
-                <li>
+                <li onclick={get_route_callback(navigator, Route::About)}>
                     <Icon icon_id={IconId::OcticonsInfo24} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"About"}</div>
                 </li>

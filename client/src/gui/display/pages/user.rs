@@ -7,7 +7,7 @@ use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::{schema::UserRegistrationSchema, user_api::api_register_user}, gui::{contexts::style::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, scroll_div::ScrollDiv}, organisms::nav_bar::NavBar}}, router::Route, store::{set_page_loading, GlobalStore}};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, user_api::{api_login_user, api_register_user}}, gui::{contexts::style::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, scroll_div::ScrollDiv}, organisms::nav_bar::NavBar}}, router::Route, store::GlobalStore};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
@@ -104,7 +104,7 @@ fn registration_onsubmit_callback(
     form: UseStateHandle<RegistrationFormData>, 
     vald_errors: UseStateHandle<Rc<RefCell<ValidationErrors>>>,
     navigator: Navigator,
-    dispatch: Dispatch<GlobalStore>,
+    loading: UseStateHandle<bool>,
     username_ref: NodeRef,
     email_ref: NodeRef,
     password_ref: NodeRef,
@@ -114,7 +114,7 @@ fn registration_onsubmit_callback(
         let form = form.clone();
         let vald_errors = vald_errors.clone();
         let navigator = navigator.clone();
-        let dispatch = dispatch.clone();
+        let loading = loading.clone();
         let username_ref = username_ref.clone();
         let email_ref = email_ref.clone();
         let password_ref = password_ref.clone();
@@ -125,7 +125,7 @@ fn registration_onsubmit_callback(
             match form.validate() {
                 Ok(_) => {
                     let form_data = form.deref().clone();
-                    set_page_loading(true, dispatch.clone());
+                    loading.set(true);
                     let res = api_register_user(&form_data.into()).await;
                     
                     username_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
@@ -135,11 +135,11 @@ fn registration_onsubmit_callback(
 
                     match res {
                         Ok(u) => {
-                            set_page_loading(false, dispatch.clone());
+                            loading.set(false);
                             navigator.push(&Route::Login);
                         },
                         Err(e) => {
-                            set_page_loading(false, dispatch.clone());
+                            loading.set(false);
                             match e {
                                 crate::api::user_api::Error::Standard(registration) => {
                                     let err;
@@ -163,6 +163,7 @@ fn registration_onsubmit_callback(
                             }
                             
                             // TODO: Show error based on resultant error recieved from API
+                            // Probably route to a Server-Down page
                         },
                     }
                 },
@@ -178,7 +179,7 @@ fn registration_onsubmit_callback(
 pub fn register_user(_: &RegisterProps) -> Html {
     // Display changes based on whether logged-in or not
     // Based on tutorial here: https://codevoweb.com/rust-yew-frontend-jwt-access-and-refresh-tokens/
-    let (store, dispatch) = use_store::<GlobalStore>();
+    let loading = use_state(|| false);
     let form = use_state(|| RegistrationFormData::default());
     let validation_errors = use_state(|| Rc::new(RefCell::new(ValidationErrors::new())));
     let navigator = use_navigator().unwrap();
@@ -190,7 +191,7 @@ pub fn register_user(_: &RegisterProps) -> Html {
 
     let onchange = registration_input_callback(form.clone());
     let onblur_validate = registration_blur_callback(form.clone(), validation_errors.clone());
-    let on_submit = registration_onsubmit_callback(form.clone(), validation_errors.clone(), navigator.clone(), dispatch.clone(), username_input_ref.clone(), email_input_ref.clone(), password_input_ref.clone(), password_confirm_input_ref.clone());
+    let on_submit = registration_onsubmit_callback(form.clone(), validation_errors.clone(), navigator.clone(), loading.clone(), username_input_ref.clone(), email_input_ref.clone(), password_input_ref.clone(), password_confirm_input_ref.clone());
 
 
     html! {
@@ -226,7 +227,7 @@ pub fn register_user(_: &RegisterProps) -> Html {
                         onblur={onblur_validate.clone()} 
                         errors={&*validation_errors} 
                     />
-                    <SubmitButton loading={store.page_loading}> {"Submit"} </SubmitButton>
+                    <SubmitButton loading={*loading}> {"Submit"} </SubmitButton>
                 </form>
 
                 <div class={css!("margin-top: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1em;")}>
@@ -241,14 +242,186 @@ pub fn register_user(_: &RegisterProps) -> Html {
 }
 
 #[derive(Properties, Clone, PartialEq)]
-pub struct LoginProps {
+pub struct LoginProps;
+
+#[derive(Validate, Default, Clone, PartialEq)]
+struct LoginFormData {
+    #[validate(length(min = 1, message = "Username is required"))]
+    username: String,
+    #[validate(length(min = 1, message = "Password is required"))]
+    password: String,
+}
+
+impl From<LoginFormData> for UserLoginSchema {
+    fn from(value: LoginFormData) -> Self {
+        UserLoginSchema {
+            username: value.username,
+            password: value.password,
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+enum LoginFormUpdate {
+    Username(String),
+    Password(String)
+}
+
+fn login_input_callback(form: UseStateHandle<LoginFormData>) -> Callback<LoginFormUpdate> {
+    Callback::from(move |data: LoginFormUpdate| {
+        let mut prev = form.deref().clone();
+        match data {
+            LoginFormUpdate::Username(s) => prev.username = s,
+            LoginFormUpdate::Password(s) => prev.password = s,
+        }
+        form.set(prev);
+    })
+}
+
+fn login_blur_callback(form: UseStateHandle<LoginFormData>, vald_errors: UseStateHandle<Rc<RefCell<ValidationErrors>>>) -> Callback<(String, LoginFormUpdate)> {
+    Callback::from(move |(name, value): (String, LoginFormUpdate)| {
+        let mut data = form.deref().clone();
+        match value {
+            LoginFormUpdate::Username(s) => data.username = s,
+            LoginFormUpdate::Password(s) => data.password = s,
+        }
+        form.set(data);
+
+        match form.validate() {
+            Ok(_) => {
+                vald_errors
+                    .borrow_mut()
+                    .errors_mut()
+                    .remove(name.as_str());
+            }
+            Err(errors) => {
+                vald_errors
+                    .borrow_mut()
+                    .errors_mut()
+                    .retain(|key, _| key != &name);
+                for (field_name, error) in errors.errors() {
+                    if field_name == &name {
+                        vald_errors
+                            .borrow_mut()
+                            .errors_mut()
+                            .insert(field_name.clone(), error.clone());
+                    }
+                }
+            }
+        }
+    })
+}
+
+fn login_onsubmit_callback(
+    form: UseStateHandle<LoginFormData>, 
+    vald_errors: UseStateHandle<Rc<RefCell<ValidationErrors>>>,
+    navigator: Navigator,
+    loading: UseStateHandle<bool>,
+    username_ref: NodeRef,
+    password_ref: NodeRef,
+) -> Callback<SubmitEvent> {
+    Callback::from(move |event: SubmitEvent| {
+        let form = form.clone();
+        let vald_errors = vald_errors.clone();
+        let navigator = navigator.clone();
+        let loading = loading.clone();
+        let username_ref = username_ref.clone();
+        let password_ref = password_ref.clone();
+
+        event.prevent_default();
+        spawn_local(async move {
+            match form.validate() {
+                Ok(_) => {
+                    let form_data = form.deref().clone();
+                    loading.set(true);
+                    let res = api_login_user(&form_data.into()).await;
+                    
+                    username_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
+                    password_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
+
+                    match res {
+                        Ok(_) => {
+                            loading.set(false);
+                            navigator.push(&Route::Dashboard);
+                            // Use auth token?
+                        },
+                        Err(e) => {
+                            loading.set(false);
+                            match e {
+                                crate::api::user_api::Error::Standard(login_err) => {
+                                    let err;
+                                    let key;
+                                    match login_err {
+                                        crate::api::types::LoginError::UnknownUsernameOrPassword => {
+                                            err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Username or password is incorrect"));
+                                            key = "password";
+                                        },
+                                    }
+                                    vald_errors
+                                        .borrow_mut()
+                                        .errors_mut()
+                                        .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
+                                },
+                                crate::api::user_api::Error::API => log!("Got API Error: API Failed"),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
+                            }
+                            
+                            // TODO: Show error based on resultant error recieved from API
+                            // Probably route to a Server-Down page
+                        },
+                    }
+                },
+                Err(e) => {
+                    vald_errors.set(Rc::new(RefCell::new(e)));
+                },
+            }
+        });
+    })
 }
 
 #[styled_component(LoginUser)]
 pub fn login_user(_: &LoginProps) -> Html {
+    let loading = use_state(|| false);
+    let form = use_state(|| LoginFormData::default());
+    let validation_errors = use_state(|| Rc::new(RefCell::new(ValidationErrors::new())));
+    let navigator = use_navigator().unwrap();
+
+    let username_input_ref = NodeRef::default();
+    let password_input_ref = NodeRef::default();
+
+    let onchange = login_input_callback(form.clone());
+    let onblur_validate = login_blur_callback(form.clone(), validation_errors.clone());
+    let on_submit = login_onsubmit_callback(form.clone(), validation_errors.clone(), navigator.clone(), loading.clone(), username_input_ref.clone(), password_input_ref.clone());
+
+
     html! {
-        <NavBar>
-            <h1>{"TODO"}</h1>
+        <NavBar content_class={css!("display: flex; justify-content: center; align-items: center;")}>
+            <ScrollDiv class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} style="padding: 20px;">
+                <h1 class={css!("font-size: 2em;")}>{"Login"}</h1>
+                <form class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} onsubmit={on_submit}>
+                    <FormInput<LoginFormUpdate> 
+                        input_type="text" placeholder="Username" label="" name="username" input_ref={username_input_ref} 
+                        to_type={Callback::from(|s| LoginFormUpdate::Username(s))}
+                        onchange={onchange.clone()} 
+                        onblur={onblur_validate.clone()} 
+                        errors={&*validation_errors} 
+                    />
+                    <FormInput<LoginFormUpdate>
+                        input_type="password" placeholder="Password" label="" name="password" input_ref={password_input_ref} 
+                        to_type={Callback::from(|s| LoginFormUpdate::Password(s))}
+                        onchange={onchange.clone()} 
+                        onblur={onblur_validate.clone()} 
+                        errors={&*validation_errors} 
+                    />
+                    <SubmitButton loading={*loading}> {"Submit"} </SubmitButton>
+                </form>
+
+                <div class={css!("margin-top: 14px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 1em;")}>
+                    {"Don't have an account?"}
+                    <Link<Route> to={Route::Register}>
+                        {" Signup Here"}
+                    </Link<Route>>
+                </div>
+            </ScrollDiv>
         </NavBar>
     }
 }

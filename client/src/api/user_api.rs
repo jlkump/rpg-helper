@@ -1,4 +1,4 @@
-use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, RegistrationError, UserData, UserDataError, UserDataResponse, UserLoginResponse}};
+use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, RegistrationError, UserData, UserDataError, UserDataResponse, UserLoginResponse}, API_URL};
 use reqwasm::http;
 
 pub enum Error<T> {
@@ -9,7 +9,7 @@ pub enum Error<T> {
 }
 
 pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, Error<RegistrationError>> {
-    let url = "http://localhost:8090/api/auth/register";//format!("{}/api/auth/register", std::env::var("API_URL").unwrap());
+    let url = format!("{}/auth/register", API_URL);
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
         .body(serde_json::to_string(user_data).unwrap())
@@ -37,7 +37,7 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
 }
 
 pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginResponse, Error<LoginError>> {
-    let url = format!("{}/api/auth/login", std::env::var("API_URL").unwrap());
+    let url = format!("{}/auth/login", API_URL);
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
         .credentials(http::RequestCredentials::Include)
@@ -67,7 +67,7 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
 
 
 pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
-    let url = format!("{}/api/users/me", std::env::var("API_URL").unwrap());
+    let url = format!("{}/auth/users/me", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
         .send()
