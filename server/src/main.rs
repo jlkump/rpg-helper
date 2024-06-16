@@ -2,7 +2,7 @@ use actix_cors::Cors;
 use actix_web::{http::header, middleware::Logger, web, App, HttpServer};
 use api::routes;
 use config::Config;
-use database::user::UserDB;
+use database::Database;
 use log::info;
 
 mod api;
@@ -12,7 +12,7 @@ mod database;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let config = Config::from_file("Config.toml").unwrap();
-    let user_db = web::Data::new(UserDB::open(&config));
+    let db = web::Data::new(Database::open(&config));
     let config_data = web::Data::new(config.clone());
 
     info!("Starting server at {}:{}/", config.server.host, config.server.port);
@@ -33,7 +33,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .wrap(Logger::default())
-            .app_data(user_db.clone())      // Passing handle to user DB to worker threads
+            .app_data(db.clone())           // Passing handle to user DB to worker threads
             .app_data(config_data.clone())  // Config data for jwt secret and other assorted info
             .configure(routes::initialize)
     })

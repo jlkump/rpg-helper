@@ -2,21 +2,28 @@ use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post,
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use serde_json::json;
-use log::trace;
 
-use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema}, types::{ LoginError, RegistrationError, UserDataError, UserDataResponse, UserLoginResponse}}, config::Config, database::user::{LoginResponse, RegistrationResponse, UserDB}};
+use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema}, types::{ LoginError, RegistrationError, UserDataError, UserDataResponse, UserLoginResponse}}, config::Config, database::{user::{LoginResponse, RegistrationResponse}, Database}};
+
+pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
+    let scope = web::scope("/api")
+        .service(login_handler)
+        .service(logout_handler)
+        .service(register_handler)
+        .service(get_me_handler);
+
+    cfg.service(scope)
+}
 
 #[post("/auth/register")]
 async fn register_handler(
     body: web::Json<UserRegistrationSchema>, 
-    user_db: web::Data<UserDB>
+    db: web::Data<Database>,
 ) -> impl Responder {
-    trace!("Recieved registration request with body of {:?}", body);
-    let registration_response = user_db.register_user(body.into_inner());
-    trace!("Got response of {:?} from Database", registration_response);
+    let registration_response = db.user_db.register_user(body.into_inner());
     match registration_response {
         RegistrationResponse::Success(user) => {
-            return HttpResponse::Ok().json(UserDataResponse { data: user_db.get_data(user).unwrap() });
+            return HttpResponse::Ok().json(UserDataResponse { data: db.user_db.get_data(user).unwrap() });
         },
         RegistrationResponse::EmailTaken => {
             return HttpResponse::Conflict().json(RegistrationError::EmailTaken);
@@ -30,12 +37,12 @@ async fn register_handler(
 #[post("/auth/login")]
 async fn login_handler(
     login: web::Json<UserLoginSchema>, 
-    user_db: web::Data<UserDB>, 
+    db: web::Data<Database>,
     config: web::Data<Config>
 ) -> impl Responder {
     // When the user login is successful,
     // the user has secure login. Otherwise, not logged in.
-    match user_db.login_user(login.into_inner()) {
+    match db.user_db.login_user(login.into_inner()) {
         LoginResponse::Success(user) => {
             let now = Utc::now();
             let iat = now.timestamp() as usize;
@@ -84,13 +91,13 @@ async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
 #[get("/user/me")]
 async fn get_me_handler(
     req: HttpRequest,
-    user_db: web::Data<UserDB>,
+    db: web::Data<Database>,
     _: jwt_auth::JwtMiddleware,
 ) -> impl Responder {
     let ext = req.extensions();
     let user_id = ext.get::<uuid::Uuid>().unwrap();
 
-    if let Some(user_data) = user_db.get_data(user_id.into()) { 
+    if let Some(user_data) = db.user_db.get_data(user_id.into()) { 
         HttpResponse::Ok().json(UserDataResponse { data: user_data} )
     } else {
         HttpResponse::InternalServerError().json(UserDataError::UserNotFound(*user_id))

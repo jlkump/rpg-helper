@@ -2,6 +2,7 @@ use actix_web::{get, web, HttpResponse, Responder};
 use serde_json::json;
 
 mod user;
+mod user_files;
 
 #[get("/healthchecker")]
 async fn health_checker_handler() -> impl Responder {
@@ -11,12 +12,10 @@ async fn health_checker_handler() -> impl Responder {
 }
 
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
+    user::setup_routes(cfg);
+    
     let scope = web::scope("/api")
-        .service(health_checker_handler)
-        .service(user::login_handler)
-        .service(user::logout_handler)
-        .service(user::register_handler)
-        .service(user::get_me_handler);
+        .service(health_checker_handler);
 
     cfg.service(scope)
 }

@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use actix_web::web::Buf;
 use bcrypt::DEFAULT_COST;
 use chrono::prelude::*;
@@ -39,14 +41,22 @@ pub enum RegistrationResponse {
     EmailTaken,
 }
 
+#[derive(Debug)]
 pub enum LoginResponse {
     Success(User),
     UnknownUsername,
     WrongPassword,
 }
 
+#[derive(Debug)]
+pub enum UpdateResponse {
+    Success,
+    UserNotFound,
+    DatabaseErr
+}
+
 impl UserDB {
-    pub fn open(config: &Config) -> Self {
+    pub(super) fn open(config: &Config) -> Self {
         UserDB {
             users: sled::open(format!("{}/users", config.database.root_path)).unwrap()
         }
@@ -61,7 +71,7 @@ impl UserDB {
             let data_tree = self.open_secure_data_tree();
             let details_tree = self.open_general_data_tree();
 
-            let v = UserSecureData::default(registration_data.username, registration_data.email, registration_data.password);
+            let v = UserSecureData::new(registration_data.username, registration_data.email, registration_data.password);
             data_tree.insert(v.id, bincode::serialize(&v).unwrap()).unwrap();
             details_tree.insert(v.id, bincode::serialize(&UserGeneralData::new(&v.username)).unwrap()).unwrap();
             RegistrationResponse::Success(User {id: v.id})
@@ -90,17 +100,80 @@ impl UserDB {
         }
     }
 
-    pub fn update_user(&self, user: User, new_user_data: UserData) {
-        if let Some(secure) = self.get_secure_data(&user) {
-            if secure.email.ne(&new_user_data.email) || secure.username.ne(&new_user_data.username) {
-                // Update secure data
-                let updated = secure.update(&new_user_data);
-                self.open_secure_data_tree().insert(user.id, bincode::serialize(&updated).unwrap()).unwrap();
-            }
+    pub fn update_user_email(&self, user: User, new_email: String) -> UpdateResponse {
+        let tree = self.open_secure_data_tree();
+        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
+            secure.update_email(new_email);
+            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
         }
-        if let Some(general) = self.get_general_data(&user) {
-            let updated = general.update(&new_user_data);
-            self.open_general_data_tree().insert(user.id, bincode::serialize(&updated).unwrap()).unwrap();
+    }
+
+    pub fn update_user_password(&self, user: User, new_password: String) -> UpdateResponse {
+        let tree = self.open_secure_data_tree();
+        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
+            secure.update_password(new_password);
+            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
+        }
+    }
+
+    pub fn update_user_verified(&self, user: User, verified: bool) -> UpdateResponse {
+        let tree = self.open_secure_data_tree();
+        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
+            secure.update_verified(verified);
+            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
+        }
+    }
+
+    pub(super) fn update_user_storage(&self, user: User, change: i64) -> UpdateResponse {
+        let tree = self.open_secure_data_tree();
+        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
+            secure.update_storage(change);
+            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
+        }
+    }
+
+    pub fn update_user_donation(&self, user: User, amount: i64) -> UpdateResponse {
+        let tree = self.open_secure_data_tree();
+        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
+            secure.update_donation(amount);
+            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
+        }
+    }
+
+    pub(super) fn user_join_game(&self, user: User, game_id: uuid::Uuid) -> UpdateResponse {
+        let tree = self.open_general_data_tree();
+        if let Some(mut general) = get_data::<UserGeneralData, uuid::Uuid>(&tree, &user.id) {
+            general.join_game(game_id);
+            tree.insert(user.id, bincode::serialize(&general).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
+        }
+    }
+
+    pub(super) fn user_leave_game(&self, user: User, game_id: uuid::Uuid) -> UpdateResponse {
+        let tree = self.open_general_data_tree();
+        if let Some(mut general) = get_data::<UserGeneralData, uuid::Uuid>(&tree, &user.id) {
+            general.leave_game(game_id);
+            tree.insert(user.id, bincode::serialize(&general).unwrap()).unwrap();
+            UpdateResponse::Success
+        } else {
+            UpdateResponse::UserNotFound
         }
     }
 
@@ -108,22 +181,26 @@ impl UserDB {
         if let Some(secure) = self.get_secure_data(&user) {
             if let Some(general) = self.get_general_data(&user) {
                 Some(UserData {
-                    username: secure.username,
-                    email: secure.email,
+                    username: secure.username.clone(),
+                    email: secure.email.clone(),
                     created_at: secure.created_at,
                     profile_name: general.profile_name,
                     profile_photo: general.profile_photo,
-                    games: general.games,
-                    rulesets: general.rulesets,
-                    settings: general.settings,
-                    characters: general.characters
+                    favorited_rulesets: general.favorited_rulesets,
+                    favorited_settings: general.favorited_settings,
+                    joined_games: general.joined_games,
+                    owned_games: general.owned_games,
+                    owned_rulesets: general.owned_rulesets,
+                    owned_settings: general.owned_settings,
+                    owned_characters: general.owned_characters,
+                    storage_used: secure.storage_used,
+                    storage_limit: secure.get_storage_limit(),
+                    is_donor: secure.donated.is_some() || secure.monthly_donor,
                 })
-            }
-            else {
+            } else {
                 None
             }
-        }
-        else {
+        } else {
             None
         }
     }
@@ -131,38 +208,32 @@ impl UserDB {
 
     fn get_user_by_username(&self, username: &String) -> Option<User> {
         for row_data in &self.open_secure_data_tree() {
-            trace!("Processing row data to find user by username");
             match row_data {
                 Ok((_, r)) => {
                     let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
                     let id = data.id;
-                    trace!("Got row data of id: {} data: {:?}", id, data);
                     if data.username.eq(username) {
                         return Some(User { id });
                     }
                 },
-                Err(e) => error!("Got error: {:?}", e),
+                Err(e) => error!("[ERROR]: {:?} for username: {}", e, username),
             }
-            trace!("Finished processing row data to find user by username");
         }
         None
     }
 
     fn get_user_by_email(&self, email: &String) -> Option<User> {
         for row_data in &self.open_secure_data_tree() {
-            trace!("Processing row data to find user by email");
             match row_data {
                 Ok((_, r)) => {
                     let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
                     let id = data.id;
-                    trace!("Got row data of id: {} data: {:?}", id, data);
                     if data.email.eq(email) {
                         return Some(User { id });
                     }
                 },
-                Err(e) => error!("Got error: {:?}", e),
+                Err(e) => error!("[ERROR]: {:?} for email: {}", e, email),
             }
-            trace!("Finished processing row data to find user by email");
         }
         None
     }
@@ -192,35 +263,90 @@ struct UserSecureData {
     username: String,      // Username for the user profile
     email: String,         // Email of the user
     password: String,      // The Password hash and salt
-    role: String,          // Admin?
     verified: bool,        // Not 100% sure what this is for, perhaps email verification? Then we delete old users that haven't been verified?
+    is_admin: bool,        // User or admin
+    donated: Option<i64>,  // Number of cents donated in USD
+    monthly_donor: bool,
     created_at: Option<DateTime<Utc>>,
     updated_at: Option<DateTime<Utc>>,
+    storage_used: i64,
 }
 
+const DEFAULT_USER_STORAGE_LIMIT: i64 = 10 * 1024 * 1024; // 10 MB
+const DONOR_USER_STORAGE_LIMIT: i64 = 1 * 1024 * 1024 * 1024; // 1 GB
+const ADMIN_USER_STORAGE_LIMIT: i64 = 5 * 1024 * 1024 * 1024; // 5 GB
+
 impl UserSecureData {
-    fn default(username: String, email: String, password: String) -> UserSecureData {
+    fn new(username: String, email: String, password: String) -> UserSecureData {
         UserSecureData {
             id: uuid::Uuid::new_v4(),
             username,
             email,
             password: bcrypt::hash(password, DEFAULT_COST).unwrap(),
-            role: String::from("User"),
             verified: false,
+            is_admin: false,
+            donated: None,
+            monthly_donor: false,
             created_at: Some(chrono::offset::Utc::now()),
             updated_at: Some(chrono::offset::Utc::now()),
+            storage_used: 0,
         }
     }
-    fn update(&self, new_data: &UserData) -> UserSecureData {
-        UserSecureData { 
-            id: self.id, 
-            username: new_data.username.clone(), 
-            email: new_data.email.clone(), 
-            password: self.password.clone(), 
-            role: self.role.clone(), 
-            verified: self.verified, 
-            created_at: self.created_at, 
-            updated_at: Some(chrono::offset::Utc::now()) 
+
+    fn update_email(&mut self, new_email: String) -> &mut Self {
+        self.email = new_email;
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self
+    }
+
+    fn update_password(&mut self, new_password: String) -> &mut Self {
+        self.password = bcrypt::hash(new_password, DEFAULT_COST).unwrap();
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self
+    }
+
+    fn update_verified(&mut self, verified: bool) -> &mut Self {
+        self.verified = verified;
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self
+    }
+
+    fn update_donation(&mut self, amount: i64) -> &mut Self {
+        if let Some(prev) = self.donated {
+            self.donated = Some(prev + amount);
+        } else {
+            self.donated = Some(amount);
+        }
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self
+    }
+
+    fn update_storage(&mut self, change: i64) -> &mut Self {
+        self.storage_used = self.storage_used + change;
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self
+    }
+
+    fn promote(&mut self) -> &mut Self {
+        self.is_admin = true;
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self
+    }
+
+    fn demote(&mut self) -> &mut Self {
+        self.is_admin = false;
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self
+    }
+
+    /// Returns the storage limit in bytes
+    fn get_storage_limit(&self) -> i64 {
+        if self.is_admin {
+            ADMIN_USER_STORAGE_LIMIT
+        } else if self.donated.is_some() || self.monthly_donor {
+            DONOR_USER_STORAGE_LIMIT
+        } else {
+            DEFAULT_USER_STORAGE_LIMIT
         }
     }
 }
@@ -234,10 +360,14 @@ impl UserSecureData {
 struct UserGeneralData {
     profile_name: String,        // Starts as username, can be changed
     profile_photo: String,       // Has default photo for new users
-    games: Vec<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
-    rulesets: Vec<uuid::Uuid>,   // The rulesets this user has created
-    settings: Vec<uuid::Uuid>,   // The settings this user has created
-    characters: Vec<uuid::Uuid>, // Characters stored in a local per-user format. These are the character the user owns
+    owned_games: HashSet<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
+    owned_rulesets: HashSet<uuid::Uuid>,   // The rulesets this user has created
+    owned_settings: HashSet<uuid::Uuid>,   // The settings this user has created
+    owned_characters: HashSet<uuid::Uuid>, // Characters stored in a local per-user format. These are the character the user owns
+    joined_games: HashSet<uuid::Uuid>,
+    favorited_rulesets: HashSet<uuid::Uuid>,
+    favorited_settings: HashSet<uuid::Uuid>,
+    updated_at: Option<DateTime<Utc>>,
 }
 
 impl UserGeneralData {
@@ -245,21 +375,46 @@ impl UserGeneralData {
         UserGeneralData {
             profile_name: username.to_string(),
             profile_photo: String::from("default_profile.png"),
-            games: vec![],
-            rulesets: vec![],
-            settings: vec![],
-            characters: vec![],
+            owned_games: HashSet::new(),
+            owned_rulesets: HashSet::new(),
+            owned_settings: HashSet::new(),
+            owned_characters: HashSet::new(),
+            joined_games: HashSet::new(),
+            favorited_rulesets: HashSet::new(),
+            favorited_settings: HashSet::new(),
+            updated_at: Some(chrono::offset::Utc::now()),
         }
     }
 
-    fn update(&self, new_data: &UserData) -> UserGeneralData {
-        UserGeneralData {
-            profile_name: new_data.profile_name.clone(),
-            profile_photo: new_data.profile_photo.clone(),
-            games: new_data.games.clone(),
-            rulesets: new_data.rulesets.clone(),
-            settings: new_data.settings.clone(),
-            characters: new_data.characters.clone()
+    fn add_owned_ruleset(&mut self, ruleset_id: uuid::Uuid) -> &mut Self {
+        if !self.owned_rulesets.contains(&ruleset_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.owned_rulesets.insert(ruleset_id);
         }
+        self
+    }
+
+    fn remove_owned_ruleset(&mut self, ruleset_id: uuid::Uuid) -> &mut Self {
+        if self.owned_rulesets.contains(&ruleset_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.owned_rulesets.remove(&ruleset_id);
+        }
+        self
+    }
+
+    fn join_game(&mut self, game_id: uuid::Uuid) -> &mut Self {
+        if !self.joined_games.contains(&game_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.joined_games.insert(game_id);
+        }
+        self
+    }
+
+    fn leave_game(&mut self, game_id: uuid::Uuid) -> &mut Self {
+        if self.joined_games.contains(&game_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.joined_games.remove(&game_id);
+        }
+        self
     }
 }

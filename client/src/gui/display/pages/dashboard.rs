@@ -2,9 +2,9 @@ use gloo::console::error;
 use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
 use yew_router::hooks::use_navigator;
-use yewdux::use_store;
+use yewdux::{use_store, Dispatch};
 
-use crate::{api::user_api::api_user_info, gui::display::organisms::nav_bar::NavBar, router, store::{set_auth_user, GlobalStore}};
+use crate::{api::user_api::api_user_info, gui::{contexts::style::theme::use_theme, display::{atoms::loader::Loader, organisms::nav_bar::NavBar}}, router, store::{set_auth_user, GlobalStore}};
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {
@@ -18,7 +18,7 @@ pub fn dashboard(props: &Props) -> Html {
     let user = store.auth_user.clone();
     let navigator = use_navigator().unwrap();
 
-    use_effect_with((),
+    use_effect_with((), 
         move |_| {
             let dispatch = dispatch.clone();
             let page_loading = page_loading.clone();
@@ -55,14 +55,22 @@ pub fn dashboard(props: &Props) -> Html {
                     }
                 }
             });
-        },
+        }
     );
 
+    let theme = use_theme();
+
     html! {
-        <NavBar>
-            <div>
-                {"TODO"}
-            </div>
+        <NavBar content_class={css!("display: flex; align-items: center; justify-content: center;")}>
+            if let Some(user) = user {
+                <div>
+                    <h3>{format!("Welcome {}!", user.profile_name)}</h3>
+                </div>
+            } else {
+                <div>
+                    <Loader color={theme.text_colored.clone()} size="5em" />
+                </div>
+            }
         </NavBar>
     }
 }

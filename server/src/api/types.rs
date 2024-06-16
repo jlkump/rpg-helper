@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use std::fmt::{Debug, Display};
+use std::{collections::HashSet, fmt::{Debug, Display}};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -50,8 +50,14 @@ pub struct UserData {
     pub created_at: Option<DateTime<Utc>>,
     pub profile_name: String,        // Starts as username, can be changed
     pub profile_photo: String,       // Has default photo for new users
-    pub games: Vec<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
-    pub rulesets: Vec<uuid::Uuid>,   // The rulesets this user has created
-    pub settings: Vec<uuid::Uuid>,   // The settings this user has created
-    pub characters: Vec<uuid::Uuid>, // Characters stored in a local per-user format. These are the character the user owns
+    pub storage_used: i64,
+    pub storage_limit: i64,
+    pub is_donor: bool,
+    pub joined_games: HashSet<uuid::Uuid>,
+    pub favorited_rulesets: HashSet<uuid::Uuid>,
+    pub favorited_settings: HashSet<uuid::Uuid>,
+    pub owned_games: HashSet<uuid::Uuid>,
+    pub owned_rulesets: HashSet<uuid::Uuid>,
+    pub owned_settings: HashSet<uuid::Uuid>,
+    pub owned_characters: HashSet<uuid::Uuid>,
 }
