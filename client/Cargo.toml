@@ -24,6 +24,3 @@ yew-router = "0.18"
 yew_icons = { version = "0.8.0", features = ["LucideMenu", "FeatherChevronDown", "FontAwesomeSolidXmark", "LucideLayoutDashboard", "BootstrapGear", "LucideHammer", "LucideMountainSnow", "BootstrapJournalText", "BootstrapMotherboard", "BootstrapPalette", "OcticonsPersonAdd16", "BootstrapBoxArrowInLeft", "BootstrapReception0", "BootstrapReception1", "BootstrapReception2", "BootstrapReception3", "BootstrapReception4", "BootstrapSearch", "FeatherFeather", "FeatherServer", "HeroiconsOutlinePencilSquare", "OcticonsInfo24"] }
 wasm-bindgen = "0.2"
 web-sys = "0.3.69"
-
-[build-dependencies]
-dotenv = "0.15.0"

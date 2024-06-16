@@ -1,11 +1,12 @@
+use gloo::console::error;
 use stylist::{style, yew::styled_component, Style};
-use yew::prelude::*;
+use yew::{platform::spawn_local, prelude::*};
 use yew_icons::{Icon, IconId};
 use yew::{html, Html};
 use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
-use yewdux::use_store;
+use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::user_api::api_logout_user, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{hamburger_menu::HamburgerMenu, logo::Logo}}, router::Route, store::GlobalStore};
+use crate::{api::user_api::api_logout_user, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{loader::Loader, hamburger_menu::HamburgerMenu, logo::Logo}}, router::Route, store::{set_auth_user, GlobalStore}};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -117,6 +118,7 @@ fn user_menu(props: &UserMenuProps) -> Html {
     // Display is dependant upon whether a User is logged in
     // If logged-in, display user profil picture and have user drop-down options
     // If logged-out, display user sign-in
+    let theme = use_theme();
     let style = css!(
         r#"
             margin: 4px;
@@ -128,10 +130,50 @@ fn user_menu(props: &UserMenuProps) -> Html {
             cursor: pointer;
         "#
     );
+    let navigator = use_navigator().unwrap();
+    let loading = use_state(|| false);
+    let (_, dispatch) = use_store::<GlobalStore>();
+
+    let handle_logout = {
+        let navigator = navigator.clone();
+        let loading = loading.clone();
+        let dispatch = dispatch.clone();
+        Callback::from(move |_: MouseEvent| {
+            let loading = loading.clone();
+            let dispatch = dispatch.clone();
+            let navigator = navigator.clone();
+            spawn_local(async move {
+                let res = api_logout_user().await;
+                loading.set(true);
+                match res {
+                    Ok(_) => {
+                        loading.set(false);
+                        set_auth_user(None, dispatch);
+                        navigator.push(&Route::Home);
+                    },
+                    Err(e) => {
+                        loading.set(false);
+                        let err_message = match e {
+                            crate::api::user_api::Error::Standard(mes) => mes,
+                            crate::api::user_api::Error::API => "API Failed".to_string(),
+                            crate::api::user_api::Error::RequestFailed => "Request Failed".to_string(),
+                            crate::api::user_api::Error::ParseFailed => "Parse Failed".to_string(),
+                        };
+                        error!("API Logout Error: {}", err_message);
+                    },
+                }
+
+            });
+        })
+    };
     html! {
         if props.logged_in {
-            <div class={style}>
-                <h3>{"Logout"}</h3>
+            <div class={style} onclick={handle_logout}>
+                if *loading {
+                    <Loader color={theme.text_colored.clone()} />
+                } else {
+                    <h3>{"Logout"}</h3>
+                }
             </div>
         } else {            
             <div class={style}>
@@ -287,7 +329,7 @@ fn get_signed_in_menu_options(navigator: &Navigator) -> Html {
                     <Icon icon_id={IconId::BootstrapGear} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Preferences"}</div>
                 </li>
-                <li onclick={get_route_callback(navigator, Route::ProfileEdit)}>
+                <li onclick={get_route_callback(navigator, Route::About)}>
                     <Icon icon_id={IconId::OcticonsInfo24} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"About"}</div>
                 </li>

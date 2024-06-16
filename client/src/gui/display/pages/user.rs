@@ -440,3 +440,15 @@ pub fn user_profile(_: &ProfileProps) -> Html {
         </NavBar>
     }
 }
+
+#[derive(Properties, Clone, PartialEq)]
+pub struct NotLoggedInProps;
+
+#[styled_component(NotLoggedIn)]
+pub fn not_logged_in(_: &NotLoggedInProps) -> Html {
+    html! {
+        <NavBar>
+            <h1>{"You are not logged in. You can login here or signup here."}</h1>
+        </NavBar>
+    }
+}

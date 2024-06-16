@@ -67,7 +67,7 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
 
 
 pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
-    let url = format!("{}/auth/users/me", API_URL);
+    let url = format!("{}/user/me", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
         .send()
@@ -94,7 +94,7 @@ pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
 }
 
 pub async fn api_logout_user() -> Result<(), Error<String>> {
-    let url = format!("{}/api/users/me", std::env::var("API_URL").unwrap());
+    let url = format!("{}/auth/logout", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
         .send()

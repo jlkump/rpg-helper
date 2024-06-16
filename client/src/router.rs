@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::gui::display::pages::{character_creator::CharacterCreator, character_viewer::CharacterViewer, home::Home, page_not_found::PageNotFound, ruleset_creator::RulesetCreator, user::UserProfile, user::LoginUser, user::RegisterUser, setting_editor::SettingEditor};
+use crate::gui::display::pages::{character_creator::CharacterCreator, character_viewer::CharacterViewer, dashboard::Dashboard, home::Home, page_not_found::PageNotFound, ruleset_creator::RulesetCreator, setting_editor::SettingEditor, user::{LoginUser, NotLoggedIn, RegisterUser, UserProfile}};
 
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum Route {
@@ -15,10 +15,12 @@ pub(crate) enum Route {
     Register,
     #[at("/Dashboard")]
     Dashboard,
-    #[at("/Profile")]
+    #[at("/Profile")] // TODO: Put profile ID or username to see certain profile
     Profile,
     #[at("/Edit-Profile")]
     ProfileEdit,
+    #[at("/Not-Logged-In")]
+    NotLoggedIn,
     #[at("/Preferences")]
     Preferences,
     #[at("/Character-Creator")]
@@ -45,9 +47,10 @@ fn switch(routes: Route) -> Html {
         Route::About => html! { <Redirect<Route> to={Route::Home} />},
         Route::Login => html! { <LoginUser/> },
         Route::Register => html! { <RegisterUser/> },
-        Route::Dashboard => html! { <Redirect<Route> to={Route::Home} /> },
+        Route::Dashboard => html! { <Dashboard /> },
         Route::Profile => html! { <UserProfile edit=false /> },
         Route::ProfileEdit => html! { <UserProfile edit=true /> },
+        Route::NotLoggedIn => html! { <NotLoggedIn />},
         Route::Preferences => html! { <Redirect<Route> to={Route::Home} /> },
         Route::CharacterCreator => html! { <CharacterCreator /> },
         Route::RulesetCreator => html! { <RulesetCreator /> },
