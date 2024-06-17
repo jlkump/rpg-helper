@@ -73,6 +73,7 @@ pub struct PublicUserData {
     pub created_at: Option<DateTime<Utc>>,
     pub profile_name: String,        // Starts as username, can be changed
     pub profile_photo: String,       // Has default photo for new users
+    pub profile_banner: String,       // Has default photo for new users
     pub profile_text: String,
     pub profile_catchphrase: String,
     pub is_donor: bool,

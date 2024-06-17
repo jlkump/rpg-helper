@@ -5,7 +5,7 @@ use web_sys::window;
 use yew::prelude::*;
 use stylist::{css, yew::styled_component};
 
-use crate::gui::{contexts::style::theme::use_theme, display::atoms::loading::Loader};
+use crate::gui::{contexts::theme::use_theme, display::atoms::loading::Loader};
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {

@@ -1,4 +1,3 @@
-pub mod style;
-pub mod user;
+pub mod theme;
 pub mod game;
 pub mod character;

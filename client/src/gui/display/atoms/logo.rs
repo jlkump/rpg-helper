@@ -2,7 +2,7 @@ use yew::prelude::*;
 use stylist::yew::styled_component;
 use yew_router::components::Link;
 
-use crate::{router::Route, gui::contexts::style::theme::use_theme};
+use crate::{router::Route, gui::contexts::theme::use_theme};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {

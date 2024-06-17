@@ -1,7 +1,7 @@
 use stylist::yew::styled_component;
 use yew::{classes, html, AttrValue, Classes, Html, Properties};
 
-use crate::gui::contexts::style::theme::use_theme;
+use crate::gui::contexts::theme::use_theme;
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {

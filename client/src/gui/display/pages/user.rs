@@ -8,7 +8,7 @@ use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user}}, gui::{contexts::style::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, profile::ProfilePortrait, scroll_div::ScrollDiv, loading::{SkeletonPane, SkeletonTextArea}}, organisms::nav_bar::NavBar}}, router::Route, store::GlobalStore};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, profile::ProfilePortrait, scroll_div::ScrollDiv, loading::{SkeletonPane, SkeletonTextArea}}, organisms::nav_bar::NavBar}}, router::Route, store::GlobalStore};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
@@ -487,6 +487,7 @@ pub fn user_profile(props: &ProfileProps) -> Html {
                 background-size: auto; 
                 background-position: center; 
                 background-repeat: no-repeat;
+                background-size: cover;
                 min-width: 400px;
                 min-height: 300px;
             }
@@ -531,7 +532,7 @@ pub fn user_profile(props: &ProfileProps) -> Html {
     html! {
         <NavBar>
             <div class={profile_style}>
-                <div class={if *loading {classes!("banner-img", "loading")} else { classes!("banner-img", css!("background-image: url(\"${src}\");", src="/img/generic/Birb Wizard Transparent.png"))}}>
+                <div class={if *loading {classes!("banner-img", "loading")} else { classes!("banner-img", css!("background-image: url(\"${src}\");", src=user_data.profile_banner))}}>
                 </div>
                 <div class="profile-content">
                     <ProfilePortrait class={"profile-img"} width="10em" height="10em" loading={*loading} src={user_data.profile_photo.clone()} />

@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::gui::{contexts::style::theme::use_theme, display::atoms::loading::Loader};
+use crate::gui::{contexts::theme::use_theme, display::atoms::loading::Loader};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {

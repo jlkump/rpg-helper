@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::gui::{contexts::style::theme::use_theme, display::atoms::{colored_panel::ColoredPanel, panel::Panel, tooltip::Tooltip}};
+use crate::gui::{contexts::theme::use_theme, display::atoms::{colored_panel::ColoredPanel, panel::Panel, tooltip::Tooltip}};
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props {

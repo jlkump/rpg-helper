@@ -234,6 +234,7 @@ impl UserDB {
                     created_at: secure.created_at,
                     profile_name: general.profile_name,
                     profile_photo: general.profile_photo.to_string(&config),
+                    profile_banner: general.profile_banner.to_string(&config),
                     profile_text: general.profile_text,
                     profile_catchphrase: general.profile_catchphrase,
                     is_donor: secure.donated.is_some() || secure.monthly_donor,
@@ -399,7 +400,8 @@ impl UserSecureData {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct UserGeneralData {
     profile_name: String,        // Starts as username, can be changed
-    profile_photo: ProfilePhotoType,       // Has default photo for new users
+    profile_photo: ImageUrl,       // Has default photo for new users
+    profile_banner: ImageUrl,      // Has default photo for new users
     profile_text: String,
     profile_catchphrase: String,
     owned_games: HashSet<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
@@ -414,16 +416,16 @@ struct UserGeneralData {
 
 // This will be good for general storing of images and their paths
 #[derive(Debug, Deserialize, Serialize, Clone)]
-enum ProfilePhotoType {
+enum ImageUrl {
     ExternalPath(String),
     InternalServerPath(String)
 }
 
-impl ProfilePhotoType {
+impl ImageUrl {
     fn to_string(self, config: &Config) -> String {
         match self {
-            ProfilePhotoType::ExternalPath(path) => path,
-            ProfilePhotoType::InternalServerPath(path) => format!("http://{}:{}/{}", config.server.host, config.server.port, path),
+            ImageUrl::ExternalPath(path) => path,
+            ImageUrl::InternalServerPath(path) => format!("http://{}:{}/{}", config.server.host, config.server.port, path),
         }
     }
 }
@@ -432,7 +434,8 @@ impl UserGeneralData {
     fn new(username: &str) -> UserGeneralData {
         UserGeneralData {
             profile_name: username.to_string(),
-            profile_photo: ProfilePhotoType::InternalServerPath(String::from("files/default_profile.png")),
+            profile_photo: ImageUrl::InternalServerPath(String::from("files/default_profile.png")),
+            profile_banner: ImageUrl::InternalServerPath(String::from("files/default_banner.png")),
             profile_text: "Lorem Ipsum".to_string(),
             profile_catchphrase: "Best DM in the West".to_string(),
             owned_games: HashSet::new(),

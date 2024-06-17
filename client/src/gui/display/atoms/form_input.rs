@@ -6,7 +6,7 @@ use wasm_bindgen::JsCast;
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
-use crate::gui::contexts::style::theme::use_theme;
+use crate::gui::contexts::theme::use_theme;
 
 #[derive(Properties, PartialEq)]
 pub struct Props<T> 

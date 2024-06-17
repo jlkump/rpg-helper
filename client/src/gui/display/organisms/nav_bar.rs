@@ -6,7 +6,7 @@ use yew::{html, Html};
 use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
 use yewdux::use_store;
 
-use crate::{api::user_api::api_logout_user, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{hamburger_menu::HamburgerMenu, loading::Loader, logo::Logo, profile::ProfilePortrait}}, router::Route, store::{set_auth_user, GlobalStore}};
+use crate::{api::user_api::api_logout_user, gui::{contexts::theme::{use_theme, Theme}, display::atoms::{hamburger_menu::HamburgerMenu, loading::Loader, logo::Logo, profile::ProfilePortrait}}, router::Route, store::{set_auth_user, GlobalStore}};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -390,7 +390,7 @@ fn get_bar_style(theme: &Theme) -> Style {
             flex-wrap: nowrap;
             justify-content: space-between;
             z-index: 100;
-            
+
             background: {};
 
             border-width: 0px 0px 4px 0px;

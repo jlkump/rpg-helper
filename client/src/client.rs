@@ -1,7 +1,7 @@
 use stylist::{css, yew::Global};
 use yew::prelude::*;
 
-use crate::gui::contexts::style::theme::{use_theme, ThemeProvider};
+use crate::gui::contexts::theme::{use_theme, ThemeProvider};
 use crate::router::Router;
 
 

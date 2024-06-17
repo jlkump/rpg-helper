@@ -4,7 +4,7 @@ use stylist::yew::styled_component;
 use yew_router::hooks::use_navigator;
 use yewdux::use_store;
 
-use crate::{api::user_api::api_user_info, gui::{contexts::style::theme::use_theme, display::{atoms::loading::Loader, organisms::nav_bar::NavBar}}, router, store::{set_auth_user, GlobalStore}};
+use crate::{api::user_api::api_user_info, gui::{contexts::theme::use_theme, display::{atoms::loading::Loader, organisms::nav_bar::NavBar}}, router, store::{set_auth_user, GlobalStore}};
 
 #[derive(Clone, Properties, PartialEq)]
 pub struct Props;

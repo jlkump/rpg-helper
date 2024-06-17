@@ -3,7 +3,7 @@ use std::sync::Arc;
 use stylist::yew::styled_component;
 use yew::prelude::*;
 
-use crate::gui::contexts::style::theme::use_theme;
+use crate::gui::contexts::theme::use_theme;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
