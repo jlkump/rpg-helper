@@ -1,4 +1,4 @@
-use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UserData, UserDataError, UserDataResponse, UserLoginResponse}, API_URL};
+use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UserData, UserDataError, UserLoginResponse}, API_URL};
 use reqwasm::http;
 
 pub enum Error<T> {
@@ -28,14 +28,9 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
         }
     }
 
-    let res_json = response.json::<UserDataResponse>().await;
+    let res_json = response.json::<UserData>().await;
     match res_json {
-        Ok(response) => {
-            match response {
-                UserDataResponse::Private(data) => return Ok(data),
-                UserDataResponse::Public(_) => return Err(Error::API("Got public data for private profile".to_string())),
-            }
-        },
+        Ok(data) => return Ok(data),
         Err(_) => Err(Error::ParseFailed),
     }
 }
@@ -88,14 +83,9 @@ pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
         }
     }
 
-    let res_json = response.json::<UserDataResponse>().await;
+    let res_json = response.json::<UserData>().await;
     match res_json {
-        Ok(response) => {
-            match response {
-                UserDataResponse::Private(data) => return Ok(data),
-                UserDataResponse::Public(_) => return Err(Error::API("Got public data for private profile".to_string())),
-            }
-        },
+        Ok(data) => Ok(data),
         Err(_) => Err(Error::ParseFailed),
     }
 }
@@ -119,14 +109,9 @@ pub async fn api_public_user_info(username: String) -> Result<PublicUserData, Er
         }
     }
 
-    let res_json = response.json::<UserDataResponse>().await;
+    let res_json = response.json::<PublicUserData>().await;
     match res_json {
-        Ok(response) => {
-            match response {
-                UserDataResponse::Private(_) => return Err(Error::API("Got private data as unauthorized".to_string())),
-                UserDataResponse::Public(data) => Ok(data),
-            }
-        },
+        Ok(data) => Ok(data),
         Err(_) => Err(Error::ParseFailed),
     }
 }

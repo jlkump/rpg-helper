@@ -6,7 +6,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::info;
 use serde_json::json;
 
-use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ LoginError, PublicUserData, RegistrationError, UploadError, UserData, UserDataError, UserDataResponse, UserLoginResponse}}, config::Config, database::{user::{LoginResponse, RegistrationResponse, User}, Database}};
+use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ LoginError, RegistrationError, UploadError, UserDataError, UserLoginResponse}}, config::Config, database::{user::{LoginResponse, RegistrationResponse, User}, Database}};
 
 use actix_multipart::form::{json::Json as MPJson, tempfile::TempFile, MultipartForm};
 
@@ -30,7 +30,7 @@ async fn register_handler(
     let registration_response = db.user_db.register_user(body.into_inner());
     match registration_response {
         RegistrationResponse::Success(user) => {
-            return HttpResponse::Ok().json(UserDataResponse::Private(db.user_db.get_data(user, &config).unwrap()));
+            return HttpResponse::Ok().json(db.user_db.get_data(user, &config).unwrap());
         },
         RegistrationResponse::EmailTaken => {
             return HttpResponse::Conflict().json(RegistrationError::EmailTaken);
@@ -105,21 +105,9 @@ async fn get_me_handler(
     let ext = req.extensions();
     let user_id = ext.get::<uuid::Uuid>().unwrap();
     if let Some(user_data) = db.user_db.get_data(user_id.into(), &config) { 
-        HttpResponse::Ok().json(UserDataResponse::Private(user_data))
+        HttpResponse::Ok().json(user_data)
     } else {
         HttpResponse::InternalServerError().json(UserDataError::UserIdNotFound(*user_id))
-    }
-}
-
-impl From<UserData> for PublicUserData {
-    fn from(value: UserData) -> Self {
-        PublicUserData {
-            username: value.username,
-            created_at: value.created_at,
-            profile_name: value.profile_name,
-            profile_photo: value.profile_photo,
-            is_donor: value.is_donor,
-        }
     }
 }
 
@@ -132,8 +120,8 @@ async fn get_user_handler(
     let username = path.into_inner();
 
     if let Some(user) = User::from_username(&db.user_db, &username) { 
-        if let Some(data) = db.user_db.get_data(user, &config) {
-            HttpResponse::Ok().json(UserDataResponse::Public(data.into()) )
+        if let Some(data) = db.user_db.get_public_data(user, &config) {
+            HttpResponse::Ok().json(data)
         } else {
             HttpResponse::NotFound().json(UserDataError::UserIdNotFound(user.id))
         }

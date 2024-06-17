@@ -7,7 +7,7 @@ use log::{error, trace};
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::UserData}, config::Config, database::get_data};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{PublicUserData, UserData}}, config::Config, database::get_data};
 
 pub struct UserDB {
     users: Db,
@@ -226,6 +226,25 @@ impl UserDB {
         }
     }
 
+    pub fn get_public_data(&self, user: User, config: &Config) -> Option<PublicUserData> {
+        if let Some(secure) = self.get_secure_data(&user) {
+            if let Some(general) = self.get_general_data(&user) {
+                Some(PublicUserData {
+                    username: secure.username.clone(),
+                    created_at: secure.created_at,
+                    profile_name: general.profile_name,
+                    profile_photo: general.profile_photo.to_string(&config),
+                    profile_text: general.profile_text,
+                    profile_catchphrase: general.profile_catchphrase,
+                    is_donor: secure.donated.is_some() || secure.monthly_donor,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
 
     fn get_user_by_username(&self, username: &String) -> Option<User> {
         for row_data in &self.open_secure_data_tree() {
@@ -381,6 +400,8 @@ impl UserSecureData {
 struct UserGeneralData {
     profile_name: String,        // Starts as username, can be changed
     profile_photo: ProfilePhotoType,       // Has default photo for new users
+    profile_text: String,
+    profile_catchphrase: String,
     owned_games: HashSet<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
     owned_rulesets: HashSet<uuid::Uuid>,   // The rulesets this user has created
     owned_settings: HashSet<uuid::Uuid>,   // The settings this user has created
@@ -412,6 +433,8 @@ impl UserGeneralData {
         UserGeneralData {
             profile_name: username.to_string(),
             profile_photo: ProfilePhotoType::InternalServerPath(String::from("files/default_profile.png")),
+            profile_text: "Lorem Ipsum".to_string(),
+            profile_catchphrase: "Best DM in the West".to_string(),
             owned_games: HashSet::new(),
             owned_rulesets: HashSet::new(),
             owned_settings: HashSet::new(),

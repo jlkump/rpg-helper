@@ -512,6 +512,7 @@ pub fn user_profile(props: &ProfileProps) -> Html {
             .text-area {
                 width: 50%;
                 word-wrap: break-word; 
+                text-align: center;
                 line-height: 1.5;
             }
 
@@ -542,12 +543,19 @@ pub fn user_profile(props: &ProfileProps) -> Html {
                             {user_data.profile_name.clone()} 
                         }
                     <hr/></h1>
+                    <h2 style="font-style: italic; font-size: 1em;">
+                        if *loading { 
+                            <SkeletonPane class={css!("margin: 0px 10px 10px 10px; width: 100px; height: 1em;")}/> 
+                        } else { 
+                            {user_data.profile_catchphrase.clone()} 
+                        }
+                    </h2>
 
                     <div class="text-area">
                         if *loading { 
                             <SkeletonTextArea style="width: 100%;"/> 
                         } else { 
-                            {"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lacinia venenatis sapien, ac mollis ligula suscipit et. Vestibulum at porta magna, quis posuere metus. Nullam lorem mauris, vulputate quis libero quis, laoreet egestas diam. Vivamus feugiat, lacus ut iaculis dictum, massa erat tincidunt tellus, sit amet posuere neque erat sed neque. Nulla leo urna, consectetur quis nunc non, maximus bibendum sem. Ut in mi interdum, placerat lacus ut, aliquet erat. Morbi sed ultricies dolor. Fusce pellentesque massa nec finibus fringilla. Vivamus nec lobortis ligula. Vivamus augue justo, pretium sit amet nisi quis, consequat bibendum libero."} 
+                            {user_data.profile_text.clone()} 
                         }
                     </div>
                 </div>
