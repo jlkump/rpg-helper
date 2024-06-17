@@ -65,7 +65,7 @@ pub fn logo(props: &Props) -> Html {
 
     html! {
         <div class={logo_style}>
-            <Link<Route> to={Route::Home} classes={css!("display: flex; flex-direction: row; align-items: center;")}><img src="img/generic/Dice RPG Icon.svg" class={image_style}/>
+            <Link<Route> to={Route::Home} classes={css!("display: flex; flex-direction: row; align-items: center;")}><img src="/img/generic/Dice RPG Icon.svg" class={image_style}/>
                 if props.text {
                     <h3 class={text_style}>{"RPG Helper"}</h3>
                 }

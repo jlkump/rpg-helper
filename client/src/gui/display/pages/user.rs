@@ -159,7 +159,7 @@ fn registration_onsubmit_callback(
                                         .errors_mut()
                                         .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
                                 },
-                                crate::api::user_api::Error::API => log!("Got API Error: API Failed"),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
+                                crate::api::user_api::Error::API(mes) => log!("Got API Error: API Failed {}", mes),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
                             }
                             
                             // TODO: Show error based on resultant error recieved from API
@@ -362,7 +362,7 @@ fn login_onsubmit_callback(
                                         .errors_mut()
                                         .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
                                 },
-                                crate::api::user_api::Error::API => log!("Got API Error: API Failed"),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
+                                crate::api::user_api::Error::API(mes) => log!("Got API Error: API Failed {}", mes),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
                             }
                             
                             // TODO: Show error based on resultant error recieved from API
@@ -437,18 +437,6 @@ pub fn user_profile(_: &ProfileProps) -> Html {
     html! {
         <NavBar>
             <h1>{"TODO"}</h1>
-        </NavBar>
-    }
-}
-
-#[derive(Properties, Clone, PartialEq)]
-pub struct NotLoggedInProps;
-
-#[styled_component(NotLoggedIn)]
-pub fn not_logged_in(_: &NotLoggedInProps) -> Html {
-    html! {
-        <NavBar>
-            <h1>{"You are not logged in. You can login here or signup here."}</h1>
         </NavBar>
     }
 }

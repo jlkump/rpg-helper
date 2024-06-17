@@ -3,7 +3,7 @@ use reqwasm::http;
 
 pub enum Error<T> {
     Standard(T),
-    API,
+    API(String),
     RequestFailed,
     ParseFailed
 }
@@ -22,10 +22,9 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
 
     if response.status() != 200 {
         let error_response = response.json::<RegistrationError>().await;
-        if let Ok(error_response) = error_response {
-            return Err(Error::Standard(error_response));
-        } else {
-            return Err(Error::API);
+        match error_response {
+            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Err(e) => return Err(Error::API(e.to_string()))
         }
     }
 
@@ -51,10 +50,9 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
 
     if response.status() != 200 {
         let error_response = response.json::<LoginError>().await;
-        if let Ok(error_response) = error_response {
-            return Err(Error::Standard(error_response));
-        } else {
-            return Err(Error::API);
+        match error_response {
+            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Err(e) => return Err(Error::API(e.to_string()))
         }
     }
 
@@ -79,10 +77,9 @@ pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
 
     if response.status() != 200 {
         let error_response = response.json::<UserDataError>().await;
-        if let Ok(error_response) = error_response {
-            return Err(Error::Standard(error_response));
-        } else {
-            return Err(Error::API);
+        match error_response {
+            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Err(e) => return Err(Error::API(e.to_string()))
         }
     }
 
@@ -106,10 +103,9 @@ pub async fn api_logout_user() -> Result<(), Error<String>> {
 
     if response.status() != 200 {
         let error_response = response.json::<String>().await;
-        if let Ok(error_response) = error_response {
-            return Err(Error::Standard(error_response));
-        } else {
-            return Err(Error::API);
+        match error_response {
+            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Err(e) => return Err(Error::API(e.to_string()))
         }
     }
 

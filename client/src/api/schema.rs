@@ -25,4 +25,3 @@ pub enum UserUpdateSchema {
 pub struct FileUploadMetadata {
     pub name: String,
 }
-

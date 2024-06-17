@@ -1,8 +1,8 @@
 pub mod character_creator;
 pub mod character_viewer;
 pub mod dashboard;
+pub mod error_pages;
 pub mod home;
-pub mod page_not_found;
 pub mod ruleset_creator;
 pub mod setting_editor;
 pub mod user;

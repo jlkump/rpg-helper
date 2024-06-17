@@ -36,20 +36,30 @@ pub fn dashboard(props: &Props) -> Html {
                         match e {
                             crate::api::user_api::Error::Standard(data_err) => {
                                 match data_err {
-                                    crate::api::types::UserDataError::UserNotFound(_) => {
-                                        navigator.push(&router::Route::Login);
+                                    crate::api::types::UserDataError::UserNotFound(e) => {
+                                        navigator.push(&router::Route::Error {
+                                            error: format!("User {} was not found in database", e)
+                                        });
                                     },
                                 }
                             },
-                            crate::api::user_api::Error::API => {
+                            crate::api::user_api::Error::API(message) => {
                                 error!("User Data Error: API Error");
-                                navigator.push(&router::Route::Login);
+                                navigator.push(&router::Route::Error {
+                                    error: format!("Server API Error \"{}\"", message)
+                                });
                             },
                             crate::api::user_api::Error::RequestFailed => {
                                 error!("User Data Error: Request Failed Error");
+                                navigator.push(&router::Route::Error {
+                                    error: format!("Server is down")
+                                });
                             },
                             crate::api::user_api::Error::ParseFailed => {
                                 error!("User Data Error: Parse Failed Error");
+                                navigator.push(&router::Route::Error {
+                                    error: format!("Could not parse server data")
+                                });
                             },
                         }
                     }

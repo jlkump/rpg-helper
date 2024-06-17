@@ -13,3 +13,7 @@ pub enum FieldError {
 pub enum DefinitionError<T> {
     Redef(T)
 }
+
+pub enum Error {
+    
+}

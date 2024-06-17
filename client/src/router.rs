@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::gui::display::pages::{character_creator::CharacterCreator, character_viewer::CharacterViewer, dashboard::Dashboard, home::Home, page_not_found::PageNotFound, ruleset_creator::RulesetCreator, setting_editor::SettingEditor, user::{LoginUser, NotLoggedIn, RegisterUser, UserProfile}};
+use crate::gui::display::pages::{character_creator::CharacterCreator, character_viewer::CharacterViewer, dashboard::Dashboard, error_pages::{ErrorPage, PageNotFound}, home::Home, ruleset_creator::RulesetCreator, setting_editor::SettingEditor, user::{LoginUser, RegisterUser, UserProfile}};
 
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum Route {
@@ -19,8 +19,6 @@ pub(crate) enum Route {
     Profile,
     #[at("/Edit-Profile")]
     ProfileEdit,
-    #[at("/Not-Logged-In")]
-    NotLoggedIn,
     #[at("/Preferences")]
     Preferences,
     #[at("/Character-Creator")]
@@ -35,6 +33,8 @@ pub(crate) enum Route {
     HostGame,
     #[at("/Character-Sheet")]
     CharacterSheet,
+    #[at("/Error/:error")]
+    Error { error: String },
     #[not_found]
     #[at("/404")]
     NotFound,
@@ -50,7 +50,7 @@ fn switch(routes: Route) -> Html {
         Route::Dashboard => html! { <Dashboard /> },
         Route::Profile => html! { <UserProfile edit=false /> },
         Route::ProfileEdit => html! { <UserProfile edit=true /> },
-        Route::NotLoggedIn => html! { <NotLoggedIn />},
+        Route::Error { error } => html! { <ErrorPage {error} />},
         Route::Preferences => html! { <Redirect<Route> to={Route::Home} /> },
         Route::CharacterCreator => html! { <CharacterCreator /> },
         Route::RulesetCreator => html! { <RulesetCreator /> },

@@ -1,12 +1,10 @@
-use std::borrow::Borrow;
-
 use gloo::console::error;
-use stylist::{style, yew::styled_component, Style};
+use stylist::{yew::styled_component, Style};
 use yew::{platform::spawn_local, prelude::*};
 use yew_icons::{Icon, IconId};
 use yew::{html, Html};
 use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
-use yewdux::{dispatch, use_store, Dispatch};
+use yewdux::use_store;
 
 use crate::{api::user_api::api_logout_user, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{loader::Loader, hamburger_menu::HamburgerMenu, logo::Logo}}, router::Route, store::{set_auth_user, GlobalStore}};
 
@@ -97,7 +95,6 @@ pub fn nav_bar(props: &Props) -> Html {
                 <span class={get_bar_style(&theme)}>
                     <div class={get_hamburger_style(&theme)} onclick={onclick}>
                         <HamburgerMenu color={theme.hamburger_menu.clone()} open={*menu_open}/>
-                        // <Icon onclick={onclick} icon_id={IconId::LucideMenu} width={"2em".to_owned()} height={"2em".to_owned()}/>
                     </div>
                     <Logo />
                     <UserMenu {logged_in}/>
@@ -183,7 +180,7 @@ fn user_menu(props: &UserMenuProps) -> Html {
                         loading.set(false);
                         let err_message = match e {
                             crate::api::user_api::Error::Standard(mes) => mes,
-                            crate::api::user_api::Error::API => "API Failed".to_string(),
+                            crate::api::user_api::Error::API(mes) => mes,
                             crate::api::user_api::Error::RequestFailed => "Request Failed".to_string(),
                             crate::api::user_api::Error::ParseFailed => "Parse Failed".to_string(),
                         };
