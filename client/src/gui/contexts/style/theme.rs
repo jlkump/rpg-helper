@@ -43,7 +43,9 @@ pub struct Theme {
     pub hover_dropshadow: String,
     pub navbar_line: String,
     pub logo: String,
-    pub hamburger_menu: String
+    pub hamburger_menu: String,
+    pub skeleton_background_primary: String,
+    pub skeleton_background_secondary: String,
 }
 
 #[derive(Debug, Clone)]
@@ -133,7 +135,9 @@ fn get_default_theme() -> Theme {
         hover_dropshadow: "rgb(163, 122, 93, 0.5)".to_owned(),
         navbar_line: "#7a0002".to_owned(),
         logo: "#7a0002".to_owned(),
-        hamburger_menu: "#7a0002".to_owned()
+        hamburger_menu: "#7a0002".to_owned(),
+        skeleton_background_primary: "#e1dcd7".to_string(),
+        skeleton_background_secondary: "#c9c2bb".to_string(),
     }
 }
 

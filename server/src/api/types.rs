@@ -15,7 +15,8 @@ pub enum LoginError {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum UserDataError {
-    UserNotFound(uuid::Uuid)
+    UserIdNotFound(uuid::Uuid),
+    UsernameNotFound(String)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -43,8 +44,9 @@ impl Display for AuthError {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct UserDataResponse {
-    pub data: UserData,
+pub enum UserDataResponse {
+    Private(UserData),
+    Public(PublicUserData),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -69,4 +71,13 @@ pub struct UserData {
     pub owned_rulesets: HashSet<uuid::Uuid>,
     pub owned_settings: HashSet<uuid::Uuid>,
     pub owned_characters: HashSet<uuid::Uuid>,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq)]
+pub struct PublicUserData {
+    pub username: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub profile_name: String,        // Starts as username, can be changed
+    pub profile_photo: String,       // Has default photo for new users
+    pub is_donor: bool,
 }

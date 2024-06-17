@@ -2,17 +2,15 @@ use gloo::console::error;
 use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
 use yew_router::hooks::use_navigator;
-use yewdux::{use_store, Dispatch};
+use yewdux::use_store;
 
-use crate::{api::user_api::api_user_info, gui::{contexts::style::theme::use_theme, display::{atoms::loader::Loader, organisms::nav_bar::NavBar}}, router, store::{set_auth_user, GlobalStore}};
+use crate::{api::user_api::api_user_info, gui::{contexts::style::theme::use_theme, display::{atoms::loading::Loader, organisms::nav_bar::NavBar}}, router, store::{set_auth_user, GlobalStore}};
 
 #[derive(Clone, Properties, PartialEq)]
-pub struct Props {
-
-}
+pub struct Props;
 
 #[styled_component(Dashboard)]
-pub fn dashboard(props: &Props) -> Html {
+pub fn dashboard(_: &Props) -> Html {
     let (store, dispatch) = use_store::<GlobalStore>();
     let page_loading = use_state(|| false);
     let user = store.auth_user.clone();
@@ -36,7 +34,12 @@ pub fn dashboard(props: &Props) -> Html {
                         match e {
                             crate::api::user_api::Error::Standard(data_err) => {
                                 match data_err {
-                                    crate::api::types::UserDataError::UserNotFound(e) => {
+                                    crate::api::types::UserDataError::UserIdNotFound(e) => {
+                                        navigator.push(&router::Route::Error {
+                                            error: format!("User {} was not found in database", e)
+                                        });
+                                    },
+                                    crate::api::types::UserDataError::UsernameNotFound(e) => {
                                         navigator.push(&router::Route::Error {
                                             error: format!("User {} was not found in database", e)
                                         });

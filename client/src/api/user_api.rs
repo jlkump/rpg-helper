@@ -1,4 +1,4 @@
-use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, RegistrationError, UserData, UserDataError, UserDataResponse, UserLoginResponse}, API_URL};
+use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UserData, UserDataError, UserDataResponse, UserLoginResponse}, API_URL};
 use reqwasm::http;
 
 pub enum Error<T> {
@@ -30,7 +30,12 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
 
     let res_json = response.json::<UserDataResponse>().await;
     match res_json {
-        Ok(data) => Ok(data.data),
+        Ok(response) => {
+            match response {
+                UserDataResponse::Private(data) => return Ok(data),
+                UserDataResponse::Public(_) => return Err(Error::API("Got public data for private profile".to_string())),
+            }
+        },
         Err(_) => Err(Error::ParseFailed),
     }
 }
@@ -65,7 +70,7 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
 
 
 pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
-    let url = format!("{}/user/me", API_URL);
+    let url = format!("{}/user", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
         .send()
@@ -85,7 +90,43 @@ pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
 
     let res_json = response.json::<UserDataResponse>().await;
     match res_json {
-        Ok(data) => Ok(data.data),
+        Ok(response) => {
+            match response {
+                UserDataResponse::Private(data) => return Ok(data),
+                UserDataResponse::Public(_) => return Err(Error::API("Got public data for private profile".to_string())),
+            }
+        },
+        Err(_) => Err(Error::ParseFailed),
+    }
+}
+
+pub async fn api_public_user_info(username: String) -> Result<PublicUserData, Error<UserDataError>> {
+    let url = format!("{}/user/{}", API_URL, username);
+    let response = match http::Request::get(&url)
+        // .credentials(http::RequestCredentials::Include)
+        .send()
+        .await
+    {
+        Ok(res) => res,
+        Err(_) => return Err(Error::RequestFailed),
+    };
+
+    if response.status() != 200 {
+        let error_response = response.json::<UserDataError>().await;
+        match error_response {
+            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Err(e) => return Err(Error::API(e.to_string()))
+        }
+    }
+
+    let res_json = response.json::<UserDataResponse>().await;
+    match res_json {
+        Ok(response) => {
+            match response {
+                UserDataResponse::Private(_) => return Err(Error::API("Got private data as unauthorized".to_string())),
+                UserDataResponse::Public(data) => Ok(data),
+            }
+        },
         Err(_) => Err(Error::ParseFailed),
     }
 }

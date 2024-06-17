@@ -10,7 +10,7 @@ pub struct PageNotFoundProps;
 pub fn page_not_found(_: &PageNotFoundProps) -> Html {    
     html! {
         <NavBar content_class={css!("display: flex; flex-direction: column; align-items: center;")}>
-            <img src="img/generic/Birb Wizard Transparent.png" />
+            <img src="/img/generic/Birb Wizard Transparent.png" />
             <h1>{"Could not find page"}</h1>
             <h3>{"404 Error"}</h3>
         </NavBar>

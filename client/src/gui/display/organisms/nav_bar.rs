@@ -6,7 +6,7 @@ use yew::{html, Html};
 use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
 use yewdux::use_store;
 
-use crate::{api::user_api::api_logout_user, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{loader::Loader, hamburger_menu::HamburgerMenu, logo::Logo}}, router::Route, store::{set_auth_user, GlobalStore}};
+use crate::{api::user_api::api_logout_user, gui::{contexts::style::theme::{use_theme, Theme}, display::atoms::{hamburger_menu::HamburgerMenu, loading::Loader, logo::Logo, profile::ProfilePortrait}}, router::Route, store::{set_auth_user, GlobalStore}};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -137,24 +137,7 @@ fn user_menu(props: &UserMenuProps) -> Html {
         "#,
         hover = theme.text_colored_highlight,
     );
-    let profile_style = css!(
-        r#"
-            border: 4px solid ${color};
-            border-radius: 25%;
-            width: 3em; 
-            height: 3em;
-            box-shadow: 5px 0px 5px ${shadow}, -5px 0px 5px ${shadow};
 
-            margin-left: 10px;
-
-            &:hover {
-                border: 4px solid ${hover};
-            }
-        "#,
-        color = theme.text_colored,
-        hover = theme.text_colored_highlight,
-        shadow = theme.hover_dropshadow
-    );
     let navigator = use_navigator().unwrap();
     let loading = use_state(|| false);
     let (store, dispatch) = use_store::<GlobalStore>();
@@ -201,8 +184,8 @@ fn user_menu(props: &UserMenuProps) -> Html {
                         <h3 class={hover_color.clone()}>{"Logout"}</h3>
                     </div>
                     if let Some(user) = &store.auth_user {
-                        <Link<Route> to={Route::Profile}><div>
-                            <img class={profile_style} src={user.profile_photo.clone()} />
+                        <Link<Route> to={Route::Profile { name: user.username.clone() }}><div>
+                            <ProfilePortrait style="margin-left: 10px;" hover=true loading={*loading} src={user.profile_photo.clone()} />
                         </div></Link<Route>>
                     }
                 }
@@ -406,7 +389,8 @@ fn get_bar_style(theme: &Theme) -> Style {
             flex-direction: row;
             flex-wrap: nowrap;
             justify-content: space-between;
-
+            z-index: 100;
+            
             background: {};
 
             border-width: 0px 0px 4px 0px;

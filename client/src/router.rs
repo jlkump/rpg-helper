@@ -15,8 +15,8 @@ pub(crate) enum Route {
     Register,
     #[at("/Dashboard")]
     Dashboard,
-    #[at("/Profile")] // TODO: Put profile ID or username to see certain profile
-    Profile,
+    #[at("/Profile/:name")]
+    Profile { name: String },
     #[at("/Edit-Profile")]
     ProfileEdit,
     #[at("/Preferences")]
@@ -48,8 +48,8 @@ fn switch(routes: Route) -> Html {
         Route::Login => html! { <LoginUser/> },
         Route::Register => html! { <RegisterUser/> },
         Route::Dashboard => html! { <Dashboard /> },
-        Route::Profile => html! { <UserProfile edit=false /> },
-        Route::ProfileEdit => html! { <UserProfile edit=true /> },
+        Route::Profile { name } => html! { <UserProfile {name}/> },
+        Route::ProfileEdit => html! { <Dashboard /> },
         Route::Error { error } => html! { <ErrorPage {error} />},
         Route::Preferences => html! { <Redirect<Route> to={Route::Home} /> },
         Route::CharacterCreator => html! { <CharacterCreator /> },

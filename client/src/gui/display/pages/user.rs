@@ -1,13 +1,14 @@
-use std::{borrow::Cow, cell::RefCell, f64::consts::E, ops::Deref, rc::Rc};
+use std::{borrow::{Borrow, Cow}, cell::RefCell, ops::Deref, rc::Rc};
 
 use gloo::console::log;
+use html::IntoPropValue;
 use web_sys::HtmlInputElement;
 use yew::{platform::spawn_local, prelude::*};
 use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, user_api::{api_login_user, api_register_user}}, gui::{contexts::style::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, scroll_div::ScrollDiv}, organisms::nav_bar::NavBar}}, router::Route, store::GlobalStore};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user}}, gui::{contexts::style::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, profile::ProfilePortrait, scroll_div::ScrollDiv, loading::{SkeletonPane, SkeletonTextArea}}, organisms::nav_bar::NavBar}}, router::Route, store::GlobalStore};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
@@ -92,7 +93,7 @@ fn registration_blur_callback(form: UseStateHandle<RegistrationFormData>, vald_e
                         vald_errors
                             .borrow_mut()
                             .errors_mut()
-                            .insert(field_name.clone(), error.clone());
+                            .insert(field_name, error.clone());
                     }
                 }
             }
@@ -134,7 +135,7 @@ fn registration_onsubmit_callback(
                     password_confirm_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
 
                     match res {
-                        Ok(u) => {
+                        Ok(_) => {
                             loading.set(false);
                             navigator.push(&Route::Login);
                         },
@@ -304,7 +305,7 @@ fn login_blur_callback(form: UseStateHandle<LoginFormData>, vald_errors: UseStat
                         vald_errors
                             .borrow_mut()
                             .errors_mut()
-                            .insert(field_name.clone(), error.clone());
+                            .insert(field_name, error.clone());
                     }
                 }
             }
@@ -353,7 +354,7 @@ fn login_onsubmit_callback(
                                     let key;
                                     match login_err {
                                         crate::api::types::LoginError::UnknownUsernameOrPassword => {
-                                            err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Username or password is incorrect"));
+                                            err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Unknown username or incorrect password"));
                                             key = "password";
                                         },
                                     }
@@ -362,7 +363,7 @@ fn login_onsubmit_callback(
                                         .errors_mut()
                                         .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
                                 },
-                                crate::api::user_api::Error::API(mes) => log!("Got API Error: API Failed {}", mes),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
+                                crate::api::user_api::Error::API(mes) => log!("Got API Error: API Failed {}", mes),crate::api::user_api::Error::RequestFailed =>  log!("Got Login API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
                             }
                             
                             // TODO: Show error based on resultant error recieved from API
@@ -428,15 +429,129 @@ pub fn login_user(_: &LoginProps) -> Html {
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct ProfileProps {
-    pub edit: bool,
+    pub name: String
 }
 
 
 #[styled_component(UserProfile)]
-pub fn user_profile(_: &ProfileProps) -> Html {
+pub fn user_profile(props: &ProfileProps) -> Html {
+    let loading = use_state(|| false);
+    let user_data = use_state(|| None);
+    let navigator = use_navigator().unwrap();
+    
+    let props_cloned = props.clone();
+    let loading_cloned = loading.clone();
+    let user_data_cloned = user_data.clone();
+    use_effect_with((), 
+        move |_| {
+            // let loading = .clone();
+            let navigator = navigator.clone();
+            spawn_local(async move {
+                loading_cloned.set(true);
+                let response = api_public_user_info(props_cloned.name).await;
+
+                match response {
+                    Ok(data) => {
+                        loading_cloned.set(false);
+                        user_data_cloned.set(Some(data))
+                    },
+                    Err(e) => {
+                        loading_cloned.set(false);
+                        match e {
+                            crate::api::user_api::Error::Standard(e) => {
+                                match e {
+                                    crate::api::types::UserDataError::UserIdNotFound(_) |crate::api::types::UserDataError::UsernameNotFound(_) => navigator.push(&Route::NotFound),
+                                }
+                            },
+                            crate::api::user_api::Error::API(_) => todo!(),
+                            crate::api::user_api::Error::RequestFailed => todo!(),
+                            crate::api::user_api::Error::ParseFailed => todo!(),
+                        }
+                    },
+                }
+
+            });
+        }
+    );
+
+    let theme = use_theme();
+    let profile_style = css!(
+        r#"
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+
+            .banner-img {
+                flex: 25%;
+                border-bottom: 3px solid ${profile_header_border};
+                background-size: auto; 
+                background-position: center; 
+                background-repeat: no-repeat;
+                min-width: 400px;
+                min-height: 300px;
+            }
+
+            .banner-img.loading {
+                background: ${img_load};
+            }
+
+            .profile-img {
+                position: absolute;
+                top: 0;
+                transform: translate(0, -70%);
+            }
+
+            .profile-content {
+                flex: 75%;
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .text-area {
+                width: 50%;
+                word-wrap: break-word; 
+                line-height: 1.5;
+            }
+
+            @media screen and (max-width: 800px) {
+                .text-area {
+                    width: 80%;
+                }
+            }
+        "#,
+        img_load = theme.panel_secondary,
+        profile_header_border = theme.border_colored
+    );
+
+    let default = &PublicUserData::default();
+    let user_data = user_data.deref().as_ref().unwrap_or(default);
     html! {
         <NavBar>
-            <h1>{"TODO"}</h1>
+            <div class={profile_style}>
+                <div class={if *loading {classes!("banner-img", "loading")} else { classes!("banner-img", css!("background-image: url(\"${src}\");", src="/img/generic/Birb Wizard Transparent.png"))}}>
+                </div>
+                <div class="profile-content">
+                    <ProfilePortrait class={"profile-img"} width="10em" height="10em" loading={*loading} src={user_data.profile_photo.clone()} />
+                    
+                    <h1 style="margin-top: 60px;">
+                        if *loading { 
+                            <SkeletonPane class={css!("margin: 0px 10px 10px 10px; width: 230px; height: 1em;")}/> 
+                        } else { 
+                            {user_data.profile_name.clone()} 
+                        }
+                    <hr/></h1>
+
+                    <div class="text-area">
+                        if *loading { 
+                            <SkeletonTextArea style="width: 100%;"/> 
+                        } else { 
+                            {"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras lacinia venenatis sapien, ac mollis ligula suscipit et. Vestibulum at porta magna, quis posuere metus. Nullam lorem mauris, vulputate quis libero quis, laoreet egestas diam. Vivamus feugiat, lacus ut iaculis dictum, massa erat tincidunt tellus, sit amet posuere neque erat sed neque. Nulla leo urna, consectetur quis nunc non, maximus bibendum sem. Ut in mi interdum, placerat lacus ut, aliquet erat. Morbi sed ultricies dolor. Fusce pellentesque massa nec finibus fringilla. Vivamus nec lobortis ligula. Vivamus augue justo, pretium sit amet nisi quis, consequat bibendum libero."} 
+                        }
+                    </div>
+                </div>
+            </div>
         </NavBar>
     }
 }

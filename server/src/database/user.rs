@@ -18,6 +18,12 @@ pub struct User {
     pub id: uuid::Uuid
 }
 
+impl User {
+    pub fn from_username(user_db: &UserDB, username: &String) -> Option<User> {
+        user_db.get_user_by_username(username)
+    }
+}
+
 impl From<uuid::Uuid> for User {
     fn from(id: uuid::Uuid) -> Self {
         User {
