@@ -2139,10 +2139,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpg-helper-cli-utils"
-version = "0.1.0"
-
-[[package]]
 name = "rpg-helper-server"
 version = "0.1.0"
 dependencies = [
