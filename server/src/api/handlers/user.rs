@@ -117,22 +117,18 @@ async fn get_me_handler(
     }
 }
 
-#[get("/user/{username}")]
+#[get("/user/{id}")]
 async fn get_user_handler(
-    path: web::Path<String>,
+    path: web::Path<uuid::Uuid>,
     db: web::Data<Database>,
     config: web::Data<Config>,
 ) -> impl Responder {
-    let username = path.into_inner();
+    let user = path.into_inner();
 
-    if let Some(user) = User::from_username(&db.user_db, &username) { 
-        if let Some(data) = db.user_db.get_public_data(user, &config) {
-            HttpResponse::Ok().json(data)
-        } else {
-            HttpResponse::NotFound().json(UserDataError::UserIdNotFound(user.id))
-        }
+    if let Some(data) = db.user_db.get_public_data(user.into(), &config) {
+        HttpResponse::Ok().json(data)
     } else {
-        HttpResponse::NotFound().json(UserDataError::UsernameNotFound(username))
+        HttpResponse::NotFound().json(UserDataError::UserIdNotFound(user))
     }
 }
 

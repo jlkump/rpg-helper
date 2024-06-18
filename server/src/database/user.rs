@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::{borrow::BorrowMut, collections::{HashMap, HashSet}};
 
 use actix_web::web::Buf;
 use bcrypt::DEFAULT_COST;
@@ -7,7 +7,7 @@ use log::{error, trace};
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{PublicUserData, UserData}}, config::Config, database::get_data};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{FriendRequest, GameInvite, PublicUserData, UserData}}, config::Config, database::get_data};
 
 pub struct UserDB {
     users: Db,
@@ -16,12 +16,6 @@ pub struct UserDB {
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
 pub struct User {
     pub id: uuid::Uuid
-}
-
-impl User {
-    pub fn from_username(user_db: &UserDB, username: &String) -> Option<User> {
-        user_db.get_user_by_username(username)
-    }
 }
 
 impl From<uuid::Uuid> for User {
@@ -61,6 +55,12 @@ pub enum UpdateResponse {
     DatabaseErr
 }
 
+pub enum DataResponse<T> {
+    Success(T),
+    NotFound,
+    DatabaseErr,
+}
+
 impl UserDB {
     pub(super) fn open(config: &Config) -> Self {
         UserDB {
@@ -87,7 +87,7 @@ impl UserDB {
     pub fn delete_user(&self, user: User) {
         let data_tree = self.open_secure_data_tree();
         let details_tree = self.open_general_data_tree();
-
+        // TODO: Also remove all friends and from active games
         // Fails when db error occurs, not when the db doesn't contain the user to remove, so fail case is rare
         data_tree.remove(user.id).unwrap();
         details_tree.remove(user.id).unwrap();
@@ -200,23 +200,65 @@ impl UserDB {
 
     pub fn get_data(&self, user: User, config: &Config) -> Option<UserData> {
         if let Some(secure) = self.get_secure_data(&user) {
+            let storage_limit = secure.get_storage_limit();
+            let UserSecureData {
+                id,
+                username,
+                email,
+                verified,
+                donated,
+                monthly_donor,
+                created_at,
+                storage_used,
+                ..
+            } = secure;
             if let Some(general) = self.get_general_data(&user) {
+                let UserGeneralData {
+                    profile_name,
+                    profile_photo,
+                    profile_banner,
+                    friends,
+                    friend_requests,
+                    sent_requests,
+                    blocked_users,
+                    sent_invites,
+                    game_invites,
+                    joined_games,
+                    owned_games,
+                    owned_rulesets,
+                    owned_settings,
+                    owned_characters,
+                    favorited_rulesets,
+                    favorited_settings,
+                    last_read_news,
+                    ..
+                } = general;
                 Some(UserData {
-                    username: secure.username.clone(),
-                    email: secure.email.clone(),
-                    created_at: secure.created_at,
-                    profile_name: general.profile_name,
-                    profile_photo: general.profile_photo.to_string(&config),
-                    favorited_rulesets: general.favorited_rulesets,
-                    favorited_settings: general.favorited_settings,
-                    joined_games: general.joined_games,
-                    owned_games: general.owned_games,
-                    owned_rulesets: general.owned_rulesets,
-                    owned_settings: general.owned_settings,
-                    owned_characters: general.owned_characters,
-                    storage_used: secure.storage_used,
-                    storage_limit: secure.get_storage_limit(),
-                    is_donor: secure.donated.is_some() || secure.monthly_donor,
+                    id,
+                    username,
+                    email,
+                    created_at,
+                    verified,
+                    profile_name,
+                    profile_photo: profile_photo.to_string(&config),
+                    profile_banner: profile_banner.to_string(&config),
+                    favorited_rulesets,
+                    favorited_settings,
+                    sent_invites: sent_invites.into_values().collect(),
+                    joined_games,
+                    owned_games,
+                    owned_rulesets,
+                    owned_settings,
+                    owned_characters,
+                    storage_used,
+                    storage_limit,
+                    is_donor: donated.is_some() || monthly_donor,
+                    friends,
+                    friend_requests: friend_requests.into_values().collect(),
+                    sent_requests,
+                    blocked_users,
+                    game_invites,
+                    last_read_news,
                 })
             } else {
                 None
@@ -228,16 +270,33 @@ impl UserDB {
 
     pub fn get_public_data(&self, user: User, config: &Config) -> Option<PublicUserData> {
         if let Some(secure) = self.get_secure_data(&user) {
+            let UserSecureData {
+                id,
+                username,
+                donated,
+                monthly_donor,
+                created_at,
+                ..
+            } = secure;
             if let Some(general) = self.get_general_data(&user) {
+                let UserGeneralData {
+                    profile_name,
+                    profile_photo,
+                    profile_banner,
+                    profile_text,
+                    profile_catchphrase,
+                    ..
+                } = general;
                 Some(PublicUserData {
-                    username: secure.username.clone(),
-                    created_at: secure.created_at,
-                    profile_name: general.profile_name,
-                    profile_photo: general.profile_photo.to_string(&config),
-                    profile_banner: general.profile_banner.to_string(&config),
-                    profile_text: general.profile_text,
-                    profile_catchphrase: general.profile_catchphrase,
-                    is_donor: secure.donated.is_some() || secure.monthly_donor,
+                    username,
+                    created_at,
+                    profile_name,
+                    profile_photo: profile_photo.to_string(&config),
+                    profile_banner: profile_banner.to_string(&config),
+                    profile_text,
+                    profile_catchphrase,
+                    is_donor: donated.is_some() || monthly_donor,
+                    id,
                 })
             } else {
                 None
@@ -248,6 +307,7 @@ impl UserDB {
     }
 
     fn get_user_by_username(&self, username: &String) -> Option<User> {
+        // TODO: have sub-tree in database that maps <Username, ID>, makes things faster
         for row_data in &self.open_secure_data_tree() {
             match row_data {
                 Ok((_, r)) => {
@@ -399,19 +459,26 @@ impl UserSecureData {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 struct UserGeneralData {
-    profile_name: String,        // Starts as username, can be changed
-    profile_photo: ImageUrl,       // Has default photo for new users
-    profile_banner: ImageUrl,      // Has default photo for new users
+    profile_name: String,                  // Starts as username, can be changed
+    profile_photo: ImageUrl,               // Has default photo for new users
+    profile_banner: ImageUrl,              // Has default photo for new users
     profile_text: String,
     profile_catchphrase: String,
-    owned_games: HashSet<uuid::Uuid>,      // Games are globally seen in the server. These are the games the user owns
-    owned_rulesets: HashSet<uuid::Uuid>,   // The rulesets this user has created
-    owned_settings: HashSet<uuid::Uuid>,   // The settings this user has created
-    owned_characters: HashSet<uuid::Uuid>, // Characters stored in a local per-user format. These are the character the user owns
+    friends: HashSet<uuid::Uuid>,          // Set of friends for the user
+    friend_requests: HashMap<uuid::Uuid, FriendRequest>,  // Friend requests sent to this user
+    sent_requests: HashSet<uuid::Uuid>,    // Friend requests sent by this user
+    blocked_users: HashSet<uuid::Uuid>,    // Set of blocked users for the user
+    sent_invites: HashMap<uuid::Uuid, GameInvite>,     // Set of users this user has invited to play
+    game_invites: HashSet<uuid::Uuid>,     // Set of games this user is invited to play in
     joined_games: HashSet<uuid::Uuid>,
+    owned_games: HashSet<uuid::Uuid>,      // Games are globally seen as long as they are public. Otherwise only friends
+    owned_rulesets: HashSet<uuid::Uuid>,   // The rulesets this user has created. These will last even if the user is deleted as long as it is followed by at least one user that is not deleted.
+    owned_settings: HashSet<uuid::Uuid>,   // The settings this user has created. These will last even if the user is deleted as long as it is followed by at least one user that is not deleted.
+    owned_characters: HashSet<uuid::Uuid>,
     favorited_rulesets: HashSet<uuid::Uuid>,
     favorited_settings: HashSet<uuid::Uuid>,
     updated_at: Option<DateTime<Utc>>,
+    last_read_news: Option<DateTime<Utc>>, // Keeps track of if there is news that the user has not seen on the website. Will only display on the dashboard, as not to be annoying.
 }
 
 // This will be good for general storing of images and their paths
@@ -438,6 +505,12 @@ impl UserGeneralData {
             profile_banner: ImageUrl::InternalServerPath(String::from("files/default_banner.png")),
             profile_text: "Lorem Ipsum".to_string(),
             profile_catchphrase: "Best DM in the West".to_string(),
+            friends: HashSet::new(),
+            friend_requests: HashMap::new(),
+            sent_requests: HashSet::new(),
+            blocked_users: HashSet::new(),
+            sent_invites: HashMap::new(),
+            game_invites: HashSet::new(),
             owned_games: HashSet::new(),
             owned_rulesets: HashSet::new(),
             owned_settings: HashSet::new(),
@@ -446,12 +519,31 @@ impl UserGeneralData {
             favorited_rulesets: HashSet::new(),
             favorited_settings: HashSet::new(),
             updated_at: Some(chrono::offset::Utc::now()),
+            last_read_news: None,
         }
     }
 
     fn update_profile_name(&mut self, profile_name: String) -> &mut Self {
         self.updated_at = Some(chrono::offset::Utc::now());
         self.profile_name = profile_name;
+        self
+    }
+
+    fn update_profile_text(&mut self, text: String) -> &mut Self {
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self.profile_text = text;
+        self
+    }
+
+    fn update_profile_photo(&mut self, photo_url: ImageUrl) -> &mut Self {
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self.profile_photo = photo_url;
+        self
+    }
+
+    fn update_banner_photo(&mut self, photo_url: ImageUrl) -> &mut Self {
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self.profile_banner = photo_url;
         self
     }
 
@@ -467,6 +559,72 @@ impl UserGeneralData {
         if self.owned_rulesets.contains(&ruleset_id) {
             self.updated_at = Some(chrono::offset::Utc::now());
             self.owned_rulesets.remove(&ruleset_id);
+        }
+        self
+    }
+
+    fn block_user(&mut self, user_id: uuid::Uuid) -> &mut Self {
+        if !self.blocked_users.contains(&user_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.blocked_users.insert(user_id);
+        }
+        self
+    }
+
+    fn unblock_user(&mut self, user_id: uuid::Uuid) -> &mut Self {
+        if self.blocked_users.contains(&user_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.blocked_users.remove(&user_id);
+        }
+        self
+    }
+
+    fn accept_friend_request(&mut self, user_id: uuid::Uuid) -> &mut Self {
+        if !self.friends.contains(&user_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.friends.insert(user_id);
+            self.friend_requests.remove(&user_id);
+        }
+        self
+    }
+
+    fn reject_friend_request(&mut self, user_id: uuid::Uuid) -> &mut Self {
+        if self.friend_requests.contains_key(&user_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.friend_requests.remove(&user_id);
+        }
+        self
+    }
+
+    fn add_friend(&mut self, user_id: uuid::Uuid) -> &mut Self {
+        if !self.friends.contains(&user_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.friends.insert(user_id);
+        }
+        self
+    }
+
+    fn remove_friend(&mut self, user_id: uuid::Uuid) -> &mut Self {
+        if self.friends.contains(&user_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.friends.remove(&user_id);
+        }
+        self
+    }
+
+    fn accept_game_invite(&mut self, game_id: uuid::Uuid) -> &mut Self {
+        if !self.joined_games.contains(&game_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.joined_games.insert(game_id);
+            self.game_invites.remove(&game_id);
+        }
+        self
+    }
+
+    fn reject_game_invite(&mut self, game_id: uuid::Uuid) -> &mut Self {
+        if self.game_invites.contains(&game_id) {
+            self.updated_at = Some(chrono::offset::Utc::now());
+            self.game_invites.remove(&game_id);
         }
         self
     }
