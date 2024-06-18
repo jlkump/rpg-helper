@@ -102,6 +102,10 @@ fn app() -> Html {
                         background: ${button_pressed};
                     }
 
+                    button:disabled {
+                        background: ${button_disabled};
+                    }
+
                     /* width */
                     ::-webkit-scrollbar {
                         width: 10px;
@@ -131,6 +135,7 @@ fn app() -> Html {
                 text_default = theme.text_default, text_invert = theme.text_invert,
                 button = theme.button_color, button_hover = theme.button_color_hover,
                 button_pressed = theme.button_color_press,
+                button_disabled = theme.button_color_disabled,
                 scroll_bar = theme.scroll_bar, scroll_hover = theme.scroll_bar_hover,
                 border_light=theme.border_light, link = theme.text_link, link_highlight = theme.text_link_highlight
             )} />

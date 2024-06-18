@@ -1,4 +1,4 @@
-use gloo::console::error;
+use gloo::console::log;
 use stylist::{yew::styled_component, Style};
 use yew::{platform::spawn_local, prelude::*};
 use yew_icons::{Icon, IconId};
@@ -6,7 +6,7 @@ use yew::{html, Html};
 use yew_router::{components::Link, hooks::use_navigator, navigator::Navigator};
 use yewdux::use_store;
 
-use crate::{api::user_api::api_logout_user, gui::{contexts::theme::{use_theme, Theme}, display::atoms::{hamburger_menu::HamburgerMenu, loading::Loader, logo::Logo, profile::ProfilePortrait}}, router::Route, store::{set_auth_user, GlobalStore}};
+use crate::{api::user_api::api_logout_user, gui::{contexts::theme::{use_theme, Theme}, display::atoms::{hamburger_menu::HamburgerMenu, loading::Loader, logo::Logo, profile::ProfilePortrait}}, router::Route, store::{set_auth_user, AuthUser}};
 
 
 #[derive(Properties, Clone, PartialEq)]
@@ -24,10 +24,10 @@ pub fn nav_bar(props: &Props) -> Html {
         Callback::from(move |_| menu_open_clone.set(!*menu_open_clone))
     };
     let theme = use_theme();
-    let (store, _) = use_store::<GlobalStore>();
+    let (store, _) = use_store::<AuthUser>();
     let user = store.auth_user.clone();
     let logged_in = user.is_some();
-
+    log!(format!("Navbar: user is {:?}", user));
     let page_style = css!(
         r#"
             display: flex;
@@ -140,7 +140,7 @@ fn user_menu(props: &UserMenuProps) -> Html {
 
     let navigator = use_navigator().unwrap();
     let loading = use_state(|| false);
-    let (store, dispatch) = use_store::<GlobalStore>();
+    let (store, dispatch) = use_store::<AuthUser>();
 
     let handle_logout = {
         let navigator = navigator.clone();
@@ -161,13 +161,7 @@ fn user_menu(props: &UserMenuProps) -> Html {
                     },
                     Err(e) => {
                         loading.set(false);
-                        let err_message = match e {
-                            crate::api::user_api::Error::Standard(mes) => mes,
-                            crate::api::user_api::Error::API(mes) => mes,
-                            crate::api::user_api::Error::RequestFailed => "Request Failed".to_string(),
-                            crate::api::user_api::Error::ParseFailed => "Parse Failed".to_string(),
-                        };
-                        error!("API Logout Error: {}", err_message);
+                        e.route_based_on_err(&navigator);
                     },
                 }
 
@@ -344,7 +338,7 @@ fn get_signed_in_menu_options(navigator: &Navigator) -> Html {
             </div>
 
             <ul>
-                <li onclick={get_route_callback(navigator, Route::ProfileEdit)}>
+                <li onclick={get_route_callback(navigator, Route::Preferences)}>
                     <Icon icon_id={IconId::BootstrapGear} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Preferences"}</div>
                 </li>
@@ -365,6 +359,10 @@ fn get_signed_out_menu_options(navigator: &Navigator) -> Html {
             </div>
 
             <ul>
+                <li onclick={get_route_callback(navigator, Route::Login)}>
+                    <Icon icon_id={IconId::FeatherCornerDownRight} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Login"}</div>
+                </li>
                 <li onclick={get_route_callback(navigator, Route::Register)}>
                     <Icon icon_id={IconId::HeroiconsOutlinePencilSquare} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Sign Up"}</div>

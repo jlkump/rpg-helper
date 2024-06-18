@@ -17,6 +17,8 @@ where
     pub input_type: String,
     pub label: String,
     pub name: String,
+    #[prop_or_default]
+    pub autocomplete: Option<String>,
     #[prop_or("".to_string())]
     pub placeholder: String,
     pub input_ref: NodeRef,
@@ -129,18 +131,23 @@ where
         color = theme.text_colored
     );
 
+    let autocomplete = props.autocomplete.clone().unwrap_or(props.name.clone());
+
     html! {
     <div class={div_style}>
-      <label html={props.name.clone()} class={label_style}>
-        {props.label.clone()}
-      </label>
-      <input
-        type={props.input_type.clone()}
-        placeholder={props.placeholder.clone()}
-        ref={props.input_ref.clone()}
-        onchange={onchange}
-        onblur={on_blur}
-      />
+        <label html={props.name.clone()} class={label_style} for={props.name.clone()}>
+            {props.label.clone()}
+        </label>
+        <input
+            id={props.name.clone()}
+            name={props.name.clone()}
+            autocomplete={autocomplete}
+            type={props.input_type.clone()}
+            placeholder={props.placeholder.clone()}
+            ref={props.input_ref.clone()}
+            onchange={onchange}
+            onblur={on_blur}
+        />
         <span class={error_style}>
             {error_message}
         </span>

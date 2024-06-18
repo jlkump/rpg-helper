@@ -8,7 +8,7 @@ use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, profile::ProfilePortrait, scroll_div::ScrollDiv, loading::{SkeletonPane, SkeletonTextArea}}, organisms::nav_bar::NavBar}}, router::Route, store::GlobalStore};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, router::Route, store::{set_auth_user, AuthUser}};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
@@ -141,30 +141,24 @@ fn registration_onsubmit_callback(
                         },
                         Err(e) => {
                             loading.set(false);
-                            match e {
-                                crate::api::user_api::Error::Standard(registration) => {
-                                    let err;
-                                    let key;
-                                    match registration {
-                                        crate::api::types::RegistrationError::UsernameTaken => {
-                                            err = ValidationError::new("UsernameTaken").with_message(Cow::from("Username is taken"));
-                                            key = "username";
-                                        },
-                                        crate::api::types::RegistrationError::EmailTaken => {
-                                            err = ValidationError::new("EmailTaken").with_message(Cow::from("Email is taken"));
-                                            key = "email";
-                                        },
-                                    }
-                                    vald_errors
-                                        .borrow_mut()
-                                        .errors_mut()
-                                        .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
-                                },
-                                crate::api::user_api::Error::API(mes) => log!("Got API Error: API Failed {}", mes),crate::api::user_api::Error::RequestFailed =>  log!("Got API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
+                            if let Some(e) = e.route_based_on_err(&navigator) {
+                                let err;
+                                let key;
+                                match e {
+                                    crate::api::types::RegistrationError::UsernameTaken => {
+                                        err = ValidationError::new("UsernameTaken").with_message(Cow::from("Username is taken"));
+                                        key = "username";
+                                    },
+                                    crate::api::types::RegistrationError::EmailTaken => {
+                                        err = ValidationError::new("EmailTaken").with_message(Cow::from("Email is taken"));
+                                        key = "email";
+                                    },
+                                }
+                                vald_errors
+                                    .borrow_mut()
+                                    .errors_mut()
+                                    .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
                             }
-                            
-                            // TODO: Show error based on resultant error recieved from API
-                            // Probably route to a Server-Down page
                         },
                     }
                 },
@@ -217,6 +211,7 @@ pub fn register_user(_: &RegisterProps) -> Html {
                     <FormInput<RegistrationFormUpdate>
                         input_type="password" placeholder="Password" label="" name="password" input_ref={password_input_ref} 
                         to_type={Callback::from(|s| RegistrationFormUpdate::Password(s))}
+                        autocomplete={Some("new-password".to_string())}
                         onchange={onchange.clone()} 
                         onblur={onblur_validate.clone()} 
                         errors={&*validation_errors} 
@@ -224,6 +219,7 @@ pub fn register_user(_: &RegisterProps) -> Html {
                     <FormInput<RegistrationFormUpdate>
                         input_type="password" placeholder="Confirm Password" label="" name="password_confirm" input_ref={password_confirm_input_ref} 
                         to_type={Callback::from(|s| RegistrationFormUpdate::PasswordConfirm(s))}
+                        autocomplete={Some("new-password".to_string())}
                         onchange={onchange.clone()} 
                         onblur={onblur_validate.clone()} 
                         errors={&*validation_errors} 
@@ -339,35 +335,25 @@ fn login_onsubmit_callback(
                     
                     username_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
                     password_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
-
                     match res {
-                        Ok(_) => {
+                        Ok(res) => {
+                            log!(format!("Api response: {:?}", res));
                             loading.set(false);
                             navigator.push(&Route::Dashboard);
-                            // Use auth token?
                         },
                         Err(e) => {
                             loading.set(false);
-                            match e {
-                                crate::api::user_api::Error::Standard(login_err) => {
-                                    let err;
-                                    let key;
-                                    match login_err {
-                                        crate::api::types::LoginError::UnknownUsernameOrPassword => {
-                                            err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Unknown username or incorrect password"));
-                                            key = "password";
-                                        },
-                                    }
-                                    vald_errors
-                                        .borrow_mut()
-                                        .errors_mut()
-                                        .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
-                                },
-                                crate::api::user_api::Error::API(mes) => log!("Got API Error: API Failed {}", mes),crate::api::user_api::Error::RequestFailed =>  log!("Got Login API Error: Request Failed"),crate::api::user_api::Error::ParseFailed =>  log!("Got API Error: Parse Failed"),
+                            if let Some(err) = e.route_based_on_err(&navigator) {
+                                match err {
+                                    crate::api::types::LoginError::UnknownUsernameOrPassword => {
+                                        let err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Unknown username or incorrect password"));
+                                        vald_errors
+                                            .borrow_mut()
+                                            .errors_mut()
+                                            .insert("password", validator::ValidationErrorsKind::Field(vec![err]));
+                                    },
+                                }
                             }
-                            
-                            // TODO: Show error based on resultant error recieved from API
-                            // Probably route to a Server-Down page
                         },
                     }
                 },
@@ -409,6 +395,7 @@ pub fn login_user(_: &LoginProps) -> Html {
                     <FormInput<LoginFormUpdate>
                         input_type="password" placeholder="Password" label="" name="password" input_ref={password_input_ref} 
                         to_type={Callback::from(|s| LoginFormUpdate::Password(s))}
+                        autocomplete={Some("current-password".to_string())}
                         onchange={onchange.clone()} 
                         onblur={onblur_validate.clone()} 
                         errors={&*validation_errors} 
@@ -453,20 +440,11 @@ pub fn user_profile(props: &ProfileProps) -> Html {
                 match response {
                     Ok(data) => {
                         loading_cloned.set(false);
-                        user_data_cloned.set(Some(data))
+                        user_data_cloned.set(Some(data));
                     },
                     Err(e) => {
                         loading_cloned.set(false);
-                        match e {
-                            crate::api::user_api::Error::Standard(e) => {
-                                match e {
-                                    crate::api::types::UserDataError::UserIdNotFound(_) |crate::api::types::UserDataError::UsernameNotFound(_) => navigator.push(&Route::NotFound),
-                                }
-                            },
-                            crate::api::user_api::Error::API(_) => todo!(),
-                            crate::api::user_api::Error::RequestFailed => todo!(),
-                            crate::api::user_api::Error::ParseFailed => todo!(),
-                        }
+                        e.route_based_on_err(&navigator);
                     },
                 }
 
@@ -560,6 +538,85 @@ pub fn user_profile(props: &ProfileProps) -> Html {
                         }
                     </div>
                 </div>
+            </div>
+        </NavBar>
+    }
+}
+
+
+#[derive(Properties, Clone, PartialEq)]
+pub struct UserPreferncesProps;
+
+#[styled_component(UserPrefernces)]
+pub fn user_profile(_: &UserPreferncesProps) -> Html {
+    let loading = use_state(|| false);
+    let navigator = use_navigator().unwrap();
+    let (state, dispatch) = use_store::<AuthUser>();
+    let user = &state.auth_user;
+
+    let loading_cloned = loading.clone();
+    use_effect_with((), 
+        move |_| {
+            let navigator = navigator.clone();
+            spawn_local(async move {
+                loading_cloned.set(true);
+                let response = api_user_info().await;
+
+                match response {
+                    Ok(data) => {
+                        loading_cloned.set(false);
+                        set_auth_user(Some(data), dispatch);
+                    },
+                    Err(e) => {
+                        loading_cloned.set(false);
+                        e.route_based_on_err(&navigator);
+                    }
+                }
+
+            });
+        }
+    );
+
+    let theme = use_theme();
+    let profile_style = css!(
+        r#"
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+
+            @media screen and (max-width: 800px) {
+
+            }
+        "#
+    );
+
+    html! {
+        <NavBar content_class={css!("display: flex; align-items: center; justify-content: center;")}>
+            <div>
+                <ProfileCard user="landon"/>
+                // <div>
+                //     {"Left Side - Account Info"}
+                //     <h2>{"Account"}</h2>
+                //     <div>
+                //         {"Email"}
+                //     </div>
+                //     <div>
+                //         {"Username"}
+                //     </div>
+                // </div>
+                // <div>
+                //     {"Right Side - Profile Info w/ preview card"}
+                //     <h2>{"Profile"}</h2>
+                //     <div>
+                //         {"Profile Name"}
+                //     </div>
+                //     <div>
+                //         {"Profile Photo"}
+                //     </div>
+                //     <div>
+                //         {"Profile Banner"}
+                //     </div>
+                // </div>
             </div>
         </NavBar>
     }

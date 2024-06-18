@@ -53,7 +53,7 @@ async fn login_handler(
         LoginResponse::Success(user) => {
             let now = Utc::now();
             let iat = now.timestamp() as usize;
-            let exp = (now + Duration::minutes(config.jwt.expiration * 60 * 24)).timestamp() as usize;
+            let exp = (now + Duration::days(config.jwt.expiration)).timestamp() as usize;
             let claims: TokenClaims = TokenClaims {
                 user_id: user.id.to_string(),
                 exp,
@@ -67,12 +67,17 @@ async fn login_handler(
             )
             .unwrap();
 
+            info!("User {:?} logged in. \n    Made token: {:?}", user, token);
+
             let cookie = Cookie::build("token", token.to_owned())
                 .path("/")
+                .same_site(actix_web::cookie::SameSite::None) // Might need to change later for production, we will see
                 .max_age(ActixWebDuration::new(config.jwt.expiration * 60 * 60 * 24, 0))
                 .http_only(true) // This ensures the cookie is safe to use (can't be accessed through javascript)
                 .finish();
 
+            info!("Made Cookie: {:?}", cookie);
+            
             HttpResponse::Ok()
                 .cookie(cookie)
                 .json(UserLoginResponse { auth_token: token })
@@ -86,6 +91,7 @@ async fn login_handler(
 async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
     let cookie = Cookie::build("token", "")
         .path("/")
+        .same_site(actix_web::cookie::SameSite::None) // Might need to change later for production, we will see
         .max_age(ActixWebDuration::new(-1, 0))
         .http_only(true)
         .finish();

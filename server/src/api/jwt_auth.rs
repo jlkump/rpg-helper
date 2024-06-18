@@ -1,10 +1,10 @@
-use core::fmt;
 use std::future::{ready, Ready};
 
 use actix_web::error::ErrorUnauthorized;
 use actix_web::{dev::Payload, Error as ActixWebError};
 use actix_web::{http, web, FromRequest, HttpMessage, HttpRequest};
 use jsonwebtoken::{decode, DecodingKey, Validation};
+use log::info;
 use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
@@ -32,14 +32,21 @@ impl FromRequest for JwtMiddleware {
 
         let token = req
             .cookie("token")
-            .map(|c| c.value().to_string())
+            .map(|c| {
+                info!("Got COOKIE: {:?}", c);
+                c.value().to_string()
+            })
             .or_else(|| {
                 req.headers()
                     .get(http::header::AUTHORIZATION)
-                    .map(|h| h.to_str().unwrap().split_at(7).1.to_string())
+                    .map(|h| {
+                        info!("Got HEADER STRING: {}", h.to_str().unwrap());
+                        h.to_str().unwrap().split_at(7).1.to_string()
+                    })
             });
 
         if token.is_none() {
+            info!("Got Auth Error: No Token!");
             return ready(Err(ErrorUnauthorized(AuthError::NotLoggedIn)));
         }
 
@@ -49,7 +56,8 @@ impl FromRequest for JwtMiddleware {
             &Validation::default(),
         ) {
             Ok(c) => c.claims,
-            Err(_) => {
+            Err(e) => {
+                info!("Got Auth Error: {}", e.to_string());
                 return ready(Err(ErrorUnauthorized(AuthError::InvalidToken)));
             }
         };
