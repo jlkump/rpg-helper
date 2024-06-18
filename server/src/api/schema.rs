@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use super::types::ImageUrl;
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UserRegistrationSchema {
     pub username: String,      // Username for the user profile
@@ -18,7 +20,12 @@ pub enum UserUpdateSchema {
     Email(String),
     Password(String),
     ProfileName(String),
-    ProfilePicture(String)
+    ProfileText(String),
+    ProfileCatchphrase(String),
+    ProfilePicture(ImageUrl),
+    ProfileBanner(ImageUrl),
+    FavoritedRuleset(uuid::Uuid),
+    FavoritedSetting(uuid::Uuid),
 }
 
 #[derive(Debug, Deserialize)]

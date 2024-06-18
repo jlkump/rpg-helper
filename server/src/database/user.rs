@@ -7,199 +7,139 @@ use log::{error, trace};
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{FriendRequest, GameInvite, PublicUserData, UserData}}, config::Config, database::get_data};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{FriendRequest, GameInvite, ImageUrl, PublicUserData, UserData}}, config::Config, database::get_data};
+
+use super::{Error, UpdateResponse, User};
 
 pub struct UserDB {
     users: Db,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
-pub struct User {
-    pub id: uuid::Uuid
-}
-
-impl From<uuid::Uuid> for User {
-    fn from(id: uuid::Uuid) -> Self {
-        User {
-            id
-        }
-    }
-}
-
-impl From<&uuid::Uuid> for User {
-    fn from(value: &uuid::Uuid) -> Self {
-        User {
-            id: value.clone(),
-        }
-    }
-}
-
 #[derive(Debug)]
-pub enum RegistrationResponse {
-    Success(User),
+pub enum RegistrationConflict {
     UsernameTaken,
     EmailTaken,
+    Other
 }
 
-#[derive(Debug)]
 pub enum LoginResponse {
     Success(User),
-    UnknownUsername,
-    WrongPassword,
+    UnknownUsernameOrPassword
 }
 
-#[derive(Debug)]
-pub enum UpdateResponse {
-    Success,
-    UserNotFound,
-    DatabaseErr
-}
-
-pub enum DataResponse<T> {
-    Success(T),
-    NotFound,
-    DatabaseErr,
+impl From<Error> for Error<RegistrationConflict> {
+    fn from(value: Error) -> Self {
+        match value {
+            Error::DbConflict(e) => Error::DbConflict(RegistrationConflict::Other),
+            Error::DbErr(e) => Error::DbErr(e),
+            Error::ParseErr(e) => Error::ParseErr(e),
+            Error::Bcrypt(e) => Error::Bcrypt(e),
+            Error::Other(str) => Error::Other(str),
+        }
+    }
 }
 
 impl UserDB {
-    pub(super) fn open(config: &Config) -> Self {
-        UserDB {
-            users: sled::open(format!("{}/users", config.database.database_path)).unwrap()
-        }
+    pub(super) fn open(config: &Config) -> Result<Self, sled::Error> {
+        Ok(UserDB {
+            users: sled::open(format!("{}/users", config.database.database_path))?
+        })
     }
 
-    pub fn register_user(&self, registration_data: UserRegistrationSchema) -> RegistrationResponse {
-        if self.get_user_by_username(&registration_data.username).is_some() {
-            RegistrationResponse::UsernameTaken
-        } else if self.get_user_by_email(&registration_data.email).is_some() {
-            RegistrationResponse::EmailTaken
+    pub fn register_user(&self, registration_data: UserRegistrationSchema) -> Result<User, Error<RegistrationConflict>> {
+        if self.get_user_by_username(&registration_data.username)?.is_some() {
+            return Err(Error::DbConflict(RegistrationConflict::UsernameTaken));
+        } else if self.get_user_by_email(&registration_data.email)?.is_some() {
+            return Err(Error::DbConflict(RegistrationConflict::EmailTaken));
         } else {
-            let data_tree = self.open_secure_data_tree();
-            let details_tree = self.open_general_data_tree();
 
             let v = UserSecureData::new(registration_data.username, registration_data.email, registration_data.password);
-            data_tree.insert(v.id, bincode::serialize(&v).unwrap()).unwrap();
-            details_tree.insert(v.id, bincode::serialize(&UserGeneralData::new(&v.username)).unwrap()).unwrap();
-            RegistrationResponse::Success(User {id: v.id})
+            self.open_username_to_id()?.insert(v.username.clone(), bincode::serialize(&v.id)?)?;
+            self.open_email_to_id()?.insert(v.email.clone(), bincode::serialize(&v.id)?)?;
+            self.open_secure_data_tree()?.insert(v.id, bincode::serialize(&v)?)?;
+            self.open_general_data_tree()?.insert(v.id, bincode::serialize(&UserGeneralData::new(&v.username))?)?;
+            return Ok(v.id);
         }
     }
 
-    pub fn delete_user(&self, user: User) {
-        let data_tree = self.open_secure_data_tree();
-        let details_tree = self.open_general_data_tree();
-        // TODO: Also remove all friends and from active games
-        // Fails when db error occurs, not when the db doesn't contain the user to remove, so fail case is rare
-        data_tree.remove(user.id).unwrap();
-        details_tree.remove(user.id).unwrap();
+    pub fn delete_user(&self, user: User) -> Result<(), Error> {
+        let data_tree = self.open_secure_data_tree()?;
+        // TODO: Also remove all friends and from active games (remove from active games will have to be at the higher database level)
+        if let Some(user_data) = get_data::<UserSecureData, uuid::Uuid>(&data_tree, &user)? {
+            // TODO: Look at friends, remove from friends lists for other users. Do the same for games.
+            self.open_username_to_id()?.remove(user_data.username)?;
+            self.open_email_to_id()?.remove(user_data.email)?;
+            self.open_general_data_tree()?.remove(user)?;
+            data_tree.remove(user)?;
+        }
+        Ok(())
     }
 
-    pub fn login_user(&self, login_data: UserLoginSchema) -> LoginResponse {
-        if let Some(user_id) = self.get_user_by_username(&login_data.username) {
-            let data = self.get_secure_data(&user_id).unwrap();
-            if bcrypt::verify(login_data.password, &data.password).unwrap() {
-                LoginResponse::Success(user_id)
-            } else {
-                LoginResponse::WrongPassword
+    pub fn login_user(&self, login_data: UserLoginSchema) -> Result<LoginResponse, Error> {
+        if let Some(user_id) = self.get_user_by_username(&login_data.username)? {
+            if let Some(data) = self.get_secure_data(&user_id)? {
+                if bcrypt::verify(login_data.password, &data.password)? {
+                    return Ok(LoginResponse::Success(user_id));
+                }
             }
-        } else {
-            LoginResponse::UnknownUsername
         }
+        Ok(LoginResponse::UnknownUsernameOrPassword)
     }
 
-    pub fn update_user_email(&self, user: User, new_email: String) -> UpdateResponse {
-        let tree = self.open_secure_data_tree();
-        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
-            secure.update_email(new_email);
-            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub fn user_exists(&self, user: User) -> Result<bool, Error> {
+        Ok(self.get_secure_data(&user)?.is_some())
     }
 
-    pub fn update_user_password(&self, user: User, new_password: String) -> UpdateResponse {
-        let tree = self.open_secure_data_tree();
-        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
-            secure.update_password(new_password);
-            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub fn update_email(&self, user: User, new_email: String) -> Result<UpdateResponse, Error> {
+        self.generic_secure_update(user, new_email, UserSecureData::update_email)
     }
 
-    pub fn update_user_verified(&self, user: User, verified: bool) -> UpdateResponse {
-        let tree = self.open_secure_data_tree();
-        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
-            secure.update_verified(verified);
-            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub fn update_password(&self, user: User, new_password: String) -> Result<UpdateResponse, Error> {
+        self.generic_secure_update(user, new_password, UserSecureData::update_password)
     }
 
-    pub(super) fn update_user_storage(&self, user: User, change: i64) -> UpdateResponse {
-        let tree = self.open_secure_data_tree();
-        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
-            secure.update_storage(change);
-            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub fn update_verified(&self, user: User, verified: bool) -> Result<UpdateResponse, Error> {
+        self.generic_secure_update(user, verified, UserSecureData::update_verified)
     }
 
-    pub fn update_user_donation(&self, user: User, amount: i64) -> UpdateResponse {
-        let tree = self.open_secure_data_tree();
-        if let Some(mut secure) = get_data::<UserSecureData, uuid::Uuid>(&tree, &user.id) {
-            secure.update_donation(amount);
-            tree.insert(user.id, bincode::serialize(&secure).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub(super) fn update_storage_usage(&self, user: User, new_amount: i64) -> Result<UpdateResponse, Error> {
+        self.generic_secure_update(user, new_amount, UserSecureData::update_storage)
     }
 
-    pub fn update_user_profile_name(&self, user: User, profile_name: String) -> UpdateResponse {
-        let tree = self.open_general_data_tree();
-        if let Some(mut general) = get_data::<UserGeneralData, uuid::Uuid>(&tree, &user.id) {
-            general.update_profile_name(profile_name);
-            tree.insert(user.id, bincode::serialize(&general).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub(super) fn update_donation_amount(&self, user: User, new_amount: i64) -> Result<UpdateResponse, Error> {
+        self.generic_secure_update(user, new_amount, UserSecureData::update_donation)
     }
 
-    pub(super) fn user_join_game(&self, user: User, game_id: uuid::Uuid) -> UpdateResponse {
-        let tree = self.open_general_data_tree();
-        if let Some(mut general) = get_data::<UserGeneralData, uuid::Uuid>(&tree, &user.id) {
-            general.join_game(game_id);
-            tree.insert(user.id, bincode::serialize(&general).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub fn update_profile_name(&self, user: User, profile_name: String) -> Result<UpdateResponse, Error> {
+        self.generic_general_update(user, profile_name, UserGeneralData::update_profile_name)
     }
 
-    pub(super) fn user_leave_game(&self, user: User, game_id: uuid::Uuid) -> UpdateResponse {
-        let tree = self.open_general_data_tree();
-        if let Some(mut general) = get_data::<UserGeneralData, uuid::Uuid>(&tree, &user.id) {
-            general.leave_game(game_id);
-            tree.insert(user.id, bincode::serialize(&general).unwrap()).unwrap();
-            UpdateResponse::Success
-        } else {
-            UpdateResponse::UserNotFound
-        }
+    pub fn update_profile_catchphrase(&self, user: User, profile_catchphrase: String) -> Result<UpdateResponse, Error> {
+        self.generic_general_update(user, profile_catchphrase, UserGeneralData::update_profile_catchphrase)
     }
 
-    pub fn user_exists(&self, user: &User) -> bool {
-        self.get_secure_data(&user).is_some()
+    pub fn update_profile_text(&self, user: User, profile_text: String) -> Result<UpdateResponse, Error> {
+        self.generic_general_update(user, profile_text, UserGeneralData::update_profile_text)
     }
 
-    pub fn get_data(&self, user: User, config: &Config) -> Option<UserData> {
-        if let Some(secure) = self.get_secure_data(&user) {
+    pub fn update_profile_photo(&self, user: User, profile_photo: ImageUrl) -> Result<UpdateResponse, Error> {
+        self.generic_general_update(user, profile_photo, UserGeneralData::update_profile_photo)
+    }
+
+    pub fn update_profile_banner(&self, user: User, profile_banner: ImageUrl) -> Result<UpdateResponse, Error> {
+        self.generic_general_update(user, profile_banner, UserGeneralData::update_profile_banner)
+    }
+
+    pub(super) fn join_game(&self, user: User, game_id: uuid::Uuid) -> Result<UpdateResponse, Error> {
+        self.generic_general_update(user, game_id, UserGeneralData::join_game)
+    }
+
+    pub(super) fn leave_game(&self, user: User, game_id: uuid::Uuid) -> Result<UpdateResponse, Error> {
+        self.generic_general_update(user, game_id, UserGeneralData::leave_game)
+    }
+
+    pub fn get_private_data(&self, user: User, config: &Config) -> Result<Option<UserData>, Error> {
+        if let Some(secure) = self.get_secure_data(&user)? {
             let storage_limit = secure.get_storage_limit();
             let UserSecureData {
                 id,
@@ -212,7 +152,7 @@ impl UserDB {
                 storage_used,
                 ..
             } = secure;
-            if let Some(general) = self.get_general_data(&user) {
+            if let Some(general) = self.get_general_data(&user)? {
                 let UserGeneralData {
                     profile_name,
                     profile_photo,
@@ -233,7 +173,7 @@ impl UserDB {
                     last_read_news,
                     ..
                 } = general;
-                Some(UserData {
+                return Ok(Some(UserData {
                     id,
                     username,
                     email,
@@ -252,24 +192,21 @@ impl UserDB {
                     owned_characters,
                     storage_used,
                     storage_limit,
-                    is_donor: donated.is_some() || monthly_donor,
+                    is_donor: donated != 0 || monthly_donor,
                     friends,
                     friend_requests: friend_requests.into_values().collect(),
                     sent_requests,
                     blocked_users,
                     game_invites,
                     last_read_news,
-                })
-            } else {
-                None
+                }));
             }
-        } else {
-            None
         }
+        return Ok(None);
     }
 
-    pub fn get_public_data(&self, user: User, config: &Config) -> Option<PublicUserData> {
-        if let Some(secure) = self.get_secure_data(&user) {
+    pub fn get_public_data(&self, user: User, config: &Config) -> Result<Option<PublicUserData>, Error> {
+        if let Some(secure) = self.get_secure_data(&user)? {
             let UserSecureData {
                 id,
                 username,
@@ -278,7 +215,7 @@ impl UserDB {
                 created_at,
                 ..
             } = secure;
-            if let Some(general) = self.get_general_data(&user) {
+            if let Some(general) = self.get_general_data(&user)? {
                 let UserGeneralData {
                     profile_name,
                     profile_photo,
@@ -287,7 +224,7 @@ impl UserDB {
                     profile_catchphrase,
                     ..
                 } = general;
-                Some(PublicUserData {
+                return Ok(Some(PublicUserData {
                     username,
                     created_at,
                     profile_name,
@@ -295,66 +232,78 @@ impl UserDB {
                     profile_banner: profile_banner.to_string(&config),
                     profile_text,
                     profile_catchphrase,
-                    is_donor: donated.is_some() || monthly_donor,
+                    is_donor: donated != 0 || monthly_donor,
                     id,
-                })
-            } else {
-                None
+                }));
             }
+        }
+        return Ok(None);
+    }
+
+
+    ////////////////////////////////////////////////////
+    ////////////// Helper Methods //////////////////////
+    ////////////////////////////////////////////////////
+
+
+    fn generic_secure_update<T, F>(&self, user: User, data: T, update: F) -> Result<UpdateResponse, Error>
+    where 
+        F: FnOnce(&mut UserSecureData, T) -> &mut UserSecureData 
+    {
+        let tree = self.open_secure_data_tree()?;
+        if let Some(mut secure) = get_data::<UserSecureData, User>(&tree, &user)? {
+            update(&mut secure, data);
+            tree.insert(user, bincode::serialize(&secure)?)?;
+            Ok(UpdateResponse::Success)
         } else {
-            None
+            Ok(UpdateResponse::NotFound)
         }
     }
 
-    fn get_user_by_username(&self, username: &String) -> Option<User> {
-        // TODO: have sub-tree in database that maps <Username, ID>, makes things faster
-        for row_data in &self.open_secure_data_tree() {
-            match row_data {
-                Ok((_, r)) => {
-                    let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
-                    let id = data.id;
-                    if data.username.eq(username) {
-                        return Some(User { id });
-                    }
-                },
-                Err(e) => error!("[ERROR]: {:?} for username: {}", e, username),
-            }
+    fn generic_general_update<T, F>(&self, user: User, data: T, update: F) -> Result<UpdateResponse, Error>
+    where 
+        F: FnOnce(&mut UserGeneralData, T) -> &mut UserGeneralData 
+    {
+        let tree = self.open_general_data_tree()?;
+        if let Some(mut general) = get_data::<UserGeneralData, User>(&tree, &user)? {
+            update(&mut general, data);
+            tree.insert(user, bincode::serialize(&general)?)?;
+            Ok(UpdateResponse::Success)
+        } else {
+            Ok(UpdateResponse::NotFound)
         }
-        None
     }
 
-    fn get_user_by_email(&self, email: &String) -> Option<User> {
-        for row_data in &self.open_secure_data_tree() {
-            match row_data {
-                Ok((_, r)) => {
-                    let data: UserSecureData = bincode::deserialize_from(r.reader()).unwrap();
-                    let id = data.id;
-                    if data.email.eq(email) {
-                        return Some(User { id });
-                    }
-                },
-                Err(e) => error!("[ERROR]: {:?} for email: {}", e, email),
-            }
-        }
-        None
+    fn get_user_by_username(&self, username: &String) -> Result<Option<User>, Error> {
+        get_data(&self.open_username_to_id()?, username)
     }
 
-    fn get_secure_data(&self, user: &User) -> Option<UserSecureData> {
-        let tree = self.open_secure_data_tree();
-        get_data(&tree, &user.id)
+    fn get_user_by_email(&self, email: &String) -> Result<Option<User>, Error> {
+        get_data(&self.open_email_to_id()?, email)
     }
 
-    fn get_general_data(&self, user: &User) -> Option<UserGeneralData> {
-        let tree = self.open_general_data_tree();
-        get_data(&tree, &user.id)
+    fn get_secure_data(&self, user: &User) -> Result<Option<UserSecureData>, Error> {
+        get_data(&self.open_secure_data_tree()?, &user)
     }
 
-    fn open_secure_data_tree(&self) -> Tree {
-        self.users.open_tree(b"secure").unwrap()
+    fn get_general_data(&self, user: &User) -> Result<Option<UserGeneralData>, Error> {
+        get_data(&self.open_general_data_tree()?, &user)
     }
 
-    fn open_general_data_tree(&self) -> Tree {
-        self.users.open_tree(b"general").unwrap()
+    fn open_secure_data_tree(&self) -> Result<Tree, sled::Error> {
+        self.users.open_tree(b"secure")
+    }
+
+    fn open_general_data_tree(&self) -> Result<Tree, sled::Error> {
+        self.users.open_tree(b"general")
+    }
+
+    fn open_username_to_id(&self) -> Result<Tree, sled::Error> {
+        self.users.open_tree(b"username-to-id")
+    }
+
+    fn open_email_to_id(&self) -> Result<Tree, sled::Error> {
+        self.users.open_tree(b"email-to-id")
     }
 }
 
@@ -366,7 +315,7 @@ struct UserSecureData {
     password: String,      // The Password hash and salt
     verified: bool,        // Not 100% sure what this is for, perhaps email verification? Then we delete old users that haven't been verified?
     is_admin: bool,        // User or admin
-    donated: Option<i64>,  // Number of cents donated in USD
+    donated: i64,  // Number of cents donated in USD
     monthly_donor: bool,
     created_at: Option<DateTime<Utc>>,
     updated_at: Option<DateTime<Utc>>,
@@ -386,7 +335,7 @@ impl UserSecureData {
             password: bcrypt::hash(password, DEFAULT_COST).unwrap(),
             verified: false,
             is_admin: false,
-            donated: None,
+            donated: 0,
             monthly_donor: false,
             created_at: Some(chrono::offset::Utc::now()),
             updated_at: Some(chrono::offset::Utc::now()),
@@ -412,18 +361,14 @@ impl UserSecureData {
         self
     }
 
-    fn update_donation(&mut self, amount: i64) -> &mut Self {
-        if let Some(prev) = self.donated {
-            self.donated = Some(prev + amount);
-        } else {
-            self.donated = Some(amount);
-        }
+    fn update_donation(&mut self, new_amount: i64) -> &mut Self {
+        self.donated = new_amount;
         self.updated_at = Some(chrono::offset::Utc::now());
         self
     }
 
-    fn update_storage(&mut self, change: i64) -> &mut Self {
-        self.storage_used = self.storage_used + change;
+    fn update_storage(&mut self, new_amount: i64) -> &mut Self {
+        self.storage_used = new_amount;
         self.updated_at = Some(chrono::offset::Utc::now());
         self
     }
@@ -444,7 +389,7 @@ impl UserSecureData {
     fn get_storage_limit(&self) -> i64 {
         if self.is_admin {
             ADMIN_USER_STORAGE_LIMIT
-        } else if self.donated.is_some() || self.monthly_donor {
+        } else if self.donated != 0 || self.monthly_donor {
             DONOR_USER_STORAGE_LIMIT
         } else {
             DEFAULT_USER_STORAGE_LIMIT
@@ -482,20 +427,6 @@ struct UserGeneralData {
 }
 
 // This will be good for general storing of images and their paths
-#[derive(Debug, Deserialize, Serialize, Clone)]
-enum ImageUrl {
-    ExternalPath(String),
-    InternalServerPath(String)
-}
-
-impl ImageUrl {
-    fn to_string(self, config: &Config) -> String {
-        match self {
-            ImageUrl::ExternalPath(path) => path,
-            ImageUrl::InternalServerPath(path) => format!("http://{}:{}/{}", config.server.host, config.server.port, path),
-        }
-    }
-}
 
 impl UserGeneralData {
     fn new(username: &str) -> UserGeneralData {
@@ -535,13 +466,19 @@ impl UserGeneralData {
         self
     }
 
+    fn update_profile_catchphrase(&mut self, catchphrase: String) -> &mut Self {
+        self.updated_at = Some(chrono::offset::Utc::now());
+        self.profile_catchphrase = catchphrase;
+        self
+    }
+
     fn update_profile_photo(&mut self, photo_url: ImageUrl) -> &mut Self {
         self.updated_at = Some(chrono::offset::Utc::now());
         self.profile_photo = photo_url;
         self
     }
 
-    fn update_banner_photo(&mut self, photo_url: ImageUrl) -> &mut Self {
+    fn update_profile_banner(&mut self, photo_url: ImageUrl) -> &mut Self {
         self.updated_at = Some(chrono::offset::Utc::now());
         self.profile_banner = photo_url;
         self

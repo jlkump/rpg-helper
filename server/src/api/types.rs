@@ -3,6 +3,12 @@ use std::{collections::HashSet, fmt::{Debug, Display}};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct ServerError {
+    pub error: String,
+    pub message: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub enum RegistrationError {
     UsernameTaken,
     EmailTaken,
@@ -41,6 +47,12 @@ impl Display for AuthError {
             AuthError::InvalidToken => write!(f, "Unauthorized: Invalid token."),
         }
     }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub enum ImageUrl {
+    ExternalPath(String),
+    InternalServerPath(String)
 }
 
 #[derive(Serialize, Deserialize, Debug)]
