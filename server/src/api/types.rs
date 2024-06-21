@@ -35,9 +35,9 @@ pub enum AuthError {
 pub enum UploadError {
     UserNotFound(uuid::Uuid),
     FileTooLarge,
+    UnsupportedFileType,
     InsufficientUserStorage(i64, i64), // The amount requested and the amount the user has left
     NameConflict(String), // Name conflict with existing user file upload
-    FileSystemErr(String)
 }
 
 impl Display for AuthError {

@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{ffi::OsStr, io::Write, path::Path};
 
 use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
@@ -12,11 +12,11 @@ use actix_multipart::form::{json::Json as MPJson, tempfile::TempFile, MultipartF
 
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
     let scope = web::scope("/api")
+        .service(get_public_user_handler)
+        .service(register_handler)
         .service(login_handler)
         .service(logout_handler)
-        .service(register_handler)
-        .service(get_me_handler)
-        .service(get_public_user_handler);
+        .service(get_me_handler);
 
     cfg.service(scope)
 }
@@ -130,7 +130,7 @@ async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
         .json(json!({"status": "success"}))
 }
 
-#[get("/user/me")]
+#[get("/user")]
 async fn get_me_handler(
     req: HttpRequest,
     db: web::Data<Database>,
@@ -209,6 +209,14 @@ struct UploadForm {
     json: MPJson<FileUploadMetadata>,
 }
 
+fn is_allowed_file_type(t: Option<&OsStr>) -> bool {
+    if let Some(t) = t {
+        t.eq("png") || t.eq("jgep") || t.eq("gif")
+    } else {
+        false
+    }
+}
+
 #[post("/user/upload")]
 async fn user_upload_file(
     req: HttpRequest,
@@ -230,29 +238,67 @@ async fn user_upload_file(
                         user_data.username, // This is only ok b/c username doesn't change
                         sanitize_filename(&form.json.name)
                     );
-                    if !Path::new(filepath).exists() {
-                        match form.file.file.persist(filepath) {
-                            Ok(_) => HttpResponse::Ok().into(),
-                            Err(e) => HttpResponse::InternalServerError().json(UploadError::FileSystemErr(e.to_string())),
-                        }
-                    } else {
-                        HttpResponse::Conflict().json(UploadError::NameConflict(sanitize_filename(&form.json.name)))
+                    let path = Path::new(filepath);
+                    if path.exists() {
+                        return HttpResponse::Conflict().json(UploadError::NameConflict(sanitize_filename(&form.json.name)));
+                    }
+                    if !is_allowed_file_type(path.extension()) {
+                        return HttpResponse::BadRequest().json(UploadError::UnsupportedFileType);
+                    }
+                    // TODO: 
+                    // [x]. Update the storage of the user
+                    // [ ]. Update database meta-info on stored files
+                    // [x]. Reject file types not supported
+                    //    - Currently, only need to support images, such as jepg, png, gif, ico, svg, etc.
+                    match form.file.file.persist(filepath) {
+                        Ok(_) => {
+                            match db.user_db.update_storage_usage(*user_id, user_data.storage_used + form.file.size as i64) {
+                                Ok(_) => HttpResponse::Ok().into(),
+                                Err(e) => handle_server_error(e, generic_conflict_handler),
+                            }
+                        },
+                        Err(e) => HttpResponse::InternalServerError().json(ServerErrorResponse {
+                            error: "Filesystem Error: Persist Error".to_string(),
+                            message: e.to_string()
+                        }),
                     }
                 } else {
                     HttpResponse::InsufficientStorage().json(UploadError::InsufficientUserStorage(form.file.size as i64, user_data.storage_limit - user_data.storage_used))
                 }
             } else {
-                HttpResponse::InternalServerError().json(UploadError::UserNotFound(*user_id))
+                HttpResponse::NotFound().json(UploadError::UserNotFound(*user_id))
             }
         },
         Err(e) => handle_server_error(e, generic_conflict_handler),
     }
 }
 
+#[get("/user/uploads")]
+async fn fetch_user_uploads(
+    req: HttpRequest,
+    MultipartForm(form): MultipartForm<UploadForm>,
+    db: web::Data<Database>,
+    config: web::Data<Config>,
+    _: jwt_auth::JwtMiddleware,
+) -> impl Responder {
+    // Responds with list of all files
+    // File response format:
+    // struct File {
+    //    name: String,
+    //    file_type: FileType,
+    // }
+    //
+    // enum FileType {
+    //     Img(String) // String is src url
+    // }
+    //
+    // The user should be able to preview the data of uploaded image files
+    HttpResponse::InternalServerError().json(ServerErrorResponse { error: "TODO".to_string(), message: "Getting done".to_string()})
+}
+
 ///////////////////////////////////////////////////
 ////////////// Helper Functions ///////////////////
 ///////////////////////////////////////////////////
-
 
 fn sanitize_filename(name: &str) -> String {
     name.chars().filter(|c| *c != '/' && *c != '\\').collect()

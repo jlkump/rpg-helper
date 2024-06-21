@@ -28,7 +28,7 @@ pub enum UserUpdateSchema {
     FavoritedSetting(uuid::Uuid),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct FileUploadMetadata {
     pub name: String,
 }

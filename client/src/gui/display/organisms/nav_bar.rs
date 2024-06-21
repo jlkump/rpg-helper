@@ -178,7 +178,7 @@ fn user_menu(props: &UserMenuProps) -> Html {
                         <h3 class={hover_color.clone()}>{"Logout"}</h3>
                     </div>
                     if let Some(user) = &store.auth_user {
-                        <Link<Route> to={Route::Profile { name: user.username.clone() }}><div>
+                        <Link<Route> to={Route::Profile { id: user.id.to_string() }}><div>
                             <ProfilePortrait style="margin-left: 10px;" hover=true loading={*loading} src={user.profile_photo.clone()} />
                         </div></Link<Route>>
                     }

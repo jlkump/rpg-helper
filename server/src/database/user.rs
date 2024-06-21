@@ -102,11 +102,11 @@ impl UserDB {
         self.generic_secure_update(user, verified, UserSecureData::update_verified)
     }
 
-    pub(super) fn update_storage_usage(&self, user: User, new_amount: i64) -> Result<UpdateResponse, Error> {
+    pub fn update_storage_usage(&self, user: User, new_amount: i64) -> Result<UpdateResponse, Error> {
         self.generic_secure_update(user, new_amount, UserSecureData::update_storage)
     }
 
-    pub(super) fn update_donation_amount(&self, user: User, new_amount: i64) -> Result<UpdateResponse, Error> {
+    pub fn update_donation_amount(&self, user: User, new_amount: i64) -> Result<UpdateResponse, Error> {
         self.generic_secure_update(user, new_amount, UserSecureData::update_donation)
     }
 

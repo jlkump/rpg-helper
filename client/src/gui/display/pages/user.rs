@@ -8,7 +8,7 @@ use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, router::Route, store::{set_auth_user, AuthUser}};
+use crate::{api::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info, api_user_upload}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, router::Route, store::{set_auth_user, AuthUser}};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
@@ -416,7 +416,7 @@ pub fn login_user(_: &LoginProps) -> Html {
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct ProfileProps {
-    pub name: String
+    pub id: uuid::Uuid
 }
 
 
@@ -435,7 +435,7 @@ pub fn user_profile(props: &ProfileProps) -> Html {
             let navigator = navigator.clone();
             spawn_local(async move {
                 loading_cloned.set(true);
-                let response = api_public_user_info(props_cloned.name).await;
+                let response = api_public_user_info(props_cloned.id).await;
 
                 match response {
                     Ok(data) => {
@@ -555,9 +555,10 @@ pub fn user_profile(_: &UserPreferncesProps) -> Html {
     let user = &state.auth_user;
 
     let loading_cloned = loading.clone();
+    let navigator_cloned = navigator.clone();
     use_effect_with((), 
         move |_| {
-            let navigator = navigator.clone();
+            let navigator = navigator_cloned.clone();
             spawn_local(async move {
                 loading_cloned.set(true);
                 let response = api_user_info().await;
@@ -590,10 +591,49 @@ pub fn user_profile(_: &UserPreferncesProps) -> Html {
         "#
     );
 
+    // TODO: Define a file upload component
+    let file_input_ref = use_node_ref();
+    let metadata_ref = use_node_ref();
+
+    let onsubmit = {
+        let file_input_ref = file_input_ref.clone();
+        let metadata_ref = metadata_ref.clone();
+        Callback::from(move |e: SubmitEvent| {
+            let navigator = navigator.clone();
+            e.prevent_default();
+            if let Some(input) = file_input_ref.cast::<HtmlInputElement>() {
+                if let Some(files) = input.files() {
+                    let file = files.get(0).unwrap(); // Get the first file
+                    if let Some(metadata_input) = metadata_ref.cast::<HtmlInputElement>() {
+                        let metadata = FileUploadMetadata {
+                            name: metadata_input.value(),
+                        };
+                        spawn_local(async move {
+                            let res = api_user_upload(metadata, file).await;
+                            match res {
+                                Ok(_) => {},
+                                Err(e) => if let Some(e) = e.route_based_on_err(&navigator) {
+                                    // TODO:
+                                },
+                            }
+                        });
+                    }
+                }
+            }
+        })
+    };
+
     html! {
         <NavBar content_class={css!("display: flex; align-items: center; justify-content: center;")}>
             <div>
-                <ProfileCard user="landon"/>
+                if let Some(data) = user {
+                    <ProfileCard user={data.id}/>
+                }
+                <form onsubmit={onsubmit}>
+                    <input type="file" ref={file_input_ref} />
+                    <input type="name" ref={metadata_ref} placeholder="Enter name" />
+                    <button type="submit">{ "Upload File" }</button>
+                </form>
                 // <div>
                 //     {"Left Side - Account Info"}
                 //     <h2>{"Account"}</h2>

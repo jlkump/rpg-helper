@@ -2,10 +2,11 @@ use std::fmt::{Debug, Display};
 
 use crate::router::Route;
 
-use super::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UserData, UserDataError, UserLoginResponse}, API_URL};
+use super::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UploadError, UserData, UserDataError, UserLoginResponse}, API_URL};
 use gloo::console::log;
 use reqwasm::http::{self, Response};
 use serde::de::DeserializeOwned;
+use web_sys::{File, FormData};
 use yew_router::navigator::Navigator;
 
 pub enum Error<T> {
@@ -13,7 +14,14 @@ pub enum Error<T> {
     Unauthorized,
     API(String),
     RequestFailed(String),
-    ParseFailed(String)
+    ParseFailed(String),
+    Other(String)
+}
+
+impl<T> From<serde_json::Error> for Error<T> {
+    fn from(value: serde_json::Error) -> Self {
+        Self::ParseFailed(value.to_string())
+    }
 }
 
 impl<T> Display for Error<T> 
@@ -27,6 +35,7 @@ where
             Error::API(e) =>  write!(f, "API Failure: {}", e),
             Error::RequestFailed(e) => write!(f, "Request Failure: {}", e),
             Error::ParseFailed(e) => write!(f, "Parse Failure: {}", e),
+            Error::Other(e) => write!(f, "{}", e),
         }
     }
 }
@@ -51,6 +60,7 @@ where
             Error::RequestFailed(mes) => navigator.push(&Route::Error { error: format!("Request failed. Server may be down. \"{}\"", mes) }),
             Error::ParseFailed(mes) => navigator.push(&Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) }),
             Error::Unauthorized => navigator.push(&Route::Home),
+            Error::Other(e) => navigator.push(&Route::Error { error: format!("Other Error: \"{}\"", e) }),
         }
         return None
     }
@@ -61,6 +71,8 @@ pub trait ErrorRoute { fn route(self, navigator: &Navigator) -> Option<Self> whe
 impl ErrorRoute for RegistrationError { fn route(self, _: &Navigator) -> Option<Self> { Some(self) } }
 
 impl ErrorRoute for LoginError { fn route(self, _: &Navigator) -> Option<Self> { Some(self) } }
+
+impl ErrorRoute for UploadError { fn route(self, _: &Navigator) -> Option<Self> { Some(self) } }
 
 impl ErrorRoute for String { 
     fn route(self, navigator: &Navigator) -> Option<Self> {
@@ -161,8 +173,8 @@ pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
     }
 }
 
-pub async fn api_public_user_info(username: String) -> Result<PublicUserData, Error<UserDataError>> {
-    let url = format!("{}/user/{}", API_URL, username);
+pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData, Error<UserDataError>> {
+    let url = format!("{}/public/user/{}", API_URL, user_id);
     let response = match http::Request::get(&url)
         // .credentials(http::RequestCredentials::Include)
         .send()
@@ -179,6 +191,33 @@ pub async fn api_public_user_info(username: String) -> Result<PublicUserData, Er
         Ok(data) => Ok(data),
         Err(e) => Err(Error::ParseFailed(e.to_string())),
     }
+}
+
+pub async fn api_user_upload(meta_data: FileUploadMetadata, file: File) -> Result<(), Error<UploadError>> {
+    let data;
+    match FormData::new() {
+        Ok(d) => data = d,
+        Err(e) => return Err(Error::Other(format!("{:?}", e))),
+    }
+    if let Err(e) = data.append_with_blob("file", &file) {
+        return Err(Error::Other(format!("{:?}", e)));
+    }
+    data.append_with_str("json", &serde_json::to_string(&meta_data)?);
+
+    let url = format!("{}/user/upload", API_URL);
+    let response = match http::Request::post(&url)
+        .header("Content-Type", "application/json")
+        .credentials(http::RequestCredentials::Include)
+        .body(data)
+        .send()
+        .await
+    {
+        Ok(res) => res,
+        Err(e) => return Err(Error::RequestFailed(e.to_string())),
+    };
+
+    handle_response::<UploadError>(&response).await?;
+    Ok(())
 }
 
 pub async fn api_logout_user() -> Result<(), Error<String>> {

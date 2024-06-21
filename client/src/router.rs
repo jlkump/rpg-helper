@@ -15,8 +15,8 @@ pub(crate) enum Route {
     Register,
     #[at("/Dashboard")]
     Dashboard,
-    #[at("/Profile/:name")]
-    Profile { name: String },
+    #[at("/Profile/:id")]
+    Profile { id: String },
     #[at("/Preferences")]
     Preferences,
     #[at("/Character-Creator")]
@@ -46,7 +46,7 @@ fn switch(routes: Route) -> Html {
         Route::Login => html! { <LoginUser/> },
         Route::Register => html! { <RegisterUser/> },
         Route::Dashboard => html! { <Dashboard /> },
-        Route::Profile { name } => html! { <UserProfile {name}/> },
+        Route::Profile { id } => html! { if let Ok(id) = uuid::Uuid::parse_str(&id) { <UserProfile {id}/> } else { <Redirect<Route> to={Route::NotFound} /> } },
         Route::Error { error } => html! { <ErrorPage {error} />},
         Route::Preferences => html! { <UserPrefernces /> },
         Route::CharacterCreator => html! { <CharacterCreator /> },

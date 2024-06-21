@@ -6,7 +6,7 @@ use crate::{api::{types::PublicUserData, user_api::api_public_user_info}, gui::{
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct Props {
-    pub user: String,
+    pub user: uuid::Uuid,
     #[prop_or(false)]
     pub edit: bool,
 }
@@ -23,7 +23,7 @@ pub fn profile_card(props: &Props) -> Html {
     use_effect_with((), move |_| {
         spawn_local(async move {
             loading_cloned.set(true);
-            let response = api_public_user_info(props_cloned.user.clone()).await;
+            let response = api_public_user_info(props_cloned.user).await;
 
             match response {
                 Ok(data) => {
