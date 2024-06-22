@@ -3,7 +3,7 @@ use std::{borrow::BorrowMut, collections::{HashMap, HashSet}};
 use actix_web::web::Buf;
 use bcrypt::DEFAULT_COST;
 use chrono::prelude::*;
-use log::{error, trace};
+use log::{error, info, trace};
 use serde::{Deserialize, Serialize};
 use sled::{Db, Tree};
 
@@ -48,8 +48,10 @@ impl UserDB {
 
     pub fn register_user(&self, registration_data: UserRegistrationSchema) -> Result<User, Error<RegistrationConflict>> {
         if self.get_user_by_username(&registration_data.username)?.is_some() {
+            info!("Username for registration was taken");
             return Err(Error::DbConflict(RegistrationConflict::UsernameTaken));
         } else if self.get_user_by_email(&registration_data.email)?.is_some() {
+            info!("email for registration was taken");
             return Err(Error::DbConflict(RegistrationConflict::EmailTaken));
         } else {
 

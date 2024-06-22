@@ -343,7 +343,9 @@ fn login_onsubmit_callback(
                         },
                         Err(e) => {
                             loading.set(false);
+                            log!("Logging in...");
                             if let Some(err) = e.route_based_on_err(&navigator) {
+                                log!("Got username or password wrong");
                                 match err {
                                     crate::api::types::LoginError::UnknownUsernameOrPassword => {
                                         let err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Unknown username or incorrect password"));

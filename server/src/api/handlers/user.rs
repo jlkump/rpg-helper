@@ -1,9 +1,9 @@
-use std::{ffi::OsStr, io::Write, path::Path};
+use std::{ffi::OsStr, fmt::Debug, io::Write, path::Path};
 
 use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{encode, EncodingKey, Header};
-use log::info;
+use log::{info, warn};
 use serde_json::json;
 
 use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ ImageUrl, LoginError, RegistrationError, ServerError as ServerErrorResponse, UploadError, UserDataError, UserLoginResponse}}, config::Config, database::{user::{LoginResponse, RegistrationConflict}, Error}, Database};
@@ -13,6 +13,8 @@ use actix_multipart::form::{json::Json as MPJson, tempfile::TempFile, MultipartF
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
     let scope = web::scope("/api")
         .service(get_public_user_handler)
+        .service(user_update_handler)
+        .service(user_upload_file)
         .service(register_handler)
         .service(login_handler)
         .service(logout_handler)
@@ -108,6 +110,7 @@ async fn login_handler(
                         .json(UserLoginResponse { auth_token: token })
                 },
                 LoginResponse::UnknownUsernameOrPassword => {
+                    info!("Unknown username or password");
                     HttpResponse::BadRequest().json(LoginError::UnknownUsernameOrPassword)
                 },
             }
@@ -225,9 +228,9 @@ async fn user_upload_file(
     config: web::Data<Config>,
     _: jwt_auth::JwtMiddleware,
 ) -> impl Responder {
+    info!("Recieved request to upload {:?}\nwith json: {:?}", form.file, form.json);
     let ext = req.extensions();
     let user_id = ext.get::<uuid::Uuid>().unwrap();
-    info!("Recieved request to upload {:?}\nwith json: {:?}", form.file, form.json);
     match db.user_db.get_private_data(*user_id, &config) {
         Ok(response) => {
             if let Some(user_data) = response {
@@ -235,7 +238,7 @@ async fn user_upload_file(
                     let filepath = &format!(
                         "{}/uploads/{}/{}", 
                         config.database.uploads_path,
-                        user_data.username, // This is only ok b/c username doesn't change
+                        user_data.id, // This is b/c username doesn't change
                         sanitize_filename(&form.json.name)
                     );
                     let path = Path::new(filepath);
@@ -315,8 +318,10 @@ fn generic_conflict_handler<T>(_: T) -> HttpResponse {
 
 fn handle_server_error<T, F>(e: Error<T>, conflict_handler: F) -> HttpResponse 
 where 
-    F: FnOnce(T) -> HttpResponse
+    F: FnOnce(T) -> HttpResponse,
+    T: Debug
 {
+    warn!("Got server error of type: {:?}", e);
     match e {
         Error::DbConflict(c) => {
             conflict_handler(c)

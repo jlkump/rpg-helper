@@ -1,4 +1,7 @@
+use std::fmt::Debug;
+
 use actix_web::web::Buf;
+use log::info;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sled::Tree;
 
@@ -15,10 +18,10 @@ pub type Setting = uuid::Uuid;
 fn get_data<'a, T, K>(db: &Tree, key: &K) -> Result<Option<T>, Error> 
 where 
     T: DeserializeOwned, 
-    K: std::convert::AsRef<[u8]>
+    K: std::convert::AsRef<[u8]> + Debug
 {
     if let Some(data) = db.get(&key)? {
-        Ok(bincode::deserialize_from(data.reader())?)
+        Ok(Some(bincode::deserialize_from(data.reader())?))
     } else {
         Ok(None)
     }

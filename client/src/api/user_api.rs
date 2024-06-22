@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display};
 
-use crate::router::Route;
+use crate::{api::types::ServerError, router::Route};
 
 use super::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UploadError, UserData, UserDataError, UserLoginResponse}, API_URL};
 use gloo::console::log;
@@ -13,6 +13,7 @@ pub enum Error<T> {
     Standard(T),
     Unauthorized,
     API(String),
+    Server(ServerError),
     RequestFailed(String),
     ParseFailed(String),
     Other(String)
@@ -36,6 +37,7 @@ where
             Error::RequestFailed(e) => write!(f, "Request Failure: {}", e),
             Error::ParseFailed(e) => write!(f, "Parse Failure: {}", e),
             Error::Other(e) => write!(f, "{}", e),
+            Error::Server(e) => write!(f, "[Server Error] {}: {}", e.error, e.message),
         }
     }
 }
@@ -61,6 +63,7 @@ where
             Error::ParseFailed(mes) => navigator.push(&Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) }),
             Error::Unauthorized => navigator.push(&Route::Home),
             Error::Other(e) => navigator.push(&Route::Error { error: format!("Other Error: \"{}\"", e) }),
+            Error::Server(e) => navigator.push(&Route::Error { error: format!("Server Error. Type: {}, mes: \"{}\"", e.error, e.message) }),
         }
         return None
     }
@@ -99,8 +102,19 @@ where
         return Err(Error::Unauthorized);
     }
 
+    log!("Got response code: {}", response.status());
+
+    if response.status() == 500 {
+        let e = response.json::<ServerError>().await;
+        match e {
+            Ok(server_err) => return Err(Error::Server(server_err)),
+            Err(e) => return Err(Error::API(e.to_string())),
+        }
+    }
+
     if response.status() != 200 {
         let error_response = response.json::<E>().await;
+        
         match error_response {
             Ok(error_response) => return Err(Error::Standard(error_response)),
             Err(e) => return Err(Error::API(e.to_string()))
@@ -202,13 +216,14 @@ pub async fn api_user_upload(meta_data: FileUploadMetadata, file: File) -> Resul
     if let Err(e) = data.append_with_blob("file", &file) {
         return Err(Error::Other(format!("{:?}", e)));
     }
-    data.append_with_str("json", &serde_json::to_string(&meta_data)?);
+    data.append_with_str("json", &serde_json::to_string(&meta_data)?).unwrap();
 
     let url = format!("{}/user/upload", API_URL);
+    // reqwest::blocking::Client::new().post(); TODO: Add reqwest for multi-part uploading files
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
         .credentials(http::RequestCredentials::Include)
-        .body(data)
+        // .body(serde_json::to_string(&data)?)
         .send()
         .await
     {
