@@ -86,7 +86,7 @@ pub fn profile_card(props: &Props) -> Html {
         "#,
         bg = theme.paper, 
         border = theme.border_tooltip_light, 
-        shadow = theme.hover_dropshadow,
+        shadow = theme.dropshadow,
         banner_loading = theme.panel_secondary
     );
 

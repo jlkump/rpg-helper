@@ -26,7 +26,7 @@ pub fn character_portrait(props: &Props) -> Html {
             border-radius: 5px;
             margin: 10px;
         "#,
-        border = theme.image_border
+        border = theme.border_image
     );
     html! {
         <img src={props.image.clone()} width={props.width.clone()} height={props.height.clone()} class={style}/>

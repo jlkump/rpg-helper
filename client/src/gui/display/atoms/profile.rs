@@ -32,7 +32,7 @@ pub fn profile_portrait(props: &Props) -> Html {
             box-shadow: 5px 0px 5px ${shadow}, -5px 0px 5px ${shadow};
         "#,
         border = theme.border_colored,
-        shadow = theme.hover_dropshadow,
+        shadow = theme.dropshadow,
         width = props.width,
         height = props.height
     );

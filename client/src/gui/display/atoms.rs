@@ -7,6 +7,7 @@ pub mod icons;
 pub mod loading;
 pub mod logo;
 pub mod panel;
+pub mod popup;
 pub mod profile;
 pub mod scroll_div;
 mod table;

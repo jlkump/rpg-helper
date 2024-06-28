@@ -387,7 +387,7 @@ fn get_bar_style(theme: &Theme) -> Style {
             flex-direction: row;
             flex-wrap: nowrap;
             justify-content: space-between;
-            z-index: 100;
+            z-index: 10;
 
             background: {};
 

@@ -298,7 +298,7 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
         translate=translate,
         bg=theme.paper_dark,
         border=border,
-        hover=theme.hover_dropshadow,
+        hover=theme.dropshadow,
         pos_x=pos.0,
         pos_y=pos.1,
     );

@@ -72,56 +72,20 @@ where
             margin-top: 2px;
             margin-bottom: 2px;
             width: 250px;
-
-            input {
-                background: ${bg};
-                border: 2px solid ${unfocused};
-                border-radius: 2px;
-                font-size: 1em;
-                padding: 4px;
-                outline: none;
-            }
-
-            input:focus {
-                border: 2px solid ${focus};
-                border-radius: 2px;
-            }
-
-            input[type=submit] {
-                background: ${button};
-                border: 0px;
-                border-radius: 4px;
-                color: ${invert};
-            }
-
-            input[type=submit]:hover {
-                background: ${button_hover};
-                border: 0px;
-                border-radius: 4px;
-                color: ${invert};
-            }
-
-            input[type=submit]:focus {
-                background: ${button_press};
-                border: 0px;
-                border-radius: 4px;
-                color: ${invert};
-            }
         "#,
-        button = theme.button_color,
-        button_hover = theme.button_color_hover,
-        button_press = theme.button_color_press,
-        invert = theme.text_invert,
-        bg = theme.panel_secondary,
-        unfocused = theme.border_light,
-        focus = theme.h1
+        // button = theme.button_color,
+        // button_hover = theme.button_color_hover,
+        // button_press = theme.button_color_press,
+        // invert = theme.text_invert,
+        // bg = theme.panel_secondary,
+        // focus = theme.h1
     );
 
-    let label_style = css!(
-        r#"
-            margin: 5px;
-        "#
-    );
+    let label_style = if props.label.eq("") {
+        css!("margin: 5px;")
+    } else {
+        css!("")
+    };
 
     let error_style = css!(
         r#"
