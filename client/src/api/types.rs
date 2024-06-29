@@ -55,6 +55,15 @@ pub enum ImageUrl {
     InternalServerPath(String)
 }
 
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub struct ImageData {
+    pub src: String,
+    pub name: String,
+    pub is_external: bool,
+    pub dimen: (i64, i64),
+    pub size: i64, // In Bytes
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserLoginResponse {
     pub auth_token: String,

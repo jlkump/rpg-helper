@@ -223,7 +223,7 @@ pub async fn api_user_upload(meta_data: FileUploadMetadata, file: File) -> Resul
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
         .credentials(http::RequestCredentials::Include)
-        // .body(serde_json::to_string(&data)?)
+        .body(data)
         .send()
         .await
     {

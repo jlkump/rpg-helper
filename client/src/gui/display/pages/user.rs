@@ -195,21 +195,21 @@ pub fn register_user(_: &RegisterProps) -> Html {
                 <h1 class={css!("font-size: 2em;")}>{"Sign Up"}</h1>
                 <form class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} onsubmit={on_submit}>
                     <FormInput<RegistrationFormUpdate> 
-                        input_type="text" placeholder="Username" label="" name="username" input_ref={username_input_ref} 
+                        input_type="text" placeholder="Username"  name="username" input_ref={username_input_ref} 
                         to_type={Callback::from(|s| RegistrationFormUpdate::Username(s))}
                         onchange={onchange.clone()} 
                         onblur={onblur_validate.clone()} 
                         errors={&*validation_errors} 
                     />
                     <FormInput<RegistrationFormUpdate>
-                        input_type="text" placeholder="Email" label="" name="email" input_ref={email_input_ref} 
+                        input_type="text" placeholder="Email"  name="email" input_ref={email_input_ref} 
                         to_type={Callback::from(|s| RegistrationFormUpdate::Email(s))}
                         onchange={onchange.clone()} 
                         onblur={onblur_validate.clone()} 
                         errors={&*validation_errors} 
                     />
                     <FormInput<RegistrationFormUpdate>
-                        input_type="password" placeholder="Password" label="" name="password" input_ref={password_input_ref} 
+                        input_type="password" placeholder="Password"  name="password" input_ref={password_input_ref} 
                         to_type={Callback::from(|s| RegistrationFormUpdate::Password(s))}
                         autocomplete={Some("new-password".to_string())}
                         onchange={onchange.clone()} 
@@ -217,7 +217,7 @@ pub fn register_user(_: &RegisterProps) -> Html {
                         errors={&*validation_errors} 
                     />
                     <FormInput<RegistrationFormUpdate>
-                        input_type="password" placeholder="Confirm Password" label="" name="password_confirm" input_ref={password_confirm_input_ref} 
+                        input_type="password" placeholder="Confirm Password"  name="password_confirm" input_ref={password_confirm_input_ref} 
                         to_type={Callback::from(|s| RegistrationFormUpdate::PasswordConfirm(s))}
                         autocomplete={Some("new-password".to_string())}
                         onchange={onchange.clone()} 
@@ -388,14 +388,14 @@ pub fn login_user(_: &LoginProps) -> Html {
                 <h1 class={css!("font-size: 2em;")}>{"Login"}</h1>
                 <form class={css!("display: flex; flex-direction: column; justify-content: center; align-items: center;")} onsubmit={on_submit}>
                     <FormInput<LoginFormUpdate> 
-                        input_type="text" placeholder="Username" label="" name="username" input_ref={username_input_ref} 
+                        input_type="text" placeholder="Username"  name="username" input_ref={username_input_ref} 
                         to_type={Callback::from(|s| LoginFormUpdate::Username(s))}
                         onchange={onchange.clone()} 
                         onblur={onblur_validate.clone()} 
                         errors={&*validation_errors} 
                     />
                     <FormInput<LoginFormUpdate>
-                        input_type="password" placeholder="Password" label="" name="password" input_ref={password_input_ref} 
+                        input_type="password" placeholder="Password"  name="password" input_ref={password_input_ref} 
                         to_type={Callback::from(|s| LoginFormUpdate::Password(s))}
                         autocomplete={Some("current-password".to_string())}
                         onchange={onchange.clone()} 

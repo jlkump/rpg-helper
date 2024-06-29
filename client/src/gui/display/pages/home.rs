@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::gui::display::organisms::{image_menu::ImageMenu, nav_bar::NavBar};
+use crate::{api::types::ImageData, gui::display::organisms::{image_menu::ImageMenu, nav_bar::NavBar}};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
@@ -14,14 +14,26 @@ pub fn home(_: &Props) -> Html {
     let image_selected = use_state(|| None);
     let callback = {
         let image_selected = image_selected.clone();
-        Callback::from(move |s: String| { image_selected.set(Some(s)) })
+        Callback::from(move |s: Option<ImageData>| { image_selected.set(s) })
+    };
+
+    let onclick = {
+        let active = active.clone();
+        Callback::from(move |_| { active.set(true); })
     };
     html! {
         <NavBar>
+            <ImageMenu {active} z_index=11 on_image_selected={callback} />
             <div style="display: flex; height: 100%; width: 100%; justify-content: center;">
-                <h1>{"Welcome!"}</h1>
-                <h4>{format!("Image Selected: {:?}", image_selected)}</h4>
-                <ImageMenu {active} z_index=11 on_image_selected={callback} />
+                <div>
+                    <h4>{format!("Image Selected: {:?}", image_selected)}</h4>
+                    <button {onclick}>{"Open image menu"}</button>
+                </div>
+                <div>
+                    if let Some(image) = &*image_selected {
+                        <img src={image.src.clone()} style="width: 100%; height: 100%; object-fit: contain;" />
+                    }
+                </div>
             </div>
         </NavBar>
     }
