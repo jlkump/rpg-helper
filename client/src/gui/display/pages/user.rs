@@ -594,36 +594,36 @@ pub fn user_profile(_: &UserPreferncesProps) -> Html {
     );
 
     // TODO: Define a file upload component
-    let file_input_ref = use_node_ref();
-    let metadata_ref = use_node_ref();
+    // let file_input_ref = use_node_ref();
+    // let metadata_ref = use_node_ref();
 
-    let onsubmit = {
-        let file_input_ref = file_input_ref.clone();
-        let metadata_ref = metadata_ref.clone();
-        Callback::from(move |e: SubmitEvent| {
-            let navigator = navigator.clone();
-            e.prevent_default();
-            if let Some(input) = file_input_ref.cast::<HtmlInputElement>() {
-                if let Some(files) = input.files() {
-                    let file = files.get(0).unwrap(); // Get the first file
-                    if let Some(metadata_input) = metadata_ref.cast::<HtmlInputElement>() {
-                        let metadata = FileUploadMetadata {
-                            name: metadata_input.value(),
-                        };
-                        spawn_local(async move {
-                            let res = api_user_upload(metadata, file).await;
-                            match res {
-                                Ok(_) => {},
-                                Err(e) => if let Some(e) = e.route_based_on_err(&navigator) {
-                                    // TODO:
-                                },
-                            }
-                        });
-                    }
-                }
-            }
-        })
-    };
+    // let onsubmit = {
+    //     let file_input_ref = file_input_ref.clone();
+    //     let metadata_ref = metadata_ref.clone();
+    //     Callback::from(move |e: SubmitEvent| {
+    //         let navigator = navigator.clone();
+    //         e.prevent_default();
+    //         if let Some(input) = file_input_ref.cast::<HtmlInputElement>() {
+    //             if let Some(files) = input.files() {
+    //                 let file = files.get(0).unwrap(); // Get the first file
+    //                 if let Some(metadata_input) = metadata_ref.cast::<HtmlInputElement>() {
+    //                     let metadata = FileUploadMetadata {
+    //                         name: metadata_input.value(),
+    //                     };
+    //                     spawn_local(async move {
+    //                         let res = api_user_upload(metadata, &file).await;
+    //                         match res {
+    //                             Ok(_) => {},
+    //                             Err(e) => if let Some(e) = e.route_based_on_err(&navigator) {
+    //                                 // TODO:
+    //                             },
+    //                         }
+    //                     });
+    //                 }
+    //             }
+    //         }
+    //     })
+    // };
 
     html! {
         <NavBar content_class={css!("display: flex; align-items: center; justify-content: center;")}>
@@ -631,11 +631,11 @@ pub fn user_profile(_: &UserPreferncesProps) -> Html {
                 if let Some(data) = user {
                     <ProfileCard user={data.id}/>
                 }
-                <form onsubmit={onsubmit}>
-                    <input type="file" ref={file_input_ref} />
-                    <input type="name" ref={metadata_ref} placeholder="Enter name" />
-                    <button type="submit">{ "Upload File" }</button>
-                </form>
+                // <form onsubmit={onsubmit}>
+                //     <input type="file" ref={file_input_ref} />
+                //     <input type="name" ref={metadata_ref} placeholder="Enter name" />
+                //     <button type="submit">{ "Upload File" }</button>
+                // </form>
                 // <div>
                 //     {"Left Side - Account Info"}
                 //     <h2>{"Account"}</h2>

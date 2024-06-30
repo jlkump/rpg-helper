@@ -207,13 +207,13 @@ pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData,
     }
 }
 
-pub async fn api_user_upload(meta_data: FileUploadMetadata, file: File) -> Result<(), Error<UploadError>> {
+pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File) -> Result<(), Error<UploadError>> {
     let data;
     match FormData::new() {
         Ok(d) => data = d,
         Err(e) => return Err(Error::Other(format!("{:?}", e))),
     }
-    if let Err(e) = data.append_with_blob("file", &file) {
+    if let Err(e) = data.append_with_blob("file", file) {
         return Err(Error::Other(format!("{:?}", e)));
     }
     data.append_with_str("json", &serde_json::to_string(&meta_data)?).unwrap();

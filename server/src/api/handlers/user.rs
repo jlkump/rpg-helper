@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fmt::Debug, io::Write, path::Path};
+use std::{ffi::OsStr, fmt::Debug, fs::{DirEntry, File}, io::Write, path::Path};
 
 use actix_web::{cookie::{time::Duration as ActixWebDuration, Cookie}, get, post, web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::{Duration, Utc};
@@ -6,7 +6,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::{info, warn};
 use serde_json::json;
 
-use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ ImageUrl, LoginError, RegistrationError, ServerError as ServerErrorResponse, UploadError, UserDataError, UserLoginResponse}}, config::Config, database::{user::{LoginResponse, RegistrationConflict}, Error}, Database};
+use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ ImageData, ImageUrl, LoginError, RegistrationError, ServerError as ServerErrorResponse, UploadError, UserDataError, UserLoginResponse}}, config::Config, database::{serverpath_from_filepath, user::{LoginResponse, RegistrationConflict}, Error}, Database};
 
 use actix_multipart::form::{json::Json as MPJson, tempfile::TempFile, MultipartForm};
 
@@ -266,7 +266,7 @@ async fn user_upload_file(
                         }),
                     }
                 } else {
-                    HttpResponse::InsufficientStorage().json(UploadError::InsufficientUserStorage(form.file.size as i64, user_data.storage_limit - user_data.storage_used))
+                    HttpResponse::InsufficientStorage().json(UploadError::InsufficientUserStorage(user_data.storage_limit - user_data.storage_used, user_data.storage_limit))
                 }
             } else {
                 HttpResponse::NotFound().json(UploadError::UserNotFound(*user_id))
@@ -279,29 +279,92 @@ async fn user_upload_file(
 #[get("/user/uploads")]
 async fn fetch_user_uploads(
     req: HttpRequest,
-    MultipartForm(form): MultipartForm<UploadForm>,
     db: web::Data<Database>,
     config: web::Data<Config>,
     _: jwt_auth::JwtMiddleware,
 ) -> impl Responder {
-    // Responds with list of all files
-    // File response format:
-    // struct File {
-    //    name: String,
-    //    file_type: FileType,
-    // }
-    //
-    // enum FileType {
-    //     Img(String) // String is src url
-    // }
-    //
-    // The user should be able to preview the data of uploaded image files
-    HttpResponse::InternalServerError().json(ServerErrorResponse { error: "TODO".to_string(), message: "Getting done".to_string()})
+    let ext = req.extensions();
+    let user_id = ext.get::<uuid::Uuid>().unwrap();
+    info!("Recieved request to for uploads from user: {}", user_id);
+    match db.user_db.get_private_data(*user_id, &config) {
+        Ok(response) => {
+            if let Some(user_data) = response {
+                let filepath = &format!(
+                    "{}/uploads/{}", 
+                    config.database.uploads_path,
+                    user_data.id,
+                );
+                if let Ok(paths) = std::fs::read_dir(filepath) {
+                    let mut res = vec![];
+                    for path in paths {
+                        if let Ok(dir) = path {
+                            if let Some(img) = image_data_from_path(dir.path().as_path(), &config) {
+                                res.push(img);
+                            }
+                        }
+                    }
+                    return HttpResponse::Ok().json(res)
+                }
+                HttpResponse::InternalServerError().json(
+                    ServerErrorResponse {
+                        error: "Filesystem Err".to_string(),
+                        message: "failed to read internal file".to_string()
+                    }
+                )
+
+            } else {
+                HttpResponse::NotFound().json(UploadError::UserNotFound(*user_id))
+            }
+        },
+        Err(e) => handle_server_error(e, generic_conflict_handler),
+    }
+}
+
+#[get("/user/uploads/{file_name}")]
+async fn fetch_user_upload(
+    req: HttpRequest,
+    path: web::Path<String>,
+    config: web::Data<Config>,
+    _: jwt_auth::JwtMiddleware,
+) -> impl Responder {
+    let ext = req.extensions();
+    let user_id = ext.get::<uuid::Uuid>().unwrap();
+    let file_name = path.into_inner();
+    let filepath = &format!(
+        "{}/uploads/{}/{}", 
+        config.database.uploads_path,
+        user_id,
+        file_name
+    );
+    if let Some(img) = image_data_from_path(Path::new(filepath), &config) {
+        return HttpResponse::Ok().json(img)
+    } else {
+        HttpResponse::InternalServerError().json(
+            ServerErrorResponse {
+                error: "Filesystem Err".to_string(),
+                message: "Could not find file".to_string()
+            }
+        )
+    }
 }
 
 ///////////////////////////////////////////////////
 ////////////// Helper Functions ///////////////////
 ///////////////////////////////////////////////////
+fn image_data_from_path(p: &Path, config: &Config) -> Option<ImageData> {
+    if is_allowed_file_type(p.extension()) {
+        if let Ok(file) = File::open(p) {
+            return Some(ImageData { 
+                src: serverpath_from_filepath(p.to_str().unwrap(), config), 
+                name: p.file_name().and_then(|f| f.to_str().and_then(|f| Some(f.to_string()))).unwrap_or_default(), 
+                is_external: false, 
+                dimen: (0, 0), 
+                size: file.metadata().unwrap().len() as i64
+            })
+        }
+    }
+    None
+} 
 
 fn sanitize_filename(name: &str) -> String {
     name.chars().filter(|c| *c != '/' && *c != '\\').collect()

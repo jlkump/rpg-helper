@@ -6,7 +6,7 @@ use web_sys::{DragEvent, Event, FileList, HtmlElement, HtmlInputElement};
 use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
 
-use crate::{api::{types::ImageData, user_api::api_user_upload}, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}};
+use crate::{api::{schema::FileUploadMetadata, types::ImageData, user_api::api_user_upload}, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -38,7 +38,6 @@ pub fn image_menu(
         ""
     ].into_iter().map(|s| { format!("/img/defaults/{}", s) }).collect();
 
-    let theme = use_theme();
     let menu_style = css!(
         r#"
             width: 60vw;
@@ -90,15 +89,7 @@ pub fn image_menu(
             }
         "#
     );
-    let error_style = css!(
-        r#"
-            color: ${color};
-            word-wrap: break-word;
-        "#,
-        color = theme.text_colored
-    );
 
-    let validation_errors = use_state(|| Rc::new(RefCell::new(ValidationErrors::default())));
     let selected_image = use_state(|| None);
     let image_selected_callback = {
         let selected_image = selected_image.clone();
@@ -117,32 +108,6 @@ pub fn image_menu(
         })
     };
 
-    let file_input_ref = NodeRef::default();
-    let uploaded_file = use_state(|| None);
-    let upload_file_name = use_state(|| None);
-
-    let onupload = {
-        let uploaded_file = uploaded_file.clone();
-        Callback::from(move |files: FileList| {
-            if let Some(file) = files.get(0) {
-                uploaded_file.set(Some(file));
-            }
-        })
-    };
-    let onchange = {
-        let upload_file_name = upload_file_name.clone();
-        Callback::from(move |s: String| {
-            upload_file_name.set(Some(s));
-        })
-    };
-    let upload_submit = {
-        let uploaded_file = uploaded_file.clone();
-        Callback::from(move |e: SubmitEvent| {
-            e.prevent_default();
-            spawn_local(async move {
-            })
-        })
-    };
 
     let url_selected_onsubmit = {
         let active = active.clone();
@@ -210,28 +175,133 @@ pub fn image_menu(
 
                     <h5 style="text-align: center;">{"Upload"}</h5>
                     <hr style="width: 90%;" />
-                    <form style="display: flex; flex-direction: column; align-items: center; width: 90%;">
-                        <FormInput<String> 
-                            input_type="text" placeholder="File Name" name="file-name" input_ref={NodeRef::default()} 
-                            to_type={Callback::from(|s| { s })}
-                            {onchange} 
-                            onblur={Callback::from(|_| {})} 
-                            errors={&*validation_errors} 
-                        />
-                        <FileFormInput 
-                            name={"file-upload"}
-                            input_ref={file_input_ref.clone()}
-                            oninput={onupload}
-                            errors={&*validation_errors} 
-                        />
-
-                        <button type="submit">{"Upload"}</button>
-                    </form>
+                    <ImageUpload onsubmit={Callback::from(move |_| {})} />
                 </div>
             </div>
         </Popup>
     }
 }
+
+#[derive(Properties, PartialEq, Clone)]
+struct ImageUploadProps {
+    onsubmit: Callback<ImageData> // Add to list of uploaded files
+}
+
+#[styled_component(ImageUpload)]
+fn image_upload(props: &ImageUploadProps) -> Html {
+    let file_input_ref = NodeRef::default();
+    let uploaded_file = use_state(|| None);
+    let upload_file_name = use_state(|| None);
+    let validation_errors = use_state(|| Rc::new(RefCell::new(ValidationErrors::default())));
+
+    let onupload = {
+        let uploaded_file = uploaded_file.clone();
+        Callback::from(move |files: FileList| {
+            if let Some(file) = files.get(0) {
+                uploaded_file.set(Some(file));
+            }
+        })
+    };
+    let onchange = {
+        let upload_file_name = upload_file_name.clone();
+        Callback::from(move |s: String| {
+            upload_file_name.set(Some(s));
+        })
+    };
+    let upload_submit = {
+        let uploaded_file = uploaded_file.clone();
+        let upload_file_name = upload_file_name.clone();
+        let vald_errors = validation_errors.clone();
+        Callback::from(move |e: SubmitEvent| {
+            e.prevent_default();
+
+            let uploaded_file = uploaded_file.clone();
+            let upload_file_name = upload_file_name.clone();
+            let mut vald_errors = vald_errors.clone();
+
+            spawn_local(async move {
+                if let Some(name) = &*upload_file_name {
+                    remove_vald_error(&mut vald_errors, "file-name", "file-name-missing");
+                    if let Some(file) = &*uploaded_file {
+                        remove_vald_error(&mut vald_errors, "file-upload", "file-missing");
+                        let meta_data = FileUploadMetadata { name: name.clone() };
+                        let res = api_user_upload(meta_data, file).await;
+                        match res {
+                            Ok(_) => {
+                                remove_vald_error(&mut vald_errors, "file-upload", "server-err");
+                            },
+                            Err(e) => {
+                                match e {
+                                    crate::api::user_api::Error::Standard(e) => {
+                                        match e {
+                                            crate::api::types::UploadError::UserNotFound(id) => {
+                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("User id {} not found", id));
+                                            },
+                                            crate::api::types::UploadError::FileTooLarge => {
+                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
+                                            },
+                                            crate::api::types::UploadError::UnsupportedFileType => {
+                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
+                                            },
+                                            crate::api::types::UploadError::InsufficientUserStorage(i, o) => {
+                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Not enough user storage. {} / {}", i, o));
+                                            },
+                                            crate::api::types::UploadError::NameConflict(other) => {
+                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Name conflict {}", other));
+                                            },
+                                        }
+                                    },
+                                    crate::api::user_api::Error::Unauthorized => {
+                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", "Unauthorized user".to_string());
+                                    },
+                                    crate::api::user_api::Error::API(s) => {
+                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                    },
+                                    crate::api::user_api::Error::Server(s) => {
+                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s.message);
+                                    },
+                                    crate::api::user_api::Error::RequestFailed(s) => {
+                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                    },
+                                    crate::api::user_api::Error::ParseFailed(s) => {
+                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                    },
+                                    crate::api::user_api::Error::Other(s) => {
+                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                    },
+                                }
+                            },
+                        }
+                    } else {
+                        insert_vald_error(&mut vald_errors, "file-upload", "file-missing", "File upload is missing".to_string());
+                    }
+                } else {
+                    insert_vald_error(&mut vald_errors, "file-name", "file-name-missing", "File name is missing".to_string());
+                }
+            })
+        })
+    };
+
+    html! {
+        <form style="display: flex; flex-direction: column; align-items: center; width: 90%;" onsubmit={upload_submit}>
+            <FormInput<String> 
+                input_type="text" placeholder="File Name" name="file-name" input_ref={NodeRef::default()} 
+                to_type={Callback::from(|s| { s })}
+                {onchange} 
+                onblur={Callback::from(|_| {})} 
+                errors={&*validation_errors} 
+            />
+            <FileFormInput 
+                name={"file-upload"}
+                input_ref={file_input_ref.clone()}
+                oninput={onupload}
+                errors={&*validation_errors} 
+            />
+            <button type="submit">{"Upload"}</button>
+        </form>
+    }
+}
+
 #[derive(Properties, PartialEq, Clone)]
 struct ImageUrlInputProps {
     onsubmit: Callback<ImageData>
@@ -387,7 +457,7 @@ fn detailed_image_panel(props: &DetailedImagePanelProps) -> Html {
     }
 }
 
-fn insert_vald_error(vald_errors: UseStateHandle<Rc<RefCell<ValidationErrors>>>, target: &'static str, code: &'static str, message: &'static str) {
+fn insert_vald_error(vald_errors: &mut UseStateHandle<Rc<RefCell<ValidationErrors>>>, target: &'static str, code: &'static str, message: String) {
     let err = ValidationError::new(code).with_message(Cow::from(message));
     vald_errors
         .borrow_mut()
@@ -395,7 +465,7 @@ fn insert_vald_error(vald_errors: UseStateHandle<Rc<RefCell<ValidationErrors>>>,
         .insert(target, validator::ValidationErrorsKind::Field(vec![err]));
 }
 
-fn remove_vald_error(vald_errors: UseStateHandle<Rc<RefCell<ValidationErrors>>>, target: &'static str, code: &'static str) {
+fn remove_vald_error(vald_errors: &mut UseStateHandle<Rc<RefCell<ValidationErrors>>>, target: &'static str, code: &'static str) {
     let prev = vald_errors
     .borrow_mut()
     .errors_mut()

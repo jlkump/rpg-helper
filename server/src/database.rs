@@ -62,11 +62,15 @@ impl<T> From<bcrypt::BcryptError> for Error<T> {
     }
 }
 
+pub fn serverpath_from_filepath(internal_path: &str, config: &Config) -> String {
+    format!("http://{}:{}/{}", config.server.host, config.server.port, internal_path)
+}
+
 impl ImageUrl {
     pub fn to_string(self, config: &Config) -> String {
         match self {
             ImageUrl::ExternalPath(path) => path,
-            ImageUrl::InternalServerPath(path) => format!("http://{}:{}/{}", config.server.host, config.server.port, path),
+            ImageUrl::InternalServerPath(path) => serverpath_from_filepath(&path, config),
         }
     }
 
