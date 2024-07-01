@@ -8,7 +8,7 @@ use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info, api_user_upload}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, router::Route, store::{set_auth_user, AuthUser}};
+use crate::{api::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info, api_user_upload}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, router::Route, store::{set_auth_token, set_auth_user, AuthUser}};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
@@ -316,6 +316,7 @@ fn login_onsubmit_callback(
     loading: UseStateHandle<bool>,
     username_ref: NodeRef,
     password_ref: NodeRef,
+    dispatch: Dispatch<AuthUser>,
 ) -> Callback<SubmitEvent> {
     Callback::from(move |event: SubmitEvent| {
         let form = form.clone();
@@ -324,6 +325,7 @@ fn login_onsubmit_callback(
         let loading = loading.clone();
         let username_ref = username_ref.clone();
         let password_ref = password_ref.clone();
+        let dispatch = dispatch.clone();
 
         event.prevent_default();
         spawn_local(async move {
@@ -337,15 +339,13 @@ fn login_onsubmit_callback(
                     password_ref.cast::<HtmlInputElement>().map(|v| v.set_value(""));
                     match res {
                         Ok(res) => {
-                            log!(format!("Api response: {:?}", res));
+                            set_auth_token(Some(res.auth_token.clone()), dispatch);
                             loading.set(false);
                             navigator.push(&Route::Dashboard);
                         },
                         Err(e) => {
                             loading.set(false);
-                            log!("Logging in...");
                             if let Some(err) = e.route_based_on_err(&navigator) {
-                                log!("Got username or password wrong");
                                 match err {
                                     crate::api::types::LoginError::UnknownUsernameOrPassword => {
                                         let err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Unknown username or incorrect password"));
@@ -373,13 +373,14 @@ pub fn login_user(_: &LoginProps) -> Html {
     let form = use_state(|| LoginFormData::default());
     let validation_errors = use_state(|| Rc::new(RefCell::new(ValidationErrors::new())));
     let navigator = use_navigator().unwrap();
+    let (_, dispatch) = use_store::<AuthUser>();
 
     let username_input_ref = NodeRef::default();
     let password_input_ref = NodeRef::default();
 
     let onchange = login_input_callback(form.clone());
     let onblur_validate = login_blur_callback(form.clone(), validation_errors.clone());
-    let on_submit = login_onsubmit_callback(form.clone(), validation_errors.clone(), navigator.clone(), loading.clone(), username_input_ref.clone(), password_input_ref.clone());
+    let on_submit = login_onsubmit_callback(form.clone(), validation_errors.clone(), navigator.clone(), loading.clone(), username_input_ref.clone(), password_input_ref.clone(), dispatch);
 
 
     html! {

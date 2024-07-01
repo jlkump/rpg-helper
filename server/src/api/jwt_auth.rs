@@ -29,6 +29,7 @@ impl FromRequest for JwtMiddleware {
     type Future = Ready<Result<Self, Self::Error>>;
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         let data = req.app_data::<web::Data<Config>>().unwrap();
+        info!("Processing Auth Request: {:?}", req);
 
         let token = req
             .cookie("token")
@@ -64,6 +65,7 @@ impl FromRequest for JwtMiddleware {
 
         let user_id = uuid::Uuid::parse_str(&claims.user_id).unwrap();
         req.extensions_mut().insert::<uuid::Uuid>(user_id.to_owned());
+        info!("Got User ID: {}", user_id);
 
         ready(Ok(JwtMiddleware { user_id }))
     }

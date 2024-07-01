@@ -12,6 +12,7 @@ chrono = { version = "0.4", features = ["serde"] }
 dotenv = "0.15.0"
 gloo = { version = "0.11", features = [] }
 reqwasm = "0.5"
+reqwest = { version = "0.12", features = ["multipart", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 stylist = { version = "0.13", features = ["yew", "yew_use_style", "parser", "macros"] }
@@ -23,4 +24,5 @@ yewdux = "0.10.0"
 yew-router = "0.18"
 yew_icons = { version = "0.8.0", features = ["LucideMenu", "FeatherChevronDown", "FontAwesomeSolidXmark", "LucideLayoutDashboard", "BootstrapGear", "LucideHammer", "LucideMountainSnow", "BootstrapJournalText", "BootstrapMotherboard", "BootstrapPalette", "OcticonsPersonAdd16", "BootstrapBoxArrowInLeft", "BootstrapReception0", "BootstrapReception1", "BootstrapReception2", "BootstrapReception3", "BootstrapReception4", "BootstrapSearch", "FeatherFeather", "FeatherServer", "FeatherCornerDownRight", "BootstrapPersonPlus", "BootstrapCheckAll", "BootstrapPersonDashFill", "HeroiconsOutlinePencilSquare", "OcticonsInfo24", "LucideCircleSlashed"] }
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4.42"
 web-sys = { version = "0.3.69", features = ["DataTransfer", "DragEvent"] }

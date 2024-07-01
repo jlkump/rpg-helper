@@ -1,12 +1,14 @@
-use std::fmt::{Debug, Display};
+use std::{fmt::{Debug, Display}, io::Bytes};
 
 use crate::{api::types::ServerError, router::Route};
 
 use super::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UploadError, UserData, UserDataError, UserLoginResponse}, API_URL};
-use gloo::console::log;
+use gloo::console::{error, log};
 use reqwasm::http::{self, Response};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde::de::DeserializeOwned;
-use web_sys::{File, FormData};
+use wasm_bindgen::{closure::Closure, JsCast, JsValue};
+use web_sys::{js_sys::{Promise, Uint8Array}, Blob, File, FileReader, FormData};
 use yew_router::navigator::Navigator;
 
 pub enum Error<T> {
@@ -22,6 +24,12 @@ pub enum Error<T> {
 impl<T> From<serde_json::Error> for Error<T> {
     fn from(value: serde_json::Error) -> Self {
         Self::ParseFailed(value.to_string())
+    }
+}
+
+impl<T> From<reqwest::Error> for Error<T> {
+    fn from(value: reqwest::Error) -> Self {
+        Self::Other(value.to_string())
     }
 }
 
@@ -102,7 +110,32 @@ where
         return Err(Error::Unauthorized);
     }
 
-    log!("Got response code: {}", response.status());
+    if response.status() == 500 {
+        let e = response.json::<ServerError>().await;
+        match e {
+            Ok(server_err) => return Err(Error::Server(server_err)),
+            Err(e) => return Err(Error::API(e.to_string())),
+        }
+    }
+
+    if response.status() != 200 {
+        let error_response = response.json::<E>().await;
+        
+        match error_response {
+            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Err(e) => return Err(Error::API(e.to_string()))
+        }
+    }
+    Ok(())
+}
+
+async fn handle_reqwest_response<E>(response: reqwest::Response) -> Result<(), Error<E>> 
+where 
+    E: DeserializeOwned
+{
+    if response.status() == 401 {
+        return Err(Error::Unauthorized);
+    }
 
     if response.status() == 500 {
         let e = response.json::<ServerError>().await;
@@ -207,23 +240,60 @@ pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData,
     }
 }
 
-pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File) -> Result<(), Error<UploadError>> {
-    let data;
-    match FormData::new() {
-        Ok(d) => data = d,
-        Err(e) => return Err(Error::Other(format!("{:?}", e))),
-    }
-    if let Err(e) = data.append_with_blob("file", file) {
-        return Err(Error::Other(format!("{:?}", e)));
-    }
-    data.append_with_str("json", &serde_json::to_string(&meta_data)?).unwrap();
+pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File, auth_token: &str) -> Result<(), Error<UploadError>> {
+    let mut form = reqwest::multipart::Form::new();
+    
+    let file_contents = read_file(file).await?;
+    let file_name = file.name();
+    let file_part = reqwest::multipart::Part::bytes(file_contents)
+        .file_name(file_name)
+        // .mime_str(&file.type_())?;
+        .mime_str("application/octet-stream")?;
+
+    form = form.part("file", file_part);
+
+    // // form = form.text("json", json_data);
+    
+    // let json_data = serde_json::to_string(&meta_data)?;
+    // let json_meta_data = reqwest::multipart::Part::text(json_data)
+    //     .mime_str("application/json")?
+    //     .headers({
+    //         let mut header = HeaderMap::new();
+    //         header.insert(CONTENT_TYPE, HeaderValue::from_str("application/json").map_err(|e| Error::Other(e.to_string()))?);
+    //         header
+    //     });
+    // form = form.part("name", json_meta_data);
+    form = form.text("name", meta_data.name);
+
+    // let json_meta_data = reqwest::multipart::Part::bytes(serde_json::to_string(&meta_data)?.into_bytes())
+    //     .file_name("metadata.json")
+    //     .mime_str("application/json")?
+    //     .headers({
+    //         let mut header = HeaderMap::new();
+    //         header.insert(CONTENT_TYPE, HeaderValue::from_str("application/json").map_err(|e| Error::Other(e.to_string()))?);
+    //         header
+    //     });
+    // form = form.part("json", json_meta_data);
+
 
     let url = format!("{}/user/upload", API_URL);
-    // reqwest::blocking::Client::new().post(); TODO: Add reqwest for multi-part uploading files
-    let response = match http::Request::post(&url)
-        .header("Content-Type", "application/json")
-        .credentials(http::RequestCredentials::Include)
-        .body(data)
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", auth_token)).map_err(|e| Error::Other(e.to_string()))?
+    );
+    // let boundary = reqwest::multipart::Form::boundary(&form);
+    // headers.insert(
+    //     CONTENT_TYPE, 
+    //     HeaderValue::from_str(&format!("multipart/form-data; boundary=temp")).map_err(|e| Error::Other(e.to_string()))?
+    // );
+
+    let client = reqwest::Client::builder()
+        .build()?;
+    let response = match client.post(&url)
+        .headers(headers)
+        .multipart(form)
         .send()
         .await
     {
@@ -231,8 +301,44 @@ pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File) -> Resu
         Err(e) => return Err(Error::RequestFailed(e.to_string())),
     };
 
-    handle_response::<UploadError>(&response).await?;
+    log!("Response Status:", response.status().to_string());
+    log!("Response Headers:", format!("{:?}", response.headers()));
+
+    if !response.status().is_success() {
+        let error_body = response.text().await?;
+        error!("Error response body:", error_body);
+        return Err(Error::Other("Failed".to_string()));
+    }
+
+    handle_reqwest_response::<UploadError>(response).await?;
     Ok(())
+}
+
+async fn read_file(file: &File) -> Result<Vec<u8>, Error<UploadError>> {
+    let reader = FileReader::new().map_err(|_| Error::Other("Could not create FileReader".into()))?;
+    let reader_ref = reader.clone();
+    let file_blob: Blob = file.clone().dyn_into().map_err(|_| Error::Other("Could not cast File to Blob".into()))?;
+
+    let promise = Promise::new(&mut |resolve, reject| {
+        let onload = Closure::once_into_js(move |_event: web_sys::Event| {
+            resolve.call0(&JsValue::NULL).unwrap();
+        });
+        let onerror = Closure::once_into_js(move |_event: web_sys::Event| {
+            reject.call0(&JsValue::NULL).unwrap();
+        });
+
+        reader.set_onload(Some(onload.as_ref().unchecked_ref()));
+        reader.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+        reader.read_as_array_buffer(&file_blob).expect("Could not read file");
+    });
+
+    wasm_bindgen_futures::JsFuture::from(promise).await.map_err(|_| Error::Other("File reading failed".into()))?;
+
+    let array_buffer = reader_ref.result().map_err(|_| Error::Other("Could not get result from FileReader".into()))?;
+    let uint8_array = Uint8Array::new(&array_buffer);
+    let vec = uint8_array.to_vec();
+
+    Ok(vec)
 }
 
 pub async fn api_logout_user() -> Result<(), Error<String>> {

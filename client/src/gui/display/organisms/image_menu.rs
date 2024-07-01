@@ -5,8 +5,9 @@ use validator::{ValidationError, ValidationErrors};
 use web_sys::{DragEvent, Event, FileList, HtmlElement, HtmlInputElement};
 use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
+use yewdux::use_store;
 
-use crate::{api::{schema::FileUploadMetadata, types::ImageData, user_api::api_user_upload}, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}};
+use crate::{api::{schema::FileUploadMetadata, types::ImageData, user_api::api_user_upload}, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}, store::AuthUser};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -194,6 +195,9 @@ fn image_upload(props: &ImageUploadProps) -> Html {
     let upload_file_name = use_state(|| None);
     let validation_errors = use_state(|| Rc::new(RefCell::new(ValidationErrors::default())));
 
+    let (store, _) = use_store::<AuthUser>();
+    
+
     let onupload = {
         let uploaded_file = uploaded_file.clone();
         Callback::from(move |files: FileList| {
@@ -218,63 +222,66 @@ fn image_upload(props: &ImageUploadProps) -> Html {
             let uploaded_file = uploaded_file.clone();
             let upload_file_name = upload_file_name.clone();
             let mut vald_errors = vald_errors.clone();
+            let store = store.clone();
 
             spawn_local(async move {
                 if let Some(name) = &*upload_file_name {
                     remove_vald_error(&mut vald_errors, "file-name", "file-name-missing");
                     if let Some(file) = &*uploaded_file {
                         remove_vald_error(&mut vald_errors, "file-upload", "file-missing");
-                        let meta_data = FileUploadMetadata { name: name.clone() };
-                        let res = api_user_upload(meta_data, file).await;
-                        match res {
-                            Ok(_) => {
-                                remove_vald_error(&mut vald_errors, "file-upload", "server-err");
-                            },
-                            Err(e) => {
-                                match e {
-                                    crate::api::user_api::Error::Standard(e) => {
-                                        match e {
-                                            crate::api::types::UploadError::UserNotFound(id) => {
-                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("User id {} not found", id));
-                                            },
-                                            crate::api::types::UploadError::FileTooLarge => {
-                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
-                                            },
-                                            crate::api::types::UploadError::UnsupportedFileType => {
-                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
-                                            },
-                                            crate::api::types::UploadError::InsufficientUserStorage(i, o) => {
-                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Not enough user storage. {} / {}", i, o));
-                                            },
-                                            crate::api::types::UploadError::NameConflict(other) => {
-                                                insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Name conflict {}", other));
-                                            },
-                                        }
-                                    },
-                                    crate::api::user_api::Error::Unauthorized => {
-                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", "Unauthorized user".to_string());
-                                    },
-                                    crate::api::user_api::Error::API(s) => {
-                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
-                                    },
-                                    crate::api::user_api::Error::Server(s) => {
-                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s.message);
-                                    },
-                                    crate::api::user_api::Error::RequestFailed(s) => {
-                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
-                                    },
-                                    crate::api::user_api::Error::ParseFailed(s) => {
-                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
-                                    },
-                                    crate::api::user_api::Error::Other(s) => {
-                                        insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
-                                    },
-                                }
-                            },
+                        if let Some(auth_token) = &store.auth_token {
+                            let meta_data = FileUploadMetadata { name: name.clone() };
+                            let res = api_user_upload(meta_data, file, auth_token).await;
+                            match res {
+                                Ok(_) => {
+                                    remove_vald_error(&mut vald_errors, "file-upload", "server-err");
+                                },
+                                Err(e) => {
+                                    match e {
+                                        crate::api::user_api::Error::Standard(e) => {
+                                            match e {
+                                                crate::api::types::UploadError::UserNotFound(id) => {
+                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("User id {} not found", id));
+                                                },
+                                                crate::api::types::UploadError::FileTooLarge => {
+                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
+                                                },
+                                                crate::api::types::UploadError::UnsupportedFileType => {
+                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
+                                                },
+                                                crate::api::types::UploadError::InsufficientUserStorage(i, o) => {
+                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Not enough user storage. {} / {}", i, o));
+                                                },
+                                                crate::api::types::UploadError::NameConflict(other) => {
+                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Name conflict {}", other));
+                                                },
+                                            }
+                                        },
+                                        crate::api::user_api::Error::Unauthorized => {
+                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", "Unauthorized user".to_string());
+                                        },
+                                        crate::api::user_api::Error::API(s) => {
+                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                        },
+                                        crate::api::user_api::Error::Server(s) => {
+                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", s.message);
+                                        },
+                                        crate::api::user_api::Error::RequestFailed(s) => {
+                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                        },
+                                        crate::api::user_api::Error::ParseFailed(s) => {
+                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                        },
+                                        crate::api::user_api::Error::Other(s) => {
+                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
+                                        },
+                                    }
+                                },
+                            }
+                        } else {
+                            insert_vald_error(&mut vald_errors, "file-upload", "file-missing", "File upload is missing".to_string());
                         }
-                    } else {
-                        insert_vald_error(&mut vald_errors, "file-upload", "file-missing", "File upload is missing".to_string());
-                    }
+                        }
                 } else {
                     insert_vald_error(&mut vald_errors, "file-name", "file-name-missing", "File name is missing".to_string());
                 }

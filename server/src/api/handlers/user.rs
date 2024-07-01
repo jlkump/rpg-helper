@@ -8,7 +8,7 @@ use serde_json::json;
 
 use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ ImageData, ImageUrl, LoginError, RegistrationError, ServerError as ServerErrorResponse, UploadError, UserDataError, UserLoginResponse}}, config::Config, database::{serverpath_from_filepath, user::{LoginResponse, RegistrationConflict}, Error}, Database};
 
-use actix_multipart::form::{json::Json as MPJson, tempfile::TempFile, MultipartForm};
+use actix_multipart::form::{self, json::Json as MPJson, tempfile::TempFile, MultipartForm};
 
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
     let scope = web::scope("/api")
@@ -49,7 +49,25 @@ async fn register_handler(
     config: web::Data<Config>,
 ) -> impl Responder {
     match db.user_db.register_user(body.into_inner()) {
-        Ok(data) => HttpResponse::Ok().json(db.user_db.get_private_data(data, &config).unwrap()),
+        Ok(data) => {
+            // TODO: Move this to the DATABASE so that it can handle the folders
+            let path = &format!(
+                "{}/{}", 
+                config.database.uploads_path,
+                data // This is b/c username doesn't change
+            );
+            let filepath = Path::new(path);
+            if !filepath.exists() {
+                if let Err(e) = std::fs::create_dir(filepath) {
+                    // Failed to create database folder for user
+                    db.user_db.delete_user(data).expect("Failed to delete user just created");
+                    return HttpResponse::InternalServerError().json(ServerErrorResponse { 
+                        error: "Database Error".to_string(), message: "Failed to create user uploads directory".to_string()
+                    });
+                }
+            }
+            HttpResponse::Ok().json(db.user_db.get_private_data(data, &config).unwrap())
+        },
         Err(e) => {
             handle_server_error(e, |conflict| {
                 match conflict {
@@ -205,12 +223,6 @@ async fn user_update_handler(
     }
 }
 
-#[derive(Debug, MultipartForm)]
-struct UploadForm {
-    #[multipart(limit = "200MB")]
-    file: TempFile,
-    json: MPJson<FileUploadMetadata>,
-}
 
 fn is_allowed_file_type(t: Option<&OsStr>) -> bool {
     if let Some(t) = t {
@@ -218,6 +230,22 @@ fn is_allowed_file_type(t: Option<&OsStr>) -> bool {
     } else {
         false
     }
+}
+
+fn get_file_ext(name: Option<String>) -> String {
+    if let Some(name) = name {
+        Path::new(&name)        
+            .extension().and_then(OsStr::to_str).and_then(|f| Some(f.to_string())).unwrap_or_default()
+    } else {
+        "".to_string()
+    }
+}
+
+#[derive(Debug, MultipartForm)]
+struct UploadForm {
+    #[multipart(limit = "200MB")]
+    file: TempFile,
+    name: form::text::Text<String>,
 }
 
 #[post("/user/upload")]
@@ -228,24 +256,27 @@ async fn user_upload_file(
     config: web::Data<Config>,
     _: jwt_auth::JwtMiddleware,
 ) -> impl Responder {
-    info!("Recieved request to upload {:?}\nwith json: {:?}", form.file, form.json);
+    
+    info!("Recieved request to upload {:?}\nwith json: {:?}", form.file, form.name);
     let ext = req.extensions();
     let user_id = ext.get::<uuid::Uuid>().unwrap();
     match db.user_db.get_private_data(*user_id, &config) {
         Ok(response) => {
             if let Some(user_data) = response {
                 if user_data.storage_used + form.file.size as i64 <= user_data.storage_limit {
+                    let ext = get_file_ext(form.file.file_name);
                     let filepath = &format!(
-                        "{}/uploads/{}/{}", 
+                        "{}/{}/{}", 
                         config.database.uploads_path,
                         user_data.id, // This is b/c username doesn't change
-                        sanitize_filename(&form.json.name)
+                        format!("{}.{}", sanitize_filename(&form.name), ext)
                     );
-                    let path = Path::new(filepath);
+                    let path: &Path = Path::new(filepath);
                     if path.exists() {
-                        return HttpResponse::Conflict().json(UploadError::NameConflict(sanitize_filename(&form.json.name)));
+                        return HttpResponse::Conflict().json(UploadError::NameConflict(sanitize_filename(&form.name)));
                     }
                     if !is_allowed_file_type(path.extension()) {
+                        info!("Invalid extension: {:?} for path: {:?}", path.extension(), path);
                         return HttpResponse::BadRequest().json(UploadError::UnsupportedFileType);
                     }
                     // TODO: 
@@ -253,6 +284,7 @@ async fn user_upload_file(
                     // [ ]. Update database meta-info on stored files
                     // [x]. Reject file types not supported
                     //    - Currently, only need to support images, such as jepg, png, gif, ico, svg, etc.
+                    info!("Attempting to persist: {:?}", path);
                     match form.file.file.persist(filepath) {
                         Ok(_) => {
                             match db.user_db.update_storage_usage(*user_id, user_data.storage_used + form.file.size as i64) {
@@ -290,7 +322,7 @@ async fn fetch_user_uploads(
         Ok(response) => {
             if let Some(user_data) = response {
                 let filepath = &format!(
-                    "{}/uploads/{}", 
+                    "{}/{}", 
                     config.database.uploads_path,
                     user_data.id,
                 );
@@ -331,7 +363,7 @@ async fn fetch_user_upload(
     let user_id = ext.get::<uuid::Uuid>().unwrap();
     let file_name = path.into_inner();
     let filepath = &format!(
-        "{}/uploads/{}/{}", 
+        "{}/{}/{}", 
         config.database.uploads_path,
         user_id,
         file_name
