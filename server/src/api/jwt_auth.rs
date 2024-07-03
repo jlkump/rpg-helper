@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::future::{ready, Ready};
 
 use actix_web::error::ErrorUnauthorized;
@@ -10,6 +11,16 @@ use serde::{Deserialize, Serialize};
 use crate::config::Config;
 
 use super::types::AuthError;
+
+impl Display for AuthError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AuthError::WrongPasswordOrUsername => write!(f, "Wrong Password or Username"),
+            AuthError::NotLoggedIn => write!(f, "Not Logged In"),
+            AuthError::InvalidToken => write!(f, "Invalid Token"),
+        }
+    }
+}
 
 // Implementation uses https://codevoweb.com/rust-jwt-authentication-with-actix-web/ as reference for authorization
 

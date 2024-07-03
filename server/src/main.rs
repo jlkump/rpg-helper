@@ -12,7 +12,7 @@ mod database;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let config = Config::from_file("Config.toml").unwrap();
-    let db = web::Data::new(Database::open(&config));
+    let db = web::Data::new(Database::open(config.clone()));
     let config_data = web::Data::new(config.clone());
 
     info!("Starting server at {}:{}/", config.server.host, config.server.port);

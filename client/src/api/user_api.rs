@@ -11,6 +11,7 @@ use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{js_sys::{Promise, Uint8Array}, Blob, File, FileReader, FormData};
 use yew_router::navigator::Navigator;
 
+// TODO: Expand Error types for each HTTP Response type
 pub enum Error<T> {
     Standard(T),
     Unauthorized,
@@ -251,29 +252,7 @@ pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File, auth_to
         .mime_str("application/octet-stream")?;
 
     form = form.part("file", file_part);
-
-    // // form = form.text("json", json_data);
-    
-    // let json_data = serde_json::to_string(&meta_data)?;
-    // let json_meta_data = reqwest::multipart::Part::text(json_data)
-    //     .mime_str("application/json")?
-    //     .headers({
-    //         let mut header = HeaderMap::new();
-    //         header.insert(CONTENT_TYPE, HeaderValue::from_str("application/json").map_err(|e| Error::Other(e.to_string()))?);
-    //         header
-    //     });
-    // form = form.part("name", json_meta_data);
     form = form.text("name", meta_data.name);
-
-    // let json_meta_data = reqwest::multipart::Part::bytes(serde_json::to_string(&meta_data)?.into_bytes())
-    //     .file_name("metadata.json")
-    //     .mime_str("application/json")?
-    //     .headers({
-    //         let mut header = HeaderMap::new();
-    //         header.insert(CONTENT_TYPE, HeaderValue::from_str("application/json").map_err(|e| Error::Other(e.to_string()))?);
-    //         header
-    //     });
-    // form = form.part("json", json_meta_data);
 
 
     let url = format!("{}/user/upload", API_URL);
@@ -283,11 +262,6 @@ pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File, auth_to
         AUTHORIZATION,
         HeaderValue::from_str(&format!("Bearer {}", auth_token)).map_err(|e| Error::Other(e.to_string()))?
     );
-    // let boundary = reqwest::multipart::Form::boundary(&form);
-    // headers.insert(
-    //     CONTENT_TYPE, 
-    //     HeaderValue::from_str(&format!("multipart/form-data; boundary=temp")).map_err(|e| Error::Other(e.to_string()))?
-    // );
 
     let client = reqwest::Client::builder()
         .build()?;
