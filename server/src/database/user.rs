@@ -3,9 +3,9 @@ use std::{collections::{HashMap, HashSet}, path::Path};
 use bcrypt::DEFAULT_COST;
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
-use sled::{Db, Tree};
+use sled::{transaction::{TransactionError, TransactionResult}, Db, Transactional, Tree};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, ConflictError, FriendRequest, GameInvite, ImageUrl, NotFoundError, PublicUserData, ServerError, ServerErrorType, UserData}}, config::Config, database::get_data};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, ConflictError, FriendRequest, GameInvite, ImageUrl, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UserData}}, config::Config, database::get_data};
 
 use super::{Error, User};
 
@@ -57,61 +57,61 @@ impl UserDB {
             let filepath = Path::new(path);
             // Fine to return early here since we haven't written anything to disk yet
             // We open serialize the data to make sure there are no errors there
-            let username_to_id_data = bincode::serialize(&v.id)?;
-            let email_to_id_data = bincode::serialize(&v.id)?;
-            let secure_data = bincode::serialize(&v)?;
-            let general_data = bincode::serialize(&UserGeneralData::new(&v.username))?;
-            std::fs::create_dir(filepath)?; 
+
 
             // TODO: 
             // [x]. If we get an error on inserting data into the trees, we need to undo the previous insert
             // [x]. If there is an error anytime after creating the directory, we must delete the directory
-            self.username_to_id.insert(v.username.clone(), username_to_id_data).map_err(
-                |e| {
-                    std::fs::remove_dir_all(filepath); // Might have to handle errors as well
-                    e
+            // [x]. Make it easier by using transactions
+            let res = (&self.username_to_id, &self.email_to_id, &self.general, &self.secure)
+                .transaction({
+                    move |(username_to_id, email_to_id, general, secure)| {
+                        let username_to_id_data = bincode::serialize(&v.id).map_err(|e| Into::<Error>::into(e))?;
+                        let email_to_id_data = bincode::serialize(&v.id).map_err(|e| Into::<Error>::into(e))?;
+                        let secure_data = bincode::serialize(&v).map_err(|e| Into::<Error>::into(e))?;
+                        let general_data = bincode::serialize(&UserGeneralData::new(&v.username)).map_err(|e| Into::<Error>::into(e))?;
+                        std::fs::create_dir(filepath).map_err(|e| Into::<Error>::into(e))?; 
+                        username_to_id.insert(v.username.as_bytes(), username_to_id_data)?;
+                        email_to_id.insert(v.email.as_bytes(), email_to_id_data)?;
+                        general.insert(v.id.as_bytes(), general_data)?;
+                        secure.insert(v.id.as_bytes(), secure_data)?;
+                        Ok(v.id)
+                    }
+                });
+            match res {
+                Ok(data) => {
+                    return Ok(data);
+                },
+                Err(e) => {
+                    match e {
+                        TransactionError::Abort(e) => { 
+                            // The transaction failed, remove the directory we created for the user.
+                            // We don't really care if this fails since that likely means the directory is already gone.
+                            // Might need to handle the small errors
+                            std::fs::remove_dir_all(filepath); 
+                            return Err(e);
+                        },
+                        TransactionError::Storage(e) => {
+                            return Err(Error::Database(e));
+                        },
+                    }
                 }
-            )?;
-            self.email_to_id.insert(v.email.clone(), email_to_id_data).map_err(
-                |e| {
-                    std::fs::remove_dir_all(filepath); // Might have to handle errors as well
-                    self.username_to_id.remove(&v.username); // Error handling?
-                    e
-                }
-            )?;
-
-            self.general.insert(v.id, general_data).map_err(
-                |e| {
-                    std::fs::remove_dir_all(filepath); // Might have to handle errors as well
-                    self.username_to_id.remove(&v.username); // Error handling?
-                    self.email_to_id.remove(&v.email);
-                    e
-                }
-            )?;
-
-            self.secure.insert(v.id, secure_data).map_err(
-                |e| {
-                    std::fs::remove_dir_all(filepath); // Might have to handle errors as well
-                    self.username_to_id.remove(&v.username); // Error handling?
-                    self.email_to_id.remove(&v.email);       // Error handling?
-                    self.general.remove(v.id);               // Error handling?
-                    e
-                }
-            )?;
-            return Ok(v.id);
+            }
         }
     }
 
     pub(super) fn delete_user(&self, user: User) -> Result<(), Error> {
-        // TODO: Also remove all friends and from active games (remove from active games will have to be at the higher database level)
         let path = &format!(
             "{}/{}", 
             self.config.database.uploads_path,
             user
         );
         let filepath = Path::new(path);
-        std::fs::remove_dir_all(filepath); // Might have to handle errors as well
+        std::fs::remove_dir_all(filepath); // Might have to handle some errors as well
 
+        // TODO:
+        // [ ]. Use transactions to delete user
+        // [ ]. Also remove all friends and from active games (remove from active games will have to be at the higher database level)
         if let Some(user_data) = get_data::<UserSecureData, User>(&self.secure, &user)? {
             // TODO: Look at friends, remove from friends lists for other users.
             self.secure.remove(user)?;

@@ -4,7 +4,7 @@ use actix_multipart::form::tempfile::TempFile;
 use actix_web::web::Buf;
 use log::info;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use sled::Tree;
+use sled::{transaction::ConflictableTransactionError, Tree};
 use user::UserDB;
 
 use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ConflictError, ImageData, ImageUrl, InsufficientStorageError, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UnsupportedError, UploadImageData, UserData}}, config::Config};
@@ -93,6 +93,12 @@ impl From<Error> for ServerError {
             },
             Error::Other(err) => err,
         }
+    }
+}
+
+impl From<Error> for ConflictableTransactionError<Error> {
+    fn from(value: Error) -> Self {
+        ConflictableTransactionError::Abort(value)
     }
 }
 
