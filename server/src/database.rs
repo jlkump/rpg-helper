@@ -15,6 +15,7 @@ pub type User = uuid::Uuid;
 pub type Game = uuid::Uuid;
 pub type Ruleset = uuid::Uuid;
 pub type Setting = uuid::Uuid;
+pub type Character = uuid::Uuid; // Stored under the user's data (user_id/character_id ?)
 
 
 fn get_data<'a, T, K>(db: &Tree, key: &K) -> Result<Option<T>, Error> 
@@ -212,7 +213,6 @@ impl UserDatabaseHandle<'_> {
             // [ ]. Update database meta-info on stored files
             // [x]. Reject file types not supported
             //    - Currently, only need to support images, such as jepg, png, gif, ico, svg, etc.
-            // [ ]. Update Error type for each type of HTTP Response.
             info!("Attempting to persist: {:?}", path);
             match file.file.persist(filepath) {
                 // Might need to handle deleting the file if updating storage fails
@@ -278,7 +278,6 @@ impl UserDatabaseHandle<'_> {
 ///////////////////////////////////////////////////
 ////////////// Helper Functions ///////////////////
 ///////////////////////////////////////////////////
-
 fn is_allowed_file_type(t: Option<&OsStr>) -> bool {
     if let Some(t) = t {
         t.eq("png") || t.eq("jgep") || t.eq("gif")
@@ -309,7 +308,7 @@ fn image_data_from_path(p: &Path, config: &Config) -> Option<ImageData> {
         }
     }
     None
-} 
+}
 
 fn sanitize_filename(name: &str) -> String {
     name.chars().filter(|c| *c != '/' && *c != '\\').collect()

@@ -14,6 +14,16 @@ async fn health_checker_handler() -> impl Responder {
     HttpResponse::Ok().json(json!({"status": "success", "message": MESSAGE}))
 }
 
+pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
+    user::setup_routes(cfg);
+
+    cfg.service(health_checker_handler)
+}
+
+//////////////////////////////
+///     Error Helpers      ///
+//////////////////////////////
+
 impl ServerError {
     pub fn new(error: ServerErrorType, message: String) -> Self {
         Self {
@@ -40,10 +50,4 @@ impl Error {
     pub fn to_http_response(self) -> HttpResponse {
         ServerError::to_http_response(self.into())
     }
-}
-
-pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
-    user::setup_routes(cfg);
-
-    cfg.service(health_checker_handler)
 }

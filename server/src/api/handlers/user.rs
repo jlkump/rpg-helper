@@ -13,12 +13,14 @@ use actix_multipart::form::{self, tempfile::TempFile, MultipartForm};
 pub fn setup_routes(cfg: &mut web::ServiceConfig) -> &mut web::ServiceConfig {
     let scope = web::scope("/api")
         .service(public_user_handler)
-        .service(user_update_handler)
-        .service(user_upload_handler)
         .service(register_handler)
         .service(login_handler)
         .service(logout_handler)
-        .service(get_me_handler);
+        .service(get_me_handler)
+        .service(user_update_handler)
+        .service(user_upload_handler)
+        .service(fetch_user_uploads_handler)
+        .service(fetch_user_upload_handler);
 
     cfg.service(scope)
 }
@@ -109,7 +111,7 @@ async fn logout_handler(_: jwt_auth::JwtMiddleware) -> impl Responder {
 async fn get_me_handler(
     req: HttpRequest,
     db: web::Data<Database>,
-    _: jwt_auth::JwtMiddleware,
+    _: jwt_auth::JwtMiddleware, // TODO: Try to get the user_id from this instead? Should work
 ) -> impl Responder {
     get_user_from_header(req, |user| {
         match db.user_data().get_private_data(*user) {
@@ -158,7 +160,7 @@ async fn user_upload_handler(
 }
 
 #[get("/user/uploads")]
-async fn fetch_user_uploads(
+async fn fetch_user_uploads_handler(
     req: HttpRequest,
     db: web::Data<Database>,
     _: jwt_auth::JwtMiddleware,
@@ -173,7 +175,7 @@ async fn fetch_user_uploads(
 }
 
 #[get("/user/uploads/{file_name}")]
-async fn fetch_user_upload(
+async fn fetch_user_upload_handler(
     req: HttpRequest,
     db: web::Data<Database>,
     path: web::Path<String>,
