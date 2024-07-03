@@ -172,12 +172,12 @@ impl UserDB {
         self.generic_general_update(user, profile_text, UserGeneralData::update_profile_text)
     }
 
-    pub(super) fn update_profile_photo(&self, user: User, profile_photo: ImageUrl) -> Result<(), Error> {
-        self.generic_general_update(user, profile_photo, UserGeneralData::update_profile_photo)
+    pub(super) fn update_profile_photo(&self, user: User, profile_photo_url: ImageUrl) -> Result<(), Error> {
+        self.generic_general_update(user, profile_photo_url, UserGeneralData::update_profile_photo)
     }
 
-    pub(super) fn update_profile_banner(&self, user: User, profile_banner: ImageUrl) -> Result<(), Error> {
-        self.generic_general_update(user, profile_banner, UserGeneralData::update_profile_banner)
+    pub(super) fn update_profile_banner(&self, user: User, profile_banner_url: ImageUrl) -> Result<(), Error> {
+        self.generic_general_update(user, profile_banner_url, UserGeneralData::update_profile_banner)
     }
 
     pub(super) fn join_game(&self, user: User, game_id: uuid::Uuid) -> Result<(), Error> {
@@ -478,8 +478,8 @@ impl UserGeneralData {
     fn new(username: &str) -> UserGeneralData {
         UserGeneralData {
             profile_name: username.to_string(),
-            profile_photo: ImageUrl::InternalServerPath(String::from("files/default_profile.png")),
-            profile_banner: ImageUrl::InternalServerPath(String::from("files/default_banner.png")),
+            profile_photo: ImageUrl::Internal(String::from("files/default_profile.png")),
+            profile_banner: ImageUrl::Internal(String::from("files/default_banner.png")),
             profile_text: "Lorem Ipsum".to_string(),
             profile_catchphrase: "Best DM in the West".to_string(),
             friends: HashSet::new(),

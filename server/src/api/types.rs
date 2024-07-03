@@ -74,20 +74,32 @@ pub enum InternalError {
 /////////////////////////////////////////
 //              Data                  ///
 /////////////////////////////////////////
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum ImageUrl {
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub enum ImageData {
     ExternalPath(String),
-    InternalServerPath(String)
+    InternalUpload(UploadImageData),
+}
+
+impl ImageData {
+    pub fn to_src(&self) -> &str {
+        match self {
+            ImageData::ExternalPath(s) => s,
+            ImageData::InternalUpload(data) => &data.src,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-pub struct ImageData {
+pub struct UploadImageData {
     pub src: String,
     pub name: String,
-    pub is_external: bool,
-    pub dimen: (i64, i64),
     pub size: i64, // In Bytes
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub enum ImageUrl {
+    External(String), // The external src link
+    Internal(String), // Just the path to the uploaded file. 
 }
 
 #[derive(Serialize, Deserialize, Debug)]

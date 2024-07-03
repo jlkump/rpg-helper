@@ -7,7 +7,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sled::Tree;
 use user::UserDB;
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ConflictError, ImageData, ImageUrl, InsufficientStorageError, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UnsupportedError, UserData}}, config::Config};
+use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ConflictError, ImageData, ImageUrl, InsufficientStorageError, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UnsupportedError, UploadImageData, UserData}}, config::Config};
 
 pub mod user;
 
@@ -103,22 +103,12 @@ pub fn serverpath_from_filepath(internal_path: &str, config: &Config) -> String 
 impl ImageUrl {
     pub fn to_string(self, config: &Config) -> String {
         match self {
-            ImageUrl::ExternalPath(path) => path,
-            ImageUrl::InternalServerPath(path) => serverpath_from_filepath(&path, config),
+            ImageUrl::External(s) => s,
+            ImageUrl::Internal(internal_path) => serverpath_from_filepath(&internal_path, config),
         }
     }
-
-    pub fn sanatize(self) -> Result<Self, Error> {
-        todo!()
-    }
-    // pub fn from_str(s: &str, user: User, db: &Database, config: &Config) -> Option<ImageUrl> {
-    //     // TODO: Look at user's uploaded data and see if the file path given exists there
-    //     // If it does, use that as an internal server path. If not, check to see if it is a valid
-    //     // external path to another server's image. If it is, use it as an external path.
-    //     // If it is neither, return None
-    //     todo!()
-    // }
 }
+
 pub struct Database {
     user_db: user::UserDB,
     config: Config 
@@ -167,16 +157,18 @@ impl UserDatabaseHandle<'_> {
             UserUpdateSchema::ProfileText(profile_text) => user_db.update_profile_text(user, profile_text),
             UserUpdateSchema::ProfileCatchphrase(profile_catchphrase) => user_db.update_profile_catchphrase(user, profile_catchphrase),
             UserUpdateSchema::ProfilePicture(profile_photo) => {
-                match profile_photo.sanatize() {
-                    Ok(url) => user_db.update_profile_photo(user, url),
-                    Err(e) => Err(e),
-                }
+                todo!()
+                // match profile_photo.sanatize() {
+                //     Ok(url) => user_db.update_profile_photo(user, url),
+                //     Err(e) => Err(e),
+                // }
             },
             UserUpdateSchema::ProfileBanner(profile_banner) => {
-                match profile_banner.sanatize() {
-                    Ok(url) => user_db.update_profile_banner(user, url),
-                    Err(e) => Err(e),
-                }
+                todo!()
+                // match profile_banner.sanatize() {
+                //     Ok(url) => user_db.update_profile_banner(user, url),
+                //     Err(e) => Err(e),
+                // }
             },
             UserUpdateSchema::FavoritedRuleset(id) => todo!(),
             UserUpdateSchema::FavoritedSetting(id) => todo!(),
@@ -298,13 +290,12 @@ fn get_file_ext(name: Option<String>) -> String {
 fn image_data_from_path(p: &Path, config: &Config) -> Option<ImageData> {
     if is_allowed_file_type(p.extension()) {
         if let Ok(file) = File::open(p) {
-            return Some(ImageData { 
+            return Some(ImageData::InternalUpload(UploadImageData { 
                 src: serverpath_from_filepath(p.to_str().unwrap(), config), 
-                name: p.file_name().and_then(|f| f.to_str().and_then(|f| Some(f.to_string()))).unwrap_or_default(), 
-                is_external: false, 
-                dimen: (0, 0), 
+                name: p.file_name()
+                        .and_then(|f| f.to_str().and_then(|f| Some(f.to_string()))).unwrap_or_default(), 
                 size: file.metadata().unwrap().len() as i64
-            })
+            }))
         }
     }
     None
