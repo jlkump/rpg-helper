@@ -2,6 +2,8 @@ use chrono::prelude::*;
 use std::{collections::HashSet, fmt::Debug};
 use serde::{Deserialize, Serialize};
 
+use super::data_model::Value;
+
 /////////////////////////////////////////
 //              Errors                ///
 /////////////////////////////////////////
@@ -160,4 +162,44 @@ pub struct FriendRequest {
 pub struct GameInvite {
     pub sent_to: uuid::Uuid,
     pub game: uuid::Uuid,
+}
+
+////////////////////////////////////////////////////////
+//         Data Model Data Transfer Schemas           //
+////////////////////////////////////////////////////////
+
+pub struct GameData {
+    owned_characters: Vec<CharacterData>,
+    values: Vec<ValueData>,
+    wiki_data: WikiData,
+    timeline: TimelineData,
+}
+
+pub struct CharacterData {
+    name: String,
+}
+
+pub struct ValueData {
+    belongs_to_character: uuid::Uuid, // ID of character the value belongs to
+    value: Value,
+}
+
+pub struct TimelineData {
+
+}
+
+// Smaller data packets can be used on updates to the game.
+// The GameData packet is used to transfer all the game data. It will be used to ensure consistency.
+pub struct EventData {
+
+}
+
+pub struct WikiData {
+    pages: Vec<WikiPageData>
+}
+
+pub struct WikiPageData {
+    page_header: String,
+    page_subheaders: Vec<String>,
+    page_markdown: String, // Include links? ImageData? Probably not.
 }

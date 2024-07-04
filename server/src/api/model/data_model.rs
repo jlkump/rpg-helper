@@ -144,6 +144,16 @@ pub struct Equation {
     inputs: Vec<Input>,
 }
 
+impl Eval for Equation {
+    fn eval_f32(&self) -> Result<EvalResult<f32>, EvalError> {
+        todo!()
+    }
+
+    fn eval_bool(&self) -> Result<EvalResult<bool>, EvalError> {
+        todo!()
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct EquationType {
     name: String,
@@ -215,7 +225,7 @@ pub struct EvalTree {
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 struct EvalNode {
-    // TODO: Probably want to define in a separate file.
+    // TODO: Probably want to define in a separate file for Eval Tree. Will be pretty large
 }
 
 impl Eval for EvalTree {
@@ -235,11 +245,15 @@ pub struct MetaType {
     pub fields: Vec<Type>,
 }
 
+impl Named for MetaType { fn get_name(&self) -> &str { &self.name } }
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct MetaInst {
     pub name: String,
     pub fields: Vec<Value>,
 }
+
+impl Named for MetaInst { fn get_name(&self) -> &str { &self.name } }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct MetaRef { // MetaRef could also be MetaInst
@@ -250,20 +264,39 @@ pub struct MetaRef { // MetaRef could also be MetaInst
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Event {
-    // TODO: Also define ordering trait based on time
-    year: Value,    // Defined specifically by a Year  meta-type required to be placed in the rule-set. Must be a num
-    month: Value,   // Defined specifically by a Month meta-type required to be placed in the rule-set. Must be a num
-    day: Value,     // Defined specifically by a Day   meta-type required to be placed in the rule-set. Must be a num
+    year: Number,    // Defined specifically by a Year  meta-type required to be placed in the rule-set. Must be a num
+    month: Number,   // Defined specifically by a Month meta-type required to be placed in the rule-set. Must be a num
+    day: Number,     // Defined specifically by a Day   meta-type required to be placed in the rule-set. Must be a num
     event_type: EventType,  // Defined by a EventType meta-type. The event type holds the reference to the effect
+}
+
+impl PartialOrd for Event {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if let Ok(EvalResult::Value(v)) = self.event_type.ordering.eval_f32() {
+            if let Ok(EvalResult::Value(o)) = other.event_type.ordering.eval_f32() {
+                if v < o {
+                    return Some(std::cmp::Ordering::Less);
+                } else if v > o {
+                    return Some(std::cmp::Ordering::Greater);
+                } else {
+                    return Some(std::cmp::Ordering::Equal);
+                }
+            }
+        }
+        None
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct EventType {
     name: String,
     effect: Effect,
-    // TODO: Restrictions
-    // Also, display img?
+    ordering: Equation,  // Defined by some evaluation of the internal values. Used to order the events on the timeline
+    restrictions: Vec<Equation>, // Expect bools
+    // display_img: ImageUrl,
 }
+
+impl Named for EventType { fn get_name(&self) -> &str { &self.name } }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Effect {
