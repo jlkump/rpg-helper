@@ -161,3 +161,88 @@ pub struct GameInvite {
     pub sent_to: uuid::Uuid,
     pub game: uuid::Uuid,
 }
+
+//////////////////////////////////////
+///     Data Model for Tool        ///
+//////////////////////////////////////
+
+pub type Name = String;
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct Value {
+    t: Type,
+    d: Data,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub enum Type { // Important to note. Changing types in-game will be very difficult. Might be best to restrict it
+    Num,
+    List(Box<Type>),
+    Enum(Vec<String>),
+    Meta(Name),     // Name of the meta-type
+    // Equation(Equation),   // Equation is owned by the type and thus not named
+    MetaRef(Name), // The name of the meta-type the ref refers to
+    // Input(RestrictedInput),
+    // DieRoll(DieRoll),
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum Data {
+    Num(f32),
+    Text(String),
+    List(Vec<Value>),
+    Enum(String),
+    Meta(MetaInst), // The meta type is accessed by the field name
+    Equation,
+    Input, // Maybe store last input and whether it has been used?
+    DieRoll, // IDK, but can store stuff for later
+    MetaRef(Name) // Name of the actual reference to the meta instance
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub struct MetaType {
+    pub name: Name,
+    pub fields: Vec<Type>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct MetaInst {
+    pub name: Name,
+    pub fields: Vec<Value>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub struct MetaRef { // MetaRef could also be MetaInst
+    // Hold data on the ruleset / setting it came from?
+    pub type_name: Name,
+    pub ref_name: Name,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct Event {
+    // TODO: Also define ordering trait based on time
+    year: Value,    // Defined specifically by a Year  meta-type required to be placed in the rule-set. Must be a num
+    month: Value,   // Defined specifically by a Month meta-type required to be placed in the rule-set. Must be a num
+    day: Value,     // Defined specifically by a Day   meta-type required to be placed in the rule-set. Must be a num
+    event_type: EventType,  // Defined by a EventType meta-type. The event type holds the reference to the effect
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct EventType {
+    name: Name,
+    effect: Effect,
+    // TODO: Restrictions
+    // Also, display img?
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct Effect {
+    target: MetaRef,
+    old_value: Value,
+    new_value: Value,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct Timeline {
+    events: Vec<Event>,
+}
