@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::database::Error;
 
-use super::types::{ServerError, ServerErrorType};
+use super::model::types::{ServerError, ServerErrorType};
 
 mod user;
 

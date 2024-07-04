@@ -6,7 +6,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use log::{info, warn};
 use serde_json::json;
 
-use crate::{api::{jwt_auth::{self, TokenClaims}, schema::{UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ InternalError, ServerError, ServerErrorType, UserLoginResponse}}, config::Config, database::User, Database};
+use crate::{api::{jwt_auth::{self, TokenClaims}, model::schema::{UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, model::types::{ InternalError, ServerError, ServerErrorType, UserLoginResponse}}, config::Config, database::User, Database};
 
 use actix_multipart::form::{self, tempfile::TempFile, MultipartForm};
 

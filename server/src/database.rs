@@ -7,7 +7,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sled::{transaction::ConflictableTransactionError, Tree};
 use user::UserDB;
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ConflictError, ImageData, ImageUrl, InsufficientStorageError, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UnsupportedError, UploadImageData, UserData}}, config::Config};
+use crate::{api::model::{schema::{UserLoginSchema, UserRegistrationSchema, UserUpdateSchema}, types::{ConflictError, ImageData, ImageUrl, InsufficientStorageError, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UnsupportedError, UploadImageData, UserData}}, config::Config};
 
 pub mod user;
 

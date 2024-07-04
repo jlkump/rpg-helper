@@ -5,7 +5,7 @@ use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use sled::{transaction::{TransactionError, TransactionResult}, Db, Transactional, Tree};
 
-use crate::{api::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, ConflictError, FriendRequest, GameInvite, ImageUrl, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UserData}}, config::Config, database::get_data};
+use crate::{api::model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, ConflictError, FriendRequest, GameInvite, ImageUrl, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UserData}}, config::Config, database::get_data};
 
 use super::{Error, User};
 
@@ -432,7 +432,10 @@ impl UserSecureData {
     }
 
     /// Returns the storage limit in bytes
-    fn get_storage_limit(&self) -> i64 {
+    fn get_storage_limit(&self) -> i64 { 
+        // Might want to define a unique limit option for admins to change specific user's limits
+        // For this, we define in the secure data the storage limit and 
+        // change when the user's role updates / the user donates / an admin manually changes it.
         if self.is_admin {
             ADMIN_USER_STORAGE_LIMIT
         } else if self.donated != 0 || self.monthly_donor {

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 
-use super::types::AuthError;
+use super::model::types::AuthError;
 
 impl Display for AuthError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
