@@ -28,6 +28,11 @@ impl PartialOrd for Date {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub struct EventRef {
+
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct Event {
     event_type: EventTypeRef,  // Defined by a EventType meta-type. The event type holds the reference to the effect
 }

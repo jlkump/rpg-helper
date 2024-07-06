@@ -11,7 +11,7 @@ use super::wiki::WikiPage;
 pub type PlayerId = uuid::Uuid;
 pub type CharacterId = uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct GamePermissions {
     // wiki_permissions: HashMap<String, Vec<Permission>>,      // Permission to see a wiki page in a game
     // type_permissions: HashMap<String, Vec<Permission>>,      // Permission to use a type in a game

@@ -1,6 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use super::{types::TypeIndex, values::ValueIndex, wiki::WikiIndex};
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Ruleset {
     id: uuid::Uuid,
     wiki: WikiIndex,

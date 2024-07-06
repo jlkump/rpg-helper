@@ -1,4 +1,5 @@
 use game::Game;
+use serde::{Deserialize, Serialize};
 
 use super::primatives::permissions::CharacterId;
 
@@ -11,11 +12,15 @@ pub mod types;
 pub mod values;
 pub mod wiki;
 
+
+/// The target of the Ref, relative to the game
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub enum RefTarget {
     Ruleset,
     Setting,
     Character(CharacterId),
     GlobalTimeline,
+    GamemasterData,
 }
 
 pub trait IndexRef<T> {
