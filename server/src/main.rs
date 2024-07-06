@@ -8,11 +8,13 @@ use log::info;
 mod api;
 mod config;
 mod database;
+mod model;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let config = Config::from_file("Config.toml").unwrap();
     let db = web::Data::new(Database::open(config.clone()));
+    // TODO: Create a shared state to a list of open games.
     let config_data = web::Data::new(config.clone());
 
     info!("Starting server at {}:{}/", config.server.host, config.server.port);

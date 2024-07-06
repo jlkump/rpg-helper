@@ -5,7 +5,7 @@ use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 use sled::{transaction::{TransactionError, TransactionResult}, Db, Transactional, Tree};
 
-use crate::{api::model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, ConflictError, FriendRequest, GameInvite, ImageUrl, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UserData}}, config::Config, database::get_data};
+use crate::{model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, ConflictError, FriendRequest, GameInvite, ImageUrl, InternalError, NotFoundError, PublicUserData, ServerError, ServerErrorType, UserData}}, config::Config, database::get_data};
 
 use super::{Error, User};
 

@@ -2,7 +2,7 @@ use chrono::prelude::*;
 use std::{collections::HashSet, fmt::Debug};
 use serde::{Deserialize, Serialize};
 
-use super::data_model::Value;
+use super::data_model::primatives::values::Value;
 
 /////////////////////////////////////////
 //              Errors                ///
@@ -168,38 +168,28 @@ pub struct GameInvite {
 //         Data Model Data Transfer Schemas           //
 ////////////////////////////////////////////////////////
 
-pub struct GameData {
-    owned_characters: Vec<CharacterData>,
-    values: Vec<ValueData>,
-    wiki_data: WikiData,
-    timeline: TimelineData,
-}
+// pub struct GameData {
+//     owned_characters: Vec<CharacterData>,
+//     wiki_data: WikiData,
+//     timeline: TimelineData,
+// }
 
-pub struct CharacterData {
-    name: String,
-}
+// pub struct CharacterData {
+//     name: String,
+//     id: String,
+//     values: Vec<ValueData>, // For the value index of each character
+// }
 
-pub struct ValueData {
-    belongs_to_character: uuid::Uuid, // ID of character the value belongs to
-    value: Value,
-}
+// pub struct ValueData {
+//     value: Value,
+// }
 
-pub struct TimelineData {
+// pub struct TimelineData {
 
-}
+// }
 
-// Smaller data packets can be used on updates to the game.
-// The GameData packet is used to transfer all the game data. It will be used to ensure consistency.
-pub struct EventData {
+// // Smaller data packets can be used on updates to the game.
+// // The GameData packet is used to transfer all the game data. It will be used to ensure consistency.
+// pub struct EventData {
 
-}
-
-pub struct WikiData {
-    pages: Vec<WikiPageData>
-}
-
-pub struct WikiPageData {
-    page_header: String,
-    page_subheaders: Vec<String>,
-    page_markdown: String, // Include links? ImageData? Probably not.
-}
+// }
