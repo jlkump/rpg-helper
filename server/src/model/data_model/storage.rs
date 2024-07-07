@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use super::primatives::permissions::CharacterId;
 
-pub mod game;
 pub mod character;
+pub mod game;
+pub mod location;
 pub mod ruleset;
 pub mod setting;
 pub mod timeline;
@@ -25,7 +26,13 @@ pub enum RefTarget {
 
 pub trait IndexRef<T> {
     fn get_target(&self) -> RefTarget; // For determining which part of the Game's data to address
-    fn get_ref(&self, game: &Game) -> Option<&T>;
+    fn to_ref(self, game: &Game) -> Option<&T> 
+    where 
+        Self: Sized,
+        Game: IndexStorage<T, Self>,
+    {
+        game.get(self)
+    }
 }
 
 pub trait IndexStorage<T, R> 

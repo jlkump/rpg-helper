@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::storage::{timeline::EventTypeRef, types::TypeRef};
-
-use super::wiki::WikiPage;
+use crate::model::data_model::storage::{location::{LocationRef, MapRef}, timeline::EventTypeRef, types::TypeRef, values::ValueRef, wiki::WikiPageRef};
 
 // This might be better placed in storage module?
 
@@ -24,11 +22,23 @@ pub struct GamePermissions {
 }
 
 impl GamePermissions {
-    pub fn get_wikipage_permissions(&self, wiki_page: &WikiPage) -> Vec<Permission> {
+    pub fn get_wikipage_permissions(&self, wiki_page: &WikiPageRef) -> Vec<Permission> {
         todo!()
     }
 
-    pub fn get_type_permissions(&self, t: &TypeRef) -> Vec<Permission> {
+    pub fn get_type_permissions(&self, t_ref: &TypeRef) -> Vec<Permission> {
+        todo!()
+    }
+
+    pub fn get_value_permissions(&self, v_ref: &ValueRef) -> Vec<Permission> {
+        todo!()
+    }
+
+    pub fn get_location_permissions(&self, loc_ref: &LocationRef) -> Vec<Permission> {
+        todo!()
+    }
+
+    pub fn get_map_permissions(&self, map_ref: &MapRef) -> Vec<Permission> {
         todo!()
     }
 

@@ -21,10 +21,6 @@ impl IndexRef<Type> for TypeRef {
     fn get_target(&self) -> super::RefTarget {
         todo!()
     }
-
-    fn get_ref(&self, game: &super::game::Game) -> Option<&Type> {
-        todo!()
-    }
 }
 
 impl IndexStorage<Type, TypeRef> for TypeIndex {
@@ -40,10 +36,6 @@ pub struct MetaTypeRef {
 
 impl IndexRef<MetaType> for MetaTypeRef {
     fn get_target(&self) -> super::RefTarget {
-        todo!()
-    }
-
-    fn get_ref(&self, game: &super::game::Game) -> Option<&MetaType> {
         todo!()
     }
 }
