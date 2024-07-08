@@ -4,6 +4,6 @@ use crate::model::data_model::storage::types::EnumerationTypeRef;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Enumeration {
-    t: EnumerationTypeRef, // Enumeration Types are stored in the typeIndex
-    inst: usize,
+    pub t: EnumerationTypeRef, // Enumeration Types are stored in the typeIndex
+    pub inst: usize,
 }

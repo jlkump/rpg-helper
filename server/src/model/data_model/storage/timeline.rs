@@ -5,7 +5,7 @@ use crate::model::data_model::primatives::{types::Type, values::{number::Number,
 use super::{types::{EquationRef, MetaTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}};
 
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Timeline {
     events: Vec<Event>,
     current_date: Date,
@@ -13,7 +13,7 @@ pub struct Timeline {
     // The character may be behind the date of the game.
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Date {
     year: Number,    // Defined specifically by a Year  meta-type required to be placed in the rule-set. Must be a num
     month: Number,   // Defined specifically by a Month meta-type required to be placed in the rule-set. Must be a num
@@ -85,7 +85,7 @@ pub struct EventType {
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub enum EventAction {
-    ChangeMetaRef(MetaInstRef, EquationRef), // Ref to modify and how to modify it
+    ChangeMetaInst(MetaInstRef, EquationRef), // Ref to modify and how to modify it
     AddValueToCharacter(TypeRef),
     RemoveValueFromCharacter(ValueRef),
     // Multiple?

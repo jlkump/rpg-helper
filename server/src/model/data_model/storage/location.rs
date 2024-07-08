@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::primatives::location::{Location, LocationType, Map};
 
-use super::{IndexRef, IndexStorage};
+use super::{IndexRef, IndexStorage, Query};
 
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
@@ -40,7 +40,7 @@ impl IndexRef<Map> for MapRef {
 }
 
 impl IndexStorage<Map, MapRef> for LocationIndex {
-    fn get(&self, r: MapRef) -> Option<&Map> {
+    fn get(&self, r: &MapRef) -> Query<&Map> {
         todo!()
     }
 }

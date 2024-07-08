@@ -1,31 +1,29 @@
+use actix_web::web::Query;
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::Value}, storage::types::{EquationRef, TypeRef}};
+use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::Value}, storage::{types::{EquationRef, TypeRef}, ContainerKind, IndexRef, RefTarget}};
 
 use super::Type;
 
-// Results
-// Ok -> EvalResult
-// Err -> EvalError
-pub enum EvalResult<T> {
-    Value(T),
-    InputRequired(Vec<InputRequest>),
-}
-
-pub enum EvalError {
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum EvalError
+{
     DivideByZero,
-    NonExistantNamedValue,
-    GotWrongType(TypeRef)
+    TypeMismatch(TypeRef),
+    TypeNotFound,
+    ValueNotFound,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct Equation {
     name: String,
+    container: ContainerKind,
+    expects: TypeRef, 
     ast: EvalTree,
 }
 
 /// EquationCompute is handle to re-try a given equation with the correct inputs.
-#[derive(Debug)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct EquationCompute {
     t: EquationRef,
     inputs: Vec<Input>,
@@ -37,11 +35,11 @@ impl EquationCompute {
         self.inputs = inputs;
     }
 
-    fn eval_f32(&self) -> Result<EvalResult<f32>, EvalError> {
+    pub fn get_req_inputs(&self) -> Vec<InputRequest> {
         todo!()
     }
 
-    fn eval_bool(&self) -> Result<EvalResult<bool>, EvalError> {
+    pub fn eval(&self) -> Query<Value> {
         todo!()
     }
 }
@@ -58,7 +56,7 @@ impl Equation {
         }
     }
 
-    fn ast_compute(&self) -> Result<EvalResult<f32>, EvalError> {
+    fn ast_compute(&self) -> Query<Value> {
         todo!()
     }
 }
@@ -74,7 +72,7 @@ pub struct EvalTree {
 }
 
 impl EvalNode {
-    fn eval_expect(&self, expected: &Type) -> Result<EvalResult<Value>, EvalError> {
+    fn eval_expect(&self, expected: &Type) -> Query<Value> {
         todo!()
     }
 }

@@ -1,7 +1,17 @@
+use std::ops::Deref;
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Number {
-    name: String,
-    value: i32, // Perhaps store floats by dividing by 100?
+    pub name: String,
+    pub value: f32,
+}
+
+impl Deref for Number {
+    type Target = f32;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
 }

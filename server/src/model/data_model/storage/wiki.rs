@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::primatives::wiki::{WikiData, WikiPage};
 
-use super::{IndexRef, IndexStorage};
+use super::{IndexRef, IndexStorage, Query};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub struct WikiIndex {
@@ -12,7 +12,7 @@ pub struct WikiIndex {
 }
 
 impl IndexStorage<WikiPage, WikiPageRef> for WikiIndex {
-    fn get(&self, r: WikiPageRef) -> Option<&WikiPage> {
+    fn get(&self, r: &WikiPageRef) -> Query<&WikiPage> {
         // TODO Break up path by '/' s to get the tree path
         todo!()
     }
