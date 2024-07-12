@@ -7,9 +7,7 @@ use list::List;
 use meta::MetaInst;
 use number::Number;
 
-use crate::model::data_model::{get_game, storage::{types::{EquationRef, TypeRef}, values::MetaInstRef, IndexRef}};
-
-use super::types::Type;
+use crate::model::data_model::storage::{types::{EquationRef, TypeRef}, values::MetaInstRef, IndexRef, Storable, view_context::ViewContext};
 
 pub mod boolean;
 pub mod die_roll;
@@ -28,6 +26,12 @@ pub enum Value {
     Equation(EquationRef),
     DieRoll(DieRoll), 
     MetaRef(MetaInstRef),
+}
+
+impl Storable for Value {
+    fn get_container(&self) -> &crate::model::data_model::storage::ContainerKind {
+        todo!()
+    }
 }
 
 impl Value {
@@ -83,7 +87,7 @@ impl ValueEffect {
     /// If the effect is able to take place,
     /// the new value is returned. Otherwise,
     /// the old value is returned as is.
-    pub fn apply(self, mut v: Value) -> Value {
+    pub fn apply(self, mut v: Value, context: &ViewContext) -> Value {
         match self {
             ValueEffect::AddToNum(num) => {
                 if let Value::Num(other) = &mut v {
@@ -109,7 +113,7 @@ impl ValueEffect {
                 // Range checking to prevent the enum from being invalid
                 if let Value::Enum(e) = &mut v {
                     let max = {
-                        if let Ok(e) = e.t.to_ref(get_game()) {
+                        if let Ok(e) = e.t.to_ref(context) {
                             (e.types.len() - 1).max(0)
                         } else {
                             1
@@ -122,7 +126,7 @@ impl ValueEffect {
                 if let Value::Meta(m) = &mut v {
                     if let Some(f) = m.fields.get(&field) {
                         if f.get_type() == effect.get_mod_type() {
-                            m.fields.insert(field, effect.apply(f.clone()));
+                            m.fields.insert(field, effect.apply(f.clone(), context));
                         }
                     }
                 }

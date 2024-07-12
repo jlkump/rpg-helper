@@ -1,20 +1,42 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::{data_model::primatives::{location::Location, permissions::{GamePermissions, PlayerId}, types::{enumeration::EnumerationType, equation::Equation, Type}, values::Value, wiki::WikiPage}, types::ServerError};
+use crate::model::{data_model::primatives::{location::Location, permissions::{CharacterId, GamePermissions, PlayerId}, types::{enumeration::EnumerationType, equation::Equation, Type}, values::Value, wiki::WikiPage}, types::ServerError};
 
-use super::{character::Character, location::LocationRef, ruleset::Ruleset, setting::Setting, timeline::{Date, Event, EventRef, Timeline}, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::ValueRef, wiki::WikiPageRef, IndexRef, IndexStorage, Query, RefTarget};
+use super::{character::Character, location::LocationRef, ruleset::Ruleset, setting::Setting, timeline::{Date, Event, EventRef, Timeline}, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::ValueRef, wiki::WikiPageRef, IndexRef, IndexStorage, Query, RefTarget, Storable};
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct Game {
-    ruleset: Ruleset,
-    setting: Setting,
-    game_data: GameplayData,
-    characters: Vec<Character>,
+pub type GameId = uuid::Uuid;
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Game<'a> {
+    id: GameId,
+    ruleset: Ruleset<'a>,
+    setting: Setting<'a>,
+    game_data: GameplayData<'a>,
+    gamemaster_data: Option<GameMasterData<'a>>, // The data is available only if the player has GM permissions
+    characters: Vec<Character<'a>>,
+    dead_characters: Vec<CharacterId>, // What to do with dead characters? Store just the ID then fetch from database?
     game_permissions: GamePermissions, // The permissons for all data contained in the game. 
                                        // Can only be edited by the GM
 }
 
-impl Game {
+/// Gameplay data is data that is created during the game for the players to have access to.
+/// It is different than the setting changing, as the gameplay data only affects the current game.
+/// Changes here will not affect the setting or ruleset.
+#[derive(Debug, PartialEq, Clone)]
+pub struct GameplayData<'a> {
+    timeline: Timeline<'a>, // These are events that the GM creates.
+    current_date: Date,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct GameMasterData<'a> {
+    future_events: Timeline<'a>,
+    // The view of data for the game master to manipulate?
+    // The Game already has the data for the GameMaster, but this provides extra info
+    // Such as the list of pre-determined events for the timeline
+}
+
+impl<'g> Game<'g> {
     pub fn filter_permissions(&self, player_id: PlayerId) -> Self {
         // Gives back a game struct that contains the data that is available to be viewed by the player
         todo!()
@@ -26,25 +48,26 @@ impl Game {
         todo!()
     }
 
-    // Update the game in memory. The Server will handle auto-saves. Players can force saves
-    pub fn type_update(&mut self, target: TypeRef, new_value: Type) {
-        todo!()
+    pub fn get_mut_ruleset(&mut self) -> &mut Ruleset<'g> {
+        &mut self.ruleset
     }
 
-    pub fn value_update(&mut self, target: ValueRef, new_value: Value) {
-        todo!()
+    pub fn get_mut_setting(&mut self) -> &mut Setting<'g> {
+        &mut self.setting
     }
 
-    pub fn wiki_update(&mut self, target: WikiPageRef, new_value: WikiPage) {
-        todo!()
+    pub fn get_mut_gameplay_data(&mut self) -> &mut GameplayData<'g> {
+        &mut self.game_data
     }
 
-    pub fn event_update(&mut self, target: EventRef, new_value: Event) {
-        todo!()
+    pub fn get_mut_gamemaster_data(&mut self) -> Option<&mut GameMasterData<'g>> {
+        self.gamemaster_data.as_mut()
     }
 }
 
-impl IndexStorage<WikiPage, WikiPageRef> for Game {
+// ---------------- Ref Implementations ---------------------------
+
+impl IndexStorage<WikiPage, WikiPageRef> for Game<'_> {
     fn get(&self, r: &WikiPageRef) -> Query<&WikiPage> {
         match r.get_target() {
             RefTarget::Playset => {
@@ -62,7 +85,7 @@ impl IndexStorage<WikiPage, WikiPageRef> for Game {
     }
 }
 
-impl IndexStorage<Value, ValueRef> for Game {
+impl IndexStorage<Value, ValueRef> for Game<'_> {
     fn get(&self, r: &ValueRef) -> Query<&Value> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -73,7 +96,7 @@ impl IndexStorage<Value, ValueRef> for Game {
     }
 }
 
-impl IndexStorage<Type, TypeRef> for Game {
+impl IndexStorage<Type, TypeRef> for Game<'_> {
     fn get(&self, r: &TypeRef) -> Query<&Type> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -84,13 +107,13 @@ impl IndexStorage<Type, TypeRef> for Game {
     }
 }
 
-impl IndexStorage<EnumerationType, EnumerationTypeRef> for Game {
+impl IndexStorage<EnumerationType, EnumerationTypeRef> for Game<'_> {
     fn get<'a>(&'a self, r: &EnumerationTypeRef) -> Query<&'a EnumerationType> {
         todo!()
     }
 }
 
-impl IndexStorage<Location, LocationRef> for Game {
+impl IndexStorage<Location, LocationRef> for Game<'_> {
     fn get(&self, r: &LocationRef) -> Query<&Location> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -101,7 +124,7 @@ impl IndexStorage<Location, LocationRef> for Game {
     }
 }
 
-impl IndexStorage<Equation, EquationRef> for Game {
+impl IndexStorage<Equation, EquationRef> for Game<'_> {
     fn get<'a>(&'a self, r: &EquationRef) -> Query<&'a Equation> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -110,22 +133,4 @@ impl IndexStorage<Equation, EquationRef> for Game {
             RefTarget::GamemasterData => todo!(),
         }
     }
-}
-
-// Gameplay data is data that is created during the game for the players to have access to.
-// It is different than the setting changing, as the gameplay data only affects the current game.
-// Changes here will not affect the setting or ruleset.
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct GameplayData {
-    timeline: Timeline, // These are events that the GM creates.
-    current_date: Date,
-    gm_view: Option<GameMasterView>,
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct GameMasterView {
-    future_events: Timeline,
-    // The view of data for the game master to manipulate?
-    // The Game already has the data for the GameMaster, but this provides extra info
-    // Such as the list of pre-determined events for the timeline
 }

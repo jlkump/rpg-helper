@@ -163,33 +163,3 @@ pub struct GameInvite {
     pub sent_to: uuid::Uuid,
     pub game: uuid::Uuid,
 }
-
-////////////////////////////////////////////////////////
-//         Data Model Data Transfer Schemas           //
-////////////////////////////////////////////////////////
-
-// pub struct GameData {
-//     owned_characters: Vec<CharacterData>,
-//     wiki_data: WikiData,
-//     timeline: TimelineData,
-// }
-
-// pub struct CharacterData {
-//     name: String,
-//     id: String,
-//     values: Vec<ValueData>, // For the value index of each character
-// }
-
-// pub struct ValueData {
-//     value: Value,
-// }
-
-// pub struct TimelineData {
-
-// }
-
-// // Smaller data packets can be used on updates to the game.
-// // The GameData packet is used to transfer all the game data. It will be used to ensure consistency.
-// pub struct EventData {
-
-// }

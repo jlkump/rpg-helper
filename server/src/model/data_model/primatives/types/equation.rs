@@ -1,7 +1,7 @@
 use actix_web::web::Query;
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::Value}, storage::{types::{EquationRef, TypeRef}, ContainerKind, IndexRef, RefTarget}};
+use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::Value}, storage::{types::{EquationRef, TypeRef}, ContainerKind, IndexRef, RefTarget, Storable}};
 
 use super::Type;
 
@@ -22,11 +22,17 @@ pub struct Equation {
     ast: EvalTree,
 }
 
+impl Storable for Equation {
+    fn get_container(&self) -> &ContainerKind {
+        &self.container
+    }
+}
+
 /// EquationCompute is handle to re-try a given equation with the correct inputs.
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct EquationCompute {
     t: EquationRef,
-    inputs: Vec<Input>,
+    inputs: Vec<Input>, // Input Request could be any type
 }
 
 impl EquationCompute {

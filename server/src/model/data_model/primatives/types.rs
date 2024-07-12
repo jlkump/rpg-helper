@@ -7,7 +7,7 @@ use meta::MetaType;
 use number::NumberType;
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::storage::types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, MetaTypeRef, TypeRef};
+use crate::model::data_model::storage::{types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, MetaTypeRef, TypeRef}, Storable};
 
 pub mod boolean;
 pub mod die_roll;
@@ -27,6 +27,12 @@ pub enum Type { // Important to note. Changing types in-game will be very diffic
     Equation(Equation),
     DieRoll(DieRollType),
     MetaRef(MetaTypeRef), // By Name of meta type. Same as type ref, but assumes a return to a MetaType
+}
+
+impl Storable for Type {
+    fn get_container(&self) -> &crate::model::data_model::storage::ContainerKind {
+        todo!()
+    }
 }
 
 impl Type {

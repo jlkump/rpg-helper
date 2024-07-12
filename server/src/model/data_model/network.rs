@@ -1,0 +1,4 @@
+//////////////////////////////////////
+//      Data Transfer Model         //
+//////////////////////////////////////
+// All the serializable forms of the data model for network transfer.

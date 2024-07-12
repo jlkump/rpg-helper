@@ -4,11 +4,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::primatives::values::Value;
 
-use super::IndexRef;
+use super::{IndexRef, view_context::ViewContext};
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct ValueIndex {
-    types: HashMap<String, Value>,
+#[derive(Debug, PartialEq, Clone)]
+pub struct ValueIndex<'a> {
+    values: HashMap<String, Value>,
+    view_context: Option<ViewContext<'a>>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
@@ -26,6 +27,10 @@ pub struct ValueRef {
 
 impl IndexRef<Value> for ValueRef {
     fn get_target(&self) -> super::RefTarget {
+        todo!()
+    }
+    
+    fn get_ref_name(&self) -> String {
         todo!()
     }
 }

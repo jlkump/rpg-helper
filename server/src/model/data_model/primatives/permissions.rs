@@ -16,9 +16,9 @@ pub struct GamePermissions {
     // character_permissions: HashMap<String, Vec<Permission>>, // Permission to see a character in a game. Should index by character ID
 
     // Rework
-    players: Vec<uuid::Uuid>,      // Who is invited an allowed to play in the game
-    game_masters: Vec<uuid::Uuid>, // Who can be game master
-    active_gm: uuid::Uuid,         // Who is the active game master (allow multiple? Should be ok to, but will check later)
+    players: Vec<PlayerId>,      // Who is invited an allowed to play in the game
+    game_masters: Vec<PlayerId>, // Who can be game master
+    active_gm: PlayerId,         // Who is the active game master (allow multiple? Should be ok to, but will check later)
 }
 
 impl GamePermissions {

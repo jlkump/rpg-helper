@@ -2,13 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::primatives::{types::Type, values::{number::Number, Value}};
 
-use super::{types::{EquationRef, MetaTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}};
+use super::{types::{EquationRef, MetaTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, view_context::ViewContext};
 
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct Timeline {
+#[derive(Debug, PartialEq, Clone)]
+pub struct Timeline<'a> {
     events: Vec<Event>,
     current_date: Date,
+    view_context: Option<ViewContext<'a>>,
     // There is a current date unique for the Game and the player's characters.
     // The character may be behind the date of the game.
 }

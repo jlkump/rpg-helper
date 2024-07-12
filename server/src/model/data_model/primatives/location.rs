@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::storage::{location::{LocationRef, MapRef}, timeline::EventTypeRef, types::EquationRef, wiki::WikiPageRef};
+use crate::model::data_model::storage::{location::{LocationRef, MapRef}, timeline::EventTypeRef, types::EquationRef, wiki::WikiPageRef, ContainerKind, Storable};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct Location {
@@ -11,15 +11,23 @@ pub struct Location {
     map_pin: Option<MapPin>,
     provided_events: Vec<EventTypeRef>,
     addition_restrictions: Vec<Vec<EquationRef>>, // Index paired with the event types above.
+    parent: Option<LocationRef>,
     children: Vec<LocationRef>, // Locations contained in this location
+    container: ContainerKind,
+}
+
+impl Storable for Location {
+    fn get_container(&self) -> &ContainerKind {
+        &self.container
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
-pub enum LocationType {   // Locations:  Region -> Sector -> Locale -> Landmark
+pub enum LocationType {   // Locations:  Region > Sector > Locale > Landmark
     Region,
-    Sector(Option<Box<LocationRef>>), // Parent if it exists
-    Locale(Option<Box<LocationRef>>),
-    Landmark(Option<Box<LocationRef>>),
+    Sector,
+    Locale,
+    Landmark,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
@@ -28,6 +36,13 @@ pub struct Map {
     name: String,
     img_src: String,
     dimen: (i32, i32),
+    container: ContainerKind,
+}
+
+impl Storable for Map {
+    fn get_container(&self) -> &ContainerKind {
+        &self.container
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
