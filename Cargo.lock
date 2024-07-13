@@ -2423,6 +2423,7 @@ dependencies = [
  "env_logger",
  "jsonwebtoken",
  "log",
+ "once_cell",
  "serde",
  "serde_json",
  "sled",

@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::{data_model::primatives::{location::Location, permissions::{CharacterId, GamePermissions, PlayerId}, types::{enumeration::EnumerationType, equation::Equation, Type}, values::Value, wiki::WikiPage}, types::ServerError};
+use crate::model::{data_model::primatives::{location::Location, permissions::{CharacterId, GamePermissions, PlayerId}, types::{enumeration::EnumerationType, equation::Equation, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::ServerError};
 
-use super::{character::Character, location::LocationRef, ruleset::Ruleset, setting::Setting, timeline::{Date, Event, EventRef, Timeline}, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::ValueRef, wiki::WikiPageRef, IndexRef, IndexStorage, Query, RefTarget, Storable};
+use super::{character::Character, location::LocationRef, ruleset::Ruleset, setting::Setting, timeline::{Date, Event, EventRef, Timeline}, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, RefTarget, Storable};
 
 pub type GameId = uuid::Uuid;
 
@@ -85,6 +85,19 @@ impl IndexStorage<WikiPage, WikiPageRef> for Game<'_> {
     }
 }
 
+impl IndexStorage<Location, LocationRef> for Game<'_> {
+    fn get(&self, r: &LocationRef) -> Query<&Location> {
+        match r.get_target() {
+            RefTarget::Playset => todo!(),
+            RefTarget::Character(_) => todo!(),
+            RefTarget::GameplayData => todo!(),
+            RefTarget::GamemasterData => todo!(),
+        }
+    }
+}
+
+// ------------- Values ---------------
+
 impl IndexStorage<Value, ValueRef> for Game<'_> {
     fn get(&self, r: &ValueRef) -> Query<&Value> {
         match r.get_target() {
@@ -95,6 +108,19 @@ impl IndexStorage<Value, ValueRef> for Game<'_> {
         }
     }
 }
+
+impl IndexStorage<MetaInst, MetaInstRef> for Game<'_> {
+    fn get<'a>(&'a self, r: &MetaInstRef) -> Query<&'a MetaInst> {
+        match r.get_target() {
+            RefTarget::Playset => todo!(),
+            RefTarget::Character(_) => todo!(),
+            RefTarget::GameplayData => todo!(),
+            RefTarget::GamemasterData => todo!(),
+        }
+    }
+}
+
+// ------------- Types  ---------------
 
 impl IndexStorage<Type, TypeRef> for Game<'_> {
     fn get(&self, r: &TypeRef) -> Query<&Type> {
@@ -110,17 +136,6 @@ impl IndexStorage<Type, TypeRef> for Game<'_> {
 impl IndexStorage<EnumerationType, EnumerationTypeRef> for Game<'_> {
     fn get<'a>(&'a self, r: &EnumerationTypeRef) -> Query<&'a EnumerationType> {
         todo!()
-    }
-}
-
-impl IndexStorage<Location, LocationRef> for Game<'_> {
-    fn get(&self, r: &LocationRef) -> Query<&Location> {
-        match r.get_target() {
-            RefTarget::Playset => todo!(),
-            RefTarget::Character(_) => todo!(),
-            RefTarget::GameplayData => todo!(),
-            RefTarget::GamemasterData => todo!(),
-        }
     }
 }
 

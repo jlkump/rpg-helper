@@ -1,6 +1,6 @@
-use crate::model::data_model::primatives::{location::Location, permissions::CharacterId, types::{enumeration::EnumerationType, equation::Equation, Type}, values::Value, wiki::WikiPage};
+use crate::model::data_model::primatives::{location::Location, permissions::CharacterId, types::{enumeration::EnumerationType, equation::Equation, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage};
 
-use super::{character::Character, game::{Game, GameMasterData}, location::LocationRef, playset::Playset, ruleset::Ruleset, setting::Setting, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::ValueRef, wiki::WikiPageRef, IndexRef, IndexStorage, Query, QueryError, RefTarget};
+use super::{character::Character, game::{Game, GameMasterData}, location::LocationRef, playset::Playset, ruleset::Ruleset, setting::Setting, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, QueryError, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct IntermediateView<'a> {
@@ -21,6 +21,23 @@ impl<'g> IntermediateView<'g> {
 
     pub fn get_character(&self, id: &CharacterId) -> Option<&Character> {
         for c in self.characters.iter() {
+            if c.id.eq(id) {
+                return Some(c);
+            }
+        }
+        None
+    }
+
+    pub fn get_mut_ruleset(&mut self) -> Option<&mut Ruleset<'g>> {
+        self.ruleset.as_mut()
+    }
+
+    pub fn get_mut_setting(&mut self) -> Option<&mut Setting<'g>> {
+        self.setting.as_mut()
+    }
+
+    pub fn get_mut_character(&mut self, id: &CharacterId) -> Option<&mut Character<'g>> {
+        for c in self.characters.iter_mut() {
             if c.id.eq(id) {
                 return Some(c);
             }
@@ -60,6 +77,19 @@ impl IndexStorage<WikiPage, WikiPageRef> for IntermediateView<'_> {
     }
 }
 
+impl IndexStorage<Location, LocationRef> for IntermediateView<'_> {
+    fn get(&self, r: &LocationRef) -> Query<&Location> {
+        match r.get_target() {
+            RefTarget::Playset => todo!(),
+            RefTarget::Character(_) => todo!(),
+            RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
+            RefTarget::GamemasterData => todo!(),
+        }
+    }
+}
+
+// ---------- Values -------------
+
 impl IndexStorage<Value, ValueRef> for IntermediateView<'_> {
     fn get(&self, r: &ValueRef) -> Query<&Value> {
         match r.get_target() {
@@ -70,6 +100,19 @@ impl IndexStorage<Value, ValueRef> for IntermediateView<'_> {
         }
     }
 }
+
+impl IndexStorage<MetaInst, MetaInstRef> for IntermediateView<'_> {
+    fn get<'a>(&'a self, r: &MetaInstRef) -> Query<&'a MetaInst> {
+        match r.get_target() {
+            RefTarget::Playset => todo!(),
+            RefTarget::Character(_) => todo!(),
+            RefTarget::GameplayData => todo!(),
+            RefTarget::GamemasterData => todo!(),
+        }
+    }
+}
+
+// ----------- Types -------------
 
 impl IndexStorage<Type, TypeRef> for IntermediateView<'_> {
     fn get(&self, r: &TypeRef) -> Query<&Type> {
@@ -85,17 +128,6 @@ impl IndexStorage<Type, TypeRef> for IntermediateView<'_> {
 impl IndexStorage<EnumerationType, EnumerationTypeRef> for IntermediateView<'_> {
     fn get<'a>(&'a self, r: &EnumerationTypeRef) -> Query<&'a EnumerationType> {
         todo!()
-    }
-}
-
-impl IndexStorage<Location, LocationRef> for IntermediateView<'_> {
-    fn get(&self, r: &LocationRef) -> Query<&Location> {
-        match r.get_target() {
-            RefTarget::Playset => todo!(),
-            RefTarget::Character(_) => todo!(),
-            RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
-            RefTarget::GamemasterData => todo!(),
-        }
     }
 }
 

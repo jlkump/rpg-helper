@@ -7,7 +7,9 @@ use list::List;
 use meta::MetaInst;
 use number::Number;
 
-use crate::model::data_model::storage::{types::{EquationRef, TypeRef}, values::MetaInstRef, IndexRef, Storable, view_context::ViewContext};
+use crate::model::data_model::storage::{types::{BooleanTypeRef, EquationRef, NumberTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, view_context::ViewContext, ContainerKind, IndexRef, Query, QueryError, Storable};
+
+use super::types::{boolean::BooleanType, number::NumberType};
 
 pub mod boolean;
 pub mod die_roll;
@@ -29,7 +31,7 @@ pub enum Value {
 }
 
 impl Storable for Value {
-    fn get_container(&self) -> &crate::model::data_model::storage::ContainerKind {
+    fn get_container(&self) -> &ContainerKind {
         todo!()
     }
 }
@@ -46,6 +48,64 @@ impl Value {
             Value::DieRoll(_) => todo!(),
             Value::MetaRef(_) => todo!(),
         }
+    }
+
+    pub fn as_number(&self, context: &ViewContext) -> Query<f32> {
+        match self {
+            Value::Num(n) => return Ok(n.value as f32),
+            Value::List(list) => {
+                // For lists, sum the value of the entries to get the number
+                return Ok(list.iter().fold(0f32, |acc: f32, x| {
+                    if let Ok(v) = x.as_number(context) {
+                        acc + v
+                    } else {
+                        acc
+                    }
+                }));
+            },
+            Value::Meta(m) => {
+                match m.get_value() {
+                    Ok(v) => return v.as_number(context),
+                    Err(e) => return Err(e),
+                }
+            },
+            Value::Equation(e) => todo!(),
+            Value::DieRoll(_) => todo!(),
+            Value::MetaRef(_) => todo!(),
+            _ => {}
+        }
+        return Err(QueryError::TypeMismatch(
+            self.get_type().clone(), 
+            context.value_to_ref::<NumberType, NumberTypeRef>(NumberType::generic())?.into()
+        ));
+    }
+
+    pub fn as_bool(&self, context: &ViewContext) -> Query<bool> {
+        match self {
+            Value::Bool(b) => return Ok(b.value),
+            Value::Meta(m) => {
+                if let Ok(v) = m.get_value() {
+                    return v.as_bool(context);
+                }
+            },
+            Value::Equation(e) => {
+                if let Ok(e) = e.to_ref(context) {
+                    e.eval(None);
+                }
+            }
+            Value::MetaRef(m) => {
+                if let Ok(m) = m.to_ref(context) {
+                    if let Ok(v) = m.get_value() {
+                        return v.as_bool(context);
+                    }
+                }
+            }
+            _ => {},
+        }
+        Err(QueryError::TypeMismatch(
+            self.get_type().clone(), 
+            context.value_to_ref::<BooleanType, BooleanTypeRef>(BooleanType::generic())?.into()
+        ))
     }
 
     pub fn get_name(&self) -> &str {

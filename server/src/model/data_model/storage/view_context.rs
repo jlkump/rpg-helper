@@ -1,4 +1,4 @@
-use super::{game::Game, intermediate_view::IntermediateView};
+use super::{game::Game, intermediate_view::IntermediateView, IndexRef, Query, Storable};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ViewContext<'a> {
@@ -19,5 +19,9 @@ impl<'g> ViewContext<'g> {
             ViewContext::GameView(_) => None,
             ViewContext::IntermediateView(v) => Some(v),
         }
+    }
+
+    pub fn value_to_ref<T: Storable, R: IndexRef<T>>(&self, v: &T) -> Query<R> {
+        todo!()
     }
 }

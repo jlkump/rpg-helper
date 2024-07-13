@@ -1,6 +1,7 @@
 use game::Game;
 use intermediate_view::IntermediateView;
 use serde::{Deserialize, Serialize};
+use types::{MetaTypeRef, TypeRef};
 use view_context::ViewContext;
 
 use super::primatives::{permissions::CharacterId, types::equation::{EquationCompute, EvalError}};
@@ -55,6 +56,8 @@ pub enum QueryError {
     Input(EquationCompute),           // Input is required for Querry to be complete
     DoesNotExist(String, RefTarget),  // Name and RefTarget of reference
     TargetDoesNotExist(RefTarget),
+    FieldDoesNotExist(MetaTypeRef, String),
+    TypeMismatch(TypeRef, TypeRef),
     Eval(EvalError),
 }
 
@@ -86,13 +89,13 @@ where
     fn get_target(&self) -> RefTarget;
 
     /// Converts the IndexReference to the actual value of the Storable.
-    fn to_ref<'a>(&self, view: &ViewContext<'a>) -> Query<&'a T>
+    fn to_ref<'a>(&self, context: &ViewContext<'a>) -> Query<&'a T>
     where
         Self: Sized,
         Game<'a>: IndexStorage<T, Self>,
         IntermediateView<'a>: IndexStorage<T, Self>,
     {
-        match view {
+        match context {
             ViewContext::GameView(g) => g.get(&self),
             ViewContext::IntermediateView(i) => i.get(&self),
         }

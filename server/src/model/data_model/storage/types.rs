@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::primatives::types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, meta::MetaType, Type};
+use crate::model::data_model::primatives::types::{boolean::BooleanType, die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, meta::MetaType, number::NumberType, Type};
 
 use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
 
@@ -16,6 +16,24 @@ pub struct TypeIndex<'a> {
 pub struct TypeRef {
     target: RefTarget,
     type_kind: TypeRefKind,
+}
+
+impl From<NumberTypeRef> for TypeRef {
+    fn from(value: NumberTypeRef) -> Self {
+        TypeRef { target: value.target.clone(), type_kind: TypeRefKind::Num(value) }
+    }
+}
+
+impl From<BooleanTypeRef> for TypeRef {
+    fn from(value: BooleanTypeRef) -> Self {
+        TypeRef { target: value.target.clone(), type_kind: TypeRefKind::Bool(value) }
+    }
+}
+
+impl From<EnumerationTypeRef> for TypeRef {
+    fn from(value: EnumerationTypeRef) -> Self {
+        TypeRef { target: value.target.clone(), type_kind: TypeRefKind::Enum(value) }
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
@@ -57,12 +75,32 @@ pub struct NumberTypeRef {
     name_of_type: String,
 }
 
+impl IndexRef<NumberType> for NumberTypeRef {
+    fn get_ref_name(&self) -> String {
+        todo!()
+    }
+
+    fn get_target(&self) -> RefTarget {
+        todo!()
+    }
+}
+
 
 /// ---------------- Boolean Type Reference -----------------------
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct BooleanTypeRef {
     target: RefTarget,
     name_of_type: String,
+}
+
+impl IndexRef<BooleanType> for BooleanTypeRef {
+    fn get_ref_name(&self) -> String {
+        todo!()
+    }
+
+    fn get_target(&self) -> RefTarget {
+        todo!()
+    }
 }
 
 /// ---------------- Enumeration Type Reference ---------------------

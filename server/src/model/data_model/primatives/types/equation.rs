@@ -55,7 +55,7 @@ impl Equation {
         todo!()
     }
 
-    pub fn compute(&self) -> EquationCompute {
+    pub fn eval(&self, inputs: Option<Vec<Input>>) -> EquationCompute {
         EquationCompute {
             t: todo!(),
             inputs: vec![],
@@ -70,6 +70,37 @@ impl Equation {
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 struct EvalNode {
     // TODO: Probably want to define in a separate file for Eval Tree. Will be pretty large
+}
+
+enum Operation {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Negate,
+    Pow,
+    Sqrt,
+    Round,
+    RoundDown,
+    RoundUp,
+    Ternary,
+    Query,
+    Find,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanEq,
+    GreaterThan,
+    GreaterThanEq,
+    Not,
+    Or,
+    And,
+}
+
+enum ExpectedValue {
+    Number,
+    Boolean,
+    MetaTypeWithField(String),
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
