@@ -31,7 +31,7 @@ impl IndexRef<MetaInst> for MetaInstRef {
         todo!()
     }
 
-    fn get_target(&self) -> super::RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
 }
@@ -39,18 +39,43 @@ impl IndexRef<MetaInst> for MetaInstRef {
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Clone)]
 pub struct ValueRef {
     name: String,
-    field: Option<Box<ValueRef>>, // If Field is None, return what the named value is. Otherwise, drill further down
+    target: RefTarget,
+    subtarget: Option<Box<ValueRefSubtarget>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Clone)]
+enum ValueRefSubtarget {
+    ListElem(usize, Option<Box<ValueRefSubtarget>>),
+    Field(ValueRef),
+}
+
+fn value_ref_subtarget_name_helper(res: &mut String, v_ref: &ValueRefSubtarget) {
+    match v_ref {
+        ValueRefSubtarget::ListElem(index, subtarget) => {
+            res.push_str(&format!("[{}]", index));
+            if let Some(sub) = subtarget {
+                value_ref_subtarget_name_helper(res, sub)
+            }
+        },
+        ValueRefSubtarget::Field(f) => {
+            res.push('.');
+            res.push_str(&f.get_ref_name());
+        },
+    }
 }
 
 impl IndexRef<Value> for ValueRef {
-    fn get_target(&self) -> super::RefTarget {
-        todo!()
+    fn get_target(&self) -> &RefTarget {
+        &self.target
     }
     
     fn get_ref_name(&self) -> String {
         let mut res = self.name.clone();
-        if let Some(f) = &self.field {
-            res.push_str(&f.get_ref_name());
+        match &self.subtarget {
+            Some(v_ref) => {
+                value_ref_subtarget_name_helper(&mut res, v_ref)
+            },
+            None => {},
         }
         res
     }
@@ -67,8 +92,8 @@ impl IndexRef<Modifier> for ModifierRef {
         self.target.get_ref_name()
     }
 
-    fn get_target(&self) -> RefTarget {
-        self.ref_target.clone()
+    fn get_target(&self) -> &RefTarget {
+        &self.ref_target
     }
 }
 

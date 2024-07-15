@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::primatives::wiki::{WikiData, WikiPage};
 
-use super::{IndexRef, IndexStorage, Query, view_context::ViewContext};
+use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct WikiIndex<'g> {
@@ -25,7 +25,7 @@ pub struct WikiPageRef {
 }
 
 impl IndexRef<WikiPage> for WikiPageRef {
-    fn get_target(&self) -> super::RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     

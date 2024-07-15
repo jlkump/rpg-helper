@@ -49,7 +49,7 @@ enum TypeRefKind {
 }
 
 impl IndexRef<Type> for TypeRef {
-    fn get_target(&self) -> super::RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     
@@ -80,7 +80,7 @@ impl IndexRef<NumberType> for NumberTypeRef {
         todo!()
     }
 
-    fn get_target(&self) -> RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
 }
@@ -98,7 +98,7 @@ impl IndexRef<BooleanType> for BooleanTypeRef {
         todo!()
     }
 
-    fn get_target(&self) -> RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
 }
@@ -117,7 +117,7 @@ impl From<&EnumerationType> for EnumerationTypeRef {
 }
 
 impl IndexRef<EnumerationType> for EnumerationTypeRef {
-    fn get_target(&self) -> RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     
@@ -145,7 +145,7 @@ impl From<&MetaType> for MetaTypeRef {
 }
 
 impl IndexRef<MetaType> for MetaTypeRef {
-    fn get_target(&self) -> RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     
@@ -174,7 +174,7 @@ impl From<Equation> for EquationRef {
 }
 
 impl IndexRef<Equation> for EquationRef {
-    fn get_target(&self) -> RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     
@@ -197,7 +197,7 @@ pub struct DieRollTypeRef {
 }
 
 impl IndexRef<DieRollType> for DieRollTypeRef {
-    fn get_target(&self) -> RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     
@@ -224,7 +224,7 @@ impl IndexRef<ModifierType> for ModifierTypeRef {
         todo!()
     }
 
-    fn get_target(&self) -> crate::model::data_model::storage::RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
 }

@@ -68,9 +68,9 @@ impl IndexStorage<WikiPage, WikiPageRef> for IntermediateView<'_> {
                     }
                     return res;
                 }
-                Err(QueryError::TargetDoesNotExist(r.get_target()))
+                Err(r.to_target_dne_error())
             },
-            RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
+            RefTarget::GameplayData => Err(r.to_target_dne_error()),
             RefTarget::GamemasterData => todo!(),
             RefTarget::Character(_) => todo!(),
         }
@@ -82,7 +82,7 @@ impl IndexStorage<Location, LocationRef> for IntermediateView<'_> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
             RefTarget::Character(_) => todo!(),
-            RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
+            RefTarget::GameplayData => Err(r.to_target_dne_error()),
             RefTarget::GamemasterData => todo!(),
         }
     }
@@ -95,7 +95,7 @@ impl IndexStorage<Value, ValueRef> for IntermediateView<'_> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
             RefTarget::Character(_) => todo!(),
-            RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
+            RefTarget::GameplayData => Err(r.to_target_dne_error()),
             RefTarget::GamemasterData => todo!(),
         }
     }
@@ -119,7 +119,7 @@ impl IndexStorage<Type, TypeRef> for IntermediateView<'_> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
             RefTarget::Character(_) => todo!(),
-            RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
+            RefTarget::GameplayData => Err(r.to_target_dne_error()),
             RefTarget::GamemasterData => todo!(),
         }
     }
@@ -142,7 +142,7 @@ impl IndexStorage<Equation, EquationRef> for IntermediateView<'_> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
             RefTarget::Character(_) => todo!(),
-            RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
+            RefTarget::GameplayData => Err(r.to_target_dne_error()),
             RefTarget::GamemasterData => todo!(),
         }
     }

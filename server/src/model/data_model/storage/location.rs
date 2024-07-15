@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::primatives::location::{Location, LocationType, Map};
 
-use super::{view_context::ViewContext, IndexRef, IndexStorage, Query};
+use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct LocationIndex<'a> {
@@ -34,7 +34,7 @@ impl LocationRef {
 }
 
 impl IndexRef<Location> for LocationRef {
-    fn get_target(&self) -> super::RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     
@@ -66,7 +66,7 @@ pub struct MapRef {
 }
 
 impl IndexRef<Map> for MapRef {
-    fn get_target(&self) -> super::RefTarget {
+    fn get_target(&self) -> &RefTarget {
         todo!()
     }
     

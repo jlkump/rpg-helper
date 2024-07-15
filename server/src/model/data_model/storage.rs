@@ -87,7 +87,7 @@ where
     fn get_ref_name(&self) -> String;
 
     /// For determining which part of a Game's data to address.
-    fn get_target(&self) -> RefTarget;
+    fn get_target(&self) -> &RefTarget;
 
     /// Converts the IndexReference to the actual value of the Storable.
     fn to_ref<'a>(&self, context: &ViewContext<'a>) -> Query<&'a T>
@@ -105,7 +105,11 @@ where
 
     /// Helper for converting from a Reference to a DNE exist error for display and debugging.
     fn to_dne_error(&self) -> QueryError {
-        QueryError::DoesNotExist(self.get_ref_name(), self.get_target())
+        QueryError::DoesNotExist(self.get_ref_name(), self.get_target().clone())
+    }
+
+    fn to_target_dne_error(&self) -> QueryError {
+        QueryError::TargetDoesNotExist(self.get_target().clone())
     }
 }
 
