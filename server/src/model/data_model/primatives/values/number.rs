@@ -8,6 +8,12 @@ pub struct Number {
     pub value: f32,
 }
 
+impl Number {
+    pub fn generic(value: f32) -> Number {
+        Number { name: format!("Num-{}", value), value }
+    }
+}
+
 impl Deref for Number {
     type Target = f32;
 

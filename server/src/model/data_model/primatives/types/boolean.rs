@@ -1,3 +1,4 @@
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::storage::{types::BooleanTypeRef, ContainerKind, Storable};
@@ -10,7 +11,11 @@ pub struct BooleanType {
 
 impl BooleanType {
     pub fn generic() -> &'static BooleanType {
-        todo!()
+        static NUMBER: Lazy<BooleanType> = Lazy::new(|| BooleanType {
+            container: ContainerKind::Ruleset,
+            name: String::from("Bool"),
+        });
+        return &NUMBER;
     }
 }
 

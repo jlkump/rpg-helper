@@ -2,14 +2,21 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::primatives::values::{meta::MetaInst, Value};
+use crate::model::data_model::primatives::values::{meta::MetaInst, modifier::Modifier, Value};
 
-use super::{IndexRef, view_context::ViewContext};
+use super::{view_context::ViewContext, IndexRef, IndexStorage, QueryError, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct ValueIndex<'a> {
     values: HashMap<String, Value>,
+    modifiers: HashMap<ValueRef, Vec<Modifier>>, // Modifiers are not actually stored as a variant of Value
     view_context: Option<ViewContext<'a>>,
+}
+
+impl ValueIndex<'_> {
+    pub fn get_all_modifiers_for(&self, v_ref: &ValueRef) -> Option<&Vec<Modifier>> {
+        self.modifiers.get(v_ref)
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
@@ -41,6 +48,49 @@ impl IndexRef<Value> for ValueRef {
     }
     
     fn get_ref_name(&self) -> String {
-        todo!()
+        let mut res = self.name.clone();
+        if let Some(f) = &self.field {
+            res.push_str(&f.get_ref_name());
+        }
+        res
+    }
+}
+
+pub struct ModifierRef {
+    name: String,
+    target: ValueRef,
+    ref_target: RefTarget,
+}
+
+impl IndexRef<Modifier> for ModifierRef {
+    fn get_ref_name(&self) -> String {
+        self.target.get_ref_name()
+    }
+
+    fn get_target(&self) -> RefTarget {
+        self.ref_target.clone()
+    }
+}
+
+impl IndexStorage<Modifier, ModifierRef> for ValueIndex<'_> {
+    fn get<'a>(&'a self, r: &ModifierRef) -> super::Query<&'a Modifier> {
+        match self.modifiers.get(&r.target) {
+            Some(m) => {
+                if let Some(context) = &self.view_context {
+                    match m.iter().find(|v| {
+                        match v.get_type(context) {
+                            Ok(m) => m.name.eq(&r.name),
+                            Err(_) => false,
+                        }
+                    }) {
+                            Some(v) => Ok(v),
+                            None => Err(r.to_dne_error()),
+                    }
+                } else {
+                    Err(QueryError::ViewContextDoesNotExist)
+                }
+            },
+            None => Err(r.to_dne_error()),
+        }
     }
 }

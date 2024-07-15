@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::primatives::types::{boolean::BooleanType, die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, meta::MetaType, number::NumberType, Type};
+use crate::model::data_model::primatives::types::{boolean::BooleanType, die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, meta::MetaType, modifier::ModifierType, number::NumberType, Type};
 
 use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
 
@@ -208,6 +208,29 @@ impl IndexRef<DieRollType> for DieRollTypeRef {
 
 impl IndexStorage<DieRollType, DieRollTypeRef> for TypeIndex<'_> {
     fn get<'a>(&'a self, r: &DieRollTypeRef) -> Query<&'a DieRollType> {
+        todo!()
+    }
+}
+
+// ----------- Modifier Type Ref -----------------
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub struct ModifierTypeRef {
+    target: RefTarget,
+    name: String,
+}
+
+impl IndexRef<ModifierType> for ModifierTypeRef {
+    fn get_ref_name(&self) -> String {
+        todo!()
+    }
+
+    fn get_target(&self) -> crate::model::data_model::storage::RefTarget {
+        todo!()
+    }
+}
+
+impl IndexStorage<ModifierType, ModifierTypeRef> for TypeIndex<'_> {
+    fn get<'a>(&'a self, r: &ModifierTypeRef) -> Query<&'a ModifierType> {
         todo!()
     }
 }

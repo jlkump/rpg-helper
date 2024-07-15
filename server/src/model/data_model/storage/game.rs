@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::{data_model::primatives::{location::Location, permissions::{CharacterId, GamePermissions, PlayerId}, types::{enumeration::EnumerationType, equation::Equation, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::ServerError};
+use crate::model::{data_model::primatives::{location::Location, permissions::{CharacterId, GamePermissions, PlayerId}, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::ServerError};
 
-use super::{character::Character, location::LocationRef, ruleset::Ruleset, setting::Setting, timeline::{Date, Event, EventRef, Timeline}, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, RefTarget, Storable};
+use super::{character::Character, location::LocationRef, ruleset::Ruleset, setting::Setting, timeline::{Date, Event, EventRef, Timeline}, types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, ModifierTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, RefTarget, Storable};
 
 pub type GameId = uuid::Uuid;
 
@@ -119,7 +119,6 @@ impl IndexStorage<MetaInst, MetaInstRef> for Game<'_> {
         }
     }
 }
-
 // ------------- Types  ---------------
 
 impl IndexStorage<Type, TypeRef> for Game<'_> {
@@ -139,6 +138,12 @@ impl IndexStorage<EnumerationType, EnumerationTypeRef> for Game<'_> {
     }
 }
 
+impl IndexStorage<DieRollType, DieRollTypeRef> for Game<'_> {
+    fn get<'a>(&'a self, r: &DieRollTypeRef) -> Query<&'a DieRollType> {
+        todo!()
+    }
+}
+
 impl IndexStorage<Equation, EquationRef> for Game<'_> {
     fn get<'a>(&'a self, r: &EquationRef) -> Query<&'a Equation> {
         match r.get_target() {
@@ -147,5 +152,11 @@ impl IndexStorage<Equation, EquationRef> for Game<'_> {
             RefTarget::GameplayData => todo!(),
             RefTarget::GamemasterData => todo!(),
         }
+    }
+}
+
+impl IndexStorage<ModifierType, ModifierTypeRef> for Game<'_> {
+    fn get<'a>(&'a self, r: &ModifierTypeRef) -> Query<&'a ModifierType> {
+        todo!()
     }
 }

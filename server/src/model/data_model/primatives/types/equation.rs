@@ -1,7 +1,6 @@
-use actix_web::web::Query;
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::Value}, storage::{types::{EquationRef, TypeRef}, ContainerKind, IndexRef, RefTarget, Storable}};
+use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::Value}, storage::{types::{EquationRef, TypeRef}, ContainerKind, IndexRef, Query, RefTarget, Storable}};
 
 use super::Type;
 
@@ -45,7 +44,15 @@ impl EquationCompute {
         todo!()
     }
 
-    pub fn eval(&self) -> Query<Value> {
+    pub fn as_number(&self) -> Query<f32> {
+        todo!()
+    }
+
+    pub fn as_bool(&self) -> Query<bool> {
+        todo!()
+    }
+
+    pub fn as_value(&self) -> Query<Value> {
         todo!()
     }
 }

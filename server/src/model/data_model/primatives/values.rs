@@ -16,6 +16,7 @@ pub mod die_roll;
 pub mod enumeration;
 pub mod list;
 pub mod meta;
+pub mod modifier;
 pub mod number;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -69,9 +70,24 @@ impl Value {
                     Err(e) => return Err(e),
                 }
             },
-            Value::Equation(e) => todo!(),
-            Value::DieRoll(_) => todo!(),
-            Value::MetaRef(_) => todo!(),
+            Value::Equation(e) => {
+                match e.to_ref(context) {
+                    Ok(v) => return v.eval(None).as_number(),
+                    Err(e) => return Err(e),
+                }
+            },
+            Value::DieRoll(roll) => return roll.as_number(context),
+            Value::MetaRef(m) => {
+                match m.to_ref(context) {
+                    Ok(m) => {
+                        match m.get_value() {
+                            Ok(v) => return v.as_number(context),
+                            Err(e) => return Err(e),
+                        }
+                    },
+                    Err(e) => return Err(e),
+                }
+            },
             _ => {}
         }
         return Err(QueryError::TypeMismatch(
@@ -143,11 +159,11 @@ impl ValueEffect {
 }
 
 impl ValueEffect {
-    /// Applys the effect to the given value
+    /// Applies the effect to the given value
     /// If the effect is able to take place,
     /// the new value is returned. Otherwise,
     /// the old value is returned as is.
-    pub fn apply(self, mut v: Value, context: &ViewContext) -> Value {
+    pub fn apply(&self, mut v: Value, context: &ViewContext) -> Value {
         match self {
             ValueEffect::AddToNum(num) => {
                 if let Value::Num(other) = &mut v {
@@ -156,12 +172,12 @@ impl ValueEffect {
             },
             ValueEffect::ChangeBool(b) => {
                 if let Value::Bool(other) = &mut v {
-                    other.value = b;
+                    other.value = *b;
                 }
             },
             ValueEffect::AddToList(val) => {
                 if let Value::List(list) = &mut v {
-                    list.push(val);
+                    list.push(val.clone());
                 }
             },
             ValueEffect::RemoveFromList(target) => {
@@ -179,21 +195,21 @@ impl ValueEffect {
                             1
                         }
                     };
-                    e.inst = inst.clamp(0, max);
+                    e.inst = (*inst).clamp(0, max);
                 }
             },
             ValueEffect::ChangeMetaInstField(field, effect) => {
                 if let Value::Meta(m) = &mut v {
-                    if let Some(f) = m.fields.get(&field) {
+                    if let Some(f) = m.fields.get(field) {
                         if f.get_type() == effect.get_mod_type() {
-                            m.fields.insert(field, effect.apply(f.clone(), context));
+                            m.fields.insert(field.clone(), effect.apply(f.clone(), context));
                         }
                     }
                 }
             },
             ValueEffect::ChangeEquationRef(e) => {
                 if let Value::Equation(_) = &mut v {
-                    v = Value::Equation(e);
+                    v = Value::Equation(e.clone());
                 }
             },
             ValueEffect::ChangeDieRoll(_) => todo!(),

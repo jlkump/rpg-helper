@@ -56,6 +56,7 @@ pub enum QueryError {
     Input(EquationCompute),           // Input is required for Querry to be complete
     DoesNotExist(String, RefTarget),  // Name and RefTarget of reference
     TargetDoesNotExist(RefTarget),
+    ViewContextDoesNotExist,
     FieldDoesNotExist(MetaTypeRef, String),
     TypeMismatch(TypeRef, TypeRef),
     Eval(EvalError),

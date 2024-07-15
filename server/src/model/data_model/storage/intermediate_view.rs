@@ -1,6 +1,6 @@
-use crate::model::data_model::primatives::{location::Location, permissions::CharacterId, types::{enumeration::EnumerationType, equation::Equation, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage};
+use crate::model::data_model::primatives::{location::Location, permissions::CharacterId, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage};
 
-use super::{character::Character, game::{Game, GameMasterData}, location::LocationRef, playset::Playset, ruleset::Ruleset, setting::Setting, types::{EnumerationTypeRef, EquationRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, QueryError, RefTarget};
+use super::{character::Character, game::{Game, GameMasterData}, location::LocationRef, playset::Playset, ruleset::Ruleset, setting::Setting, types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, ModifierTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, QueryError, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct IntermediateView<'a> {
@@ -131,6 +131,12 @@ impl IndexStorage<EnumerationType, EnumerationTypeRef> for IntermediateView<'_> 
     }
 }
 
+impl IndexStorage<DieRollType, DieRollTypeRef> for IntermediateView<'_> {
+    fn get<'a>(&'a self, r: &DieRollTypeRef) -> Query<&'a DieRollType> {
+        todo!()
+    }
+}
+
 impl IndexStorage<Equation, EquationRef> for IntermediateView<'_> {
     fn get<'a>(&'a self, r: &EquationRef) -> Query<&'a Equation> {
         match r.get_target() {
@@ -139,5 +145,11 @@ impl IndexStorage<Equation, EquationRef> for IntermediateView<'_> {
             RefTarget::GameplayData => Err(QueryError::TargetDoesNotExist(r.get_target())),
             RefTarget::GamemasterData => todo!(),
         }
+    }
+}
+
+impl IndexStorage<ModifierType, ModifierTypeRef> for IntermediateView<'_> {
+    fn get<'a>(&'a self, r: &ModifierTypeRef) -> Query<&'a ModifierType> {
+        todo!()
     }
 }

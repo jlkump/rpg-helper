@@ -4,6 +4,7 @@ use enumeration::EnumerationType;
 use equation::Equation;
 use list::ListType;
 use meta::MetaType;
+use modifier::ModifierType;
 use number::NumberType;
 use serde::{Deserialize, Serialize};
 
@@ -15,6 +16,7 @@ pub mod enumeration;
 pub mod equation;
 pub mod list;
 pub mod meta;
+pub mod modifier;
 pub mod number;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -27,6 +29,7 @@ pub enum Type { // Important to note. Changing types in-game will be very diffic
     Equation(Equation),
     DieRoll(DieRollType),
     MetaRef(MetaTypeRef), // By Name of meta type. Same as type ref, but assumes a return to a MetaType
+    Modifier(ModifierType),
 }
 
 impl Storable for Type {
