@@ -10,7 +10,7 @@ pub struct Input {
     value: Value,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct InputRequest {
     name: String,
     requested_type: TypeRef,

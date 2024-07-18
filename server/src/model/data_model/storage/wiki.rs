@@ -25,7 +25,7 @@ pub struct WikiPageRef {
 }
 
 impl IndexRef<WikiPage> for WikiPageRef {
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
     

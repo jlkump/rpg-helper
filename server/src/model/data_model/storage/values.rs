@@ -30,8 +30,8 @@ impl IndexRef<MetaInst> for MetaInstRef {
     fn get_ref_name(&self) -> String {
         todo!()
     }
-
-    fn get_target(&self) -> &RefTarget {
+    
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
 }
@@ -65,8 +65,8 @@ fn value_ref_subtarget_name_helper(res: &mut String, v_ref: &ValueRefSubtarget) 
 }
 
 impl IndexRef<Value> for ValueRef {
-    fn get_target(&self) -> &RefTarget {
-        &self.target
+    fn get_container(&self) -> &super::ContainerKind {
+        todo!()
     }
     
     fn get_ref_name(&self) -> String {
@@ -92,8 +92,8 @@ impl IndexRef<Modifier> for ModifierRef {
         self.target.get_ref_name()
     }
 
-    fn get_target(&self) -> &RefTarget {
-        &self.ref_target
+    fn get_container(&self) -> &super::ContainerKind {
+        todo!()
     }
 }
 

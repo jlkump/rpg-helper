@@ -72,7 +72,7 @@ impl Value {
             },
             Value::Equation(e) => {
                 match e.to_ref(context) {
-                    Ok(v) => return v.eval(None).as_number(),
+                    Ok(v) => return v.eval().as_number(context),
                     Err(e) => return Err(e),
                 }
             },
@@ -106,7 +106,7 @@ impl Value {
             },
             Value::Equation(e) => {
                 if let Ok(e) = e.to_ref(context) {
-                    e.eval(None);
+                    return e.eval().as_bool(context);
                 }
             }
             Value::MetaRef(m) => {

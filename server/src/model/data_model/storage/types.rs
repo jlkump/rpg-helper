@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::data_model::primatives::types::{boolean::BooleanType, die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, meta::MetaType, modifier::ModifierType, number::NumberType, Type};
 
-use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
+use super::{view_context::ViewContext, ContainerKind, IndexRef, IndexStorage, Query, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct TypeIndex<'a> {
@@ -49,7 +49,7 @@ enum TypeRefKind {
 }
 
 impl IndexRef<Type> for TypeRef {
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
     
@@ -80,7 +80,7 @@ impl IndexRef<NumberType> for NumberTypeRef {
         todo!()
     }
 
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
 }
@@ -98,7 +98,7 @@ impl IndexRef<BooleanType> for BooleanTypeRef {
         todo!()
     }
 
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
 }
@@ -117,7 +117,7 @@ impl From<&EnumerationType> for EnumerationTypeRef {
 }
 
 impl IndexRef<EnumerationType> for EnumerationTypeRef {
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
     
@@ -145,7 +145,7 @@ impl From<&MetaType> for MetaTypeRef {
 }
 
 impl IndexRef<MetaType> for MetaTypeRef {
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
     
@@ -163,8 +163,14 @@ impl IndexStorage<MetaType, MetaTypeRef> for TypeIndex<'_> {
 /// ---------------- Equation Type Reference ---------------------
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Clone)]
 pub struct EquationRef {
-    target: RefTarget,
+    container: ContainerKind,
     name: String,
+}
+
+impl EquationRef {
+    pub fn new(equation_name: &str, container: ContainerKind) -> EquationRef {
+        EquationRef { container, name: equation_name.to_string() }
+    }
 }
 
 impl From<Equation> for EquationRef {
@@ -174,12 +180,12 @@ impl From<Equation> for EquationRef {
 }
 
 impl IndexRef<Equation> for EquationRef {
-    fn get_target(&self) -> &RefTarget {
-        todo!()
+    fn get_container(&self) -> &super::ContainerKind {
+        &self.container
     }
     
     fn get_ref_name(&self) -> String {
-        todo!()
+        self.name.clone()
     }
 }
 
@@ -197,7 +203,7 @@ pub struct DieRollTypeRef {
 }
 
 impl IndexRef<DieRollType> for DieRollTypeRef {
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
     
@@ -224,7 +230,7 @@ impl IndexRef<ModifierType> for ModifierTypeRef {
         todo!()
     }
 
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
 }

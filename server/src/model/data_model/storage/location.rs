@@ -34,7 +34,7 @@ impl LocationRef {
 }
 
 impl IndexRef<Location> for LocationRef {
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
     
@@ -66,7 +66,7 @@ pub struct MapRef {
 }
 
 impl IndexRef<Map> for MapRef {
-    fn get_target(&self) -> &RefTarget {
+    fn get_container(&self) -> &super::ContainerKind {
         todo!()
     }
     

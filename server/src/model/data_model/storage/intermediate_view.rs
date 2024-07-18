@@ -28,6 +28,13 @@ impl<'g> IntermediateView<'g> {
         None
     }
 
+    pub fn get_playset<'a>(&'a self) -> Option<Playset<'a, 'g>> {
+        if self.ruleset.is_none() && self.setting.is_none() { 
+            return None; 
+        }
+        Some(Playset::new(self.ruleset.as_ref(), self.setting.as_ref()))
+    }
+
     pub fn get_mut_ruleset(&mut self) -> Option<&mut Ruleset<'g>> {
         self.ruleset.as_mut()
     }
@@ -43,13 +50,6 @@ impl<'g> IntermediateView<'g> {
             }
         }
         None
-    }
-
-    pub fn get_playset<'a>(&'a self) -> Option<Playset<'a, 'g>> {
-        if self.ruleset.is_none() && self.setting.is_none() { 
-            return None; 
-        }
-        Some(Playset::new(self.ruleset.as_ref(), self.setting.as_ref()))
     }
 }
 
@@ -106,7 +106,7 @@ impl IndexStorage<MetaInst, MetaInstRef> for IntermediateView<'_> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
             RefTarget::Character(_) => todo!(),
-            RefTarget::GameplayData => todo!(),
+            RefTarget::GameplayData => Err(r.to_target_dne_error()),
             RefTarget::GamemasterData => todo!(),
         }
     }

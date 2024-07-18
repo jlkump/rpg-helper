@@ -31,8 +31,8 @@ pub enum RefTarget {
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub enum ContainerKind {
-    Setting,
     Ruleset,
+    Setting,
     GameplayData,
     GamemasterData,
     Character(CharacterId),
@@ -86,8 +86,12 @@ where
     /// Each reference should have a name of the instance to which it refers.
     fn get_ref_name(&self) -> String;
 
+    fn get_container(&self) -> &ContainerKind;
+
     /// For determining which part of a Game's data to address.
-    fn get_target(&self) -> &RefTarget;
+    fn get_target(&self) -> RefTarget {
+        self.get_container().into()
+    }
 
     /// Converts the IndexReference to the actual value of the Storable.
     fn to_ref<'a>(&self, context: &ViewContext<'a>) -> Query<&'a T>
