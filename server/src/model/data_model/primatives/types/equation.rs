@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::{die_roll::DieRoll, Value}}, storage::{types::{DieRollTypeRef, EquationRef, TypeRef}, values::ValueRef, view_context::ViewContext, ContainerKind, IndexRef, Query, RefTarget, Storable}};
+use crate::model::data_model::{primatives::{input::{Input, InputRequest}, values::{boolean::Bool, die_roll::DieRoll, number::Number, Value}}, storage::{types::{DieRollTypeRef, EquationRef, TypeRef}, values::ValueRef, view_context::ViewContext, ContainerKind, IndexRef, Query, QueryError, RefTarget, Storable}};
 
 use super::{die_roll::DieRollType, Type};
 
@@ -8,12 +8,14 @@ use super::{die_roll::DieRollType, Type};
 pub enum EvalError
 {
     DivideByZero,
+    RequiresInput,
+    RequiresDieRoll,
     ExpectedValueMismatch(ExpectedValue, Value),
     TypeNotFound(String),
     ValueNotFound(String),
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Equation {
     name: String,
     equation_string: String,  // This gets converted to the AST, but it probably doesn't hurt to store it as well.
@@ -43,13 +45,24 @@ impl Equation {
 
     pub fn eval(&self) -> EquationCompute {
         EquationCompute {
-            t: todo!(),
+            t: self.self_ref.clone(),
             inputs: vec![],
         }
     }
 
-    fn ast_compute(&self) -> Query<Value> {
-        todo!()
+    fn ast_compute(&self, context: &ViewContext) -> Query<Value> {
+        match self.ast.eval(context) {
+            Ok(v) => return Ok(v),
+            Err(e) => match e {
+                QueryError::Eval(e) => {
+                    match e {
+                        EvalError::RequiresInput | EvalError::RequiresDieRoll => return Err(QueryError::Input(self.eval())),
+                        _ => Err(QueryError::Eval(e))
+                    }
+                },
+                _ => Err(e)
+            },
+        }
     }
 }
 
@@ -71,7 +84,13 @@ impl EquationCompute {
     }
 
     pub fn as_number(&self, context: &ViewContext) -> Query<f32> {
-        todo!()
+        match self.t.to_ref(context)?.ast_compute(context) {
+            Ok(v) => match v {
+                Value::Num(n) => Ok(*n),
+                _ => Err(QueryError::Eval(EvalError::ExpectedValueMismatch(ExpectedValue::Number, v)))
+            },
+            Err(e) => Err(e),
+        }
     }
 
     pub fn as_bool(&self, context: &ViewContext) -> Query<bool> {
@@ -83,27 +102,49 @@ impl EquationCompute {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 struct EvalTree {
     root: EvalNode,
 }
 
 impl EvalTree {
+    
     fn from_str(s: &str) -> EvalTree {
         // Tokenize string
         // Return err if syntax error exists
         todo!()
     }
-
+    
     fn expected_value(&self) -> ExpectedValue {
         self.root.expected_value()
     }
+
+    fn eval(&self, context: &ViewContext) -> Query<Value> {
+        self.root.recursive_eval(context)
+    }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 enum EvalNode {
     Operand(OperandNode),
     Operation(OperationNode),
+}
+
+impl EvalNode {
+    fn recursive_eval(&self, context: &ViewContext) -> Query<Value> {
+        match self {
+            EvalNode::Operand(o) => {
+                match o {
+                    OperandNode::Number(n) => Ok(Value::Num(Number::generic(*n))),
+                    OperandNode::Boolean(b) => Ok(Value::Bool(Bool::generic(*b))),
+                    OperandNode::ValueRef(v) => Ok(v.to_ref(context)?.clone()),
+                    OperandNode::DieRoll(_) => Err(QueryError::Eval(EvalError::RequiresDieRoll)),
+                    OperandNode::Input(_) => Err(QueryError::Eval(EvalError::RequiresInput)),
+                }
+            },
+            EvalNode::Operation(_) => todo!(),
+        }
+    }
 }
 
 impl EvalNode {
@@ -115,10 +156,10 @@ impl EvalNode {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 // Operand Nodes are the leaf nodes of a AST
 enum OperandNode {
-    Number(i32),
+    Number(f32),
     Boolean(bool),
     ValueRef(ValueRef),
     DieRoll(DieRollTypeRef),
@@ -137,7 +178,7 @@ impl OperandNode {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 // Operation Nodes act on their children, which may be either an operand node or a operation node
 enum OperationNode {
     // Expects numeric result

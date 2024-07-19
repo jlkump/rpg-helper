@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+
 use serde::{Deserialize, Serialize};
 
 use boolean::Bool;
@@ -98,7 +100,7 @@ impl Value {
 
     pub fn as_bool(&self, context: &ViewContext) -> Query<bool> {
         match self {
-            Value::Bool(b) => return Ok(b.value),
+            Value::Bool(b) => return Ok(**b),
             Value::Meta(m) => {
                 if let Ok(v) = m.get_value() {
                     return v.as_bool(context);
@@ -172,7 +174,7 @@ impl ValueEffect {
             },
             ValueEffect::ChangeBool(b) => {
                 if let Value::Bool(other) = &mut v {
-                    other.value = *b;
+                    other.set_value(*b);
                 }
             },
             ValueEffect::AddToList(val) => {
