@@ -10,7 +10,6 @@ pub enum EvalError
     DivideByZero,
     RequiresInput,
     RequiresDieRoll,
-    ExpectedValueMismatch(ExpectedValue, Value),
     TypeNotFound(String),
     ValueNotFound(String),
 }
@@ -84,21 +83,15 @@ impl EquationCompute {
     }
 
     pub fn as_number(&self, context: &ViewContext) -> Query<f32> {
-        match self.t.to_ref(context)?.ast_compute(context) {
-            Ok(v) => match v {
-                Value::Num(n) => Ok(*n),
-                _ => Err(QueryError::Eval(EvalError::ExpectedValueMismatch(ExpectedValue::Number, v)))
-            },
-            Err(e) => Err(e),
-        }
+        Ok(self.t.to_ref(context)?.ast_compute(context)?.as_number(context)?)
     }
 
     pub fn as_bool(&self, context: &ViewContext) -> Query<bool> {
-        todo!()
+        Ok(self.t.to_ref(context)?.ast_compute(context)?.as_bool(context)?)
     }
 
     pub fn as_value(&self, context: &ViewContext) -> Query<Value> {
-        todo!()
+        self.t.to_ref(context)?.ast_compute(context)
     }
 }
 
@@ -130,6 +123,24 @@ enum EvalNode {
     Operation(OperationNode),
 }
 
+fn number_op<F>(v1: &Box<EvalNode>, v2: &Box<EvalNode>, context: &ViewContext, f: F) -> Query<Value> 
+where
+    F: Fn(f32, f32) -> f32
+{
+    let v1 = v1.recursive_eval(context)?.as_number(context)?;
+    let v2 = v2.recursive_eval(context)?.as_number(context)?;
+    Ok(Value::Num(Number::generic(f(v1, v2))))
+}
+
+fn boolean_op<F>(v1: &Box<EvalNode>, v2: &Box<EvalNode>, context: &ViewContext, f: F) -> Query<Value> 
+where
+    F: Fn(Value, Value) -> bool
+{
+    let v1 = v1.recursive_eval(context)?;
+    let v2 = v2.recursive_eval(context)?;
+    Ok(Value::Bool(Bool::generic(f(v1, v2))))
+}
+
 impl EvalNode {
     fn recursive_eval(&self, context: &ViewContext) -> Query<Value> {
         match self {
@@ -142,7 +153,81 @@ impl EvalNode {
                     OperandNode::Input(_) => Err(QueryError::Eval(EvalError::RequiresInput)),
                 }
             },
-            EvalNode::Operation(_) => todo!(),
+            EvalNode::Operation(op) => {
+                match op {
+                    OperationNode::Add(v1, v2) => 
+                        number_op(v1, v2, context, |n1, n2| n1 + n2),
+                    OperationNode::Subtract(v1, v2) => 
+                        number_op(v1, v2, context, |n1, n2| n1 - n2),
+                    OperationNode::Multiply(v1, v2) => 
+                        number_op(v1, v2, context, |n1, n2| n1 * n2),
+                    OperationNode::Divide(v1, v2) =>
+                        number_op(v1, v2, context, |n1, n2| n1 / n2),
+                    OperationNode::Negate(v1) => 
+                        Ok(Value::Num(Number::generic(-v1.recursive_eval(context)?.as_number(context)?))),
+                    OperationNode::Pow(v1, v2) =>
+                        number_op(v1, v2, context, |n1, n2| n1.powf(n2)),
+                    OperationNode::Sqrt(v1) =>
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.sqrt()))),
+                    OperationNode::Round(v1) => 
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.round()))),
+                    OperationNode::RoundDown(v1) =>
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.floor()))),
+                    OperationNode::RoundUp(v1) =>
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.ceil()))),
+                    OperationNode::Equal(v1, v2) =>
+                        boolean_op(v1, v2, context, |n1, n2| n1.eq(&n2)),
+                    OperationNode::NotEqual(v1, v2) => 
+                        boolean_op(v1, v2, context, |n1, n2| n1.ne(&n2)),
+                    OperationNode::LessThan(v1, v2) => {
+                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        Ok(Value::Bool(Bool::generic(v1 < v2)))
+                    },
+                    OperationNode::LessThanEq(v1, v2) => {
+                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        Ok(Value::Bool(Bool::generic(v1 <= v2)))
+                    },
+                    OperationNode::GreaterThan(v1, v2) => {
+                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        Ok(Value::Bool(Bool::generic(v1 > v2)))
+                    },
+                    OperationNode::GreaterThanEq(v1, v2) => {
+                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        Ok(Value::Bool(Bool::generic(v1 >= v2)))
+                    },
+                    OperationNode::Not(v1) =>
+                        Ok(Value::Bool(Bool::generic(!v1.recursive_eval(context)?.as_bool(context)?))),
+                    OperationNode::Or(v1, v2) => {
+                        let v1 = v1.recursive_eval(context)?.as_bool(context)?;
+                        let v2 = v2.recursive_eval(context)?.as_bool(context)?;
+                        Ok(Value::Bool(Bool::generic(v1 || v2)))
+                    },
+                    OperationNode::And(v1, v2) => {
+                        let v1 = v1.recursive_eval(context)?.as_bool(context)?;
+                        let v2 = v2.recursive_eval(context)?.as_bool(context)?;
+                        Ok(Value::Bool(Bool::generic(v1 && v2)))
+                    },
+                    OperationNode::Range(v1, min, max) => {
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?
+                            .clamp(
+                                min.recursive_eval(context)?.as_number(context)?, 
+                                max.recursive_eval(context)?.as_number(context)?
+                            )
+                        )))
+                    },
+                    OperationNode::Ternary(v1, v2, v3) => {
+                        if v1.recursive_eval(context)?.as_bool(context)? {
+                            v2.recursive_eval(context)
+                        } else {
+                            v3.recursive_eval(context)
+                        }
+                    }
+                }
+            },
         }
     }
 }
@@ -212,7 +297,29 @@ enum OperationNode {
 
 impl OperationNode {
     fn expected_value(&self) -> ExpectedValue {
-        todo!()
+        match self {
+            OperationNode::Add(_, _) => ExpectedValue::Number,
+            OperationNode::Subtract(_, _) => ExpectedValue::Number,
+            OperationNode::Multiply(_, _) => ExpectedValue::Number,
+            OperationNode::Divide(_, _) => ExpectedValue::Number,
+            OperationNode::Negate(_) => ExpectedValue::Number,
+            OperationNode::Pow(_, _) => ExpectedValue::Number,
+            OperationNode::Sqrt(_) => ExpectedValue::Number,
+            OperationNode::Round(_) => ExpectedValue::Number,
+            OperationNode::RoundDown(_) => ExpectedValue::Number,
+            OperationNode::RoundUp(_) => ExpectedValue::Number,
+            OperationNode::Equal(_, _) => ExpectedValue::Boolean,
+            OperationNode::NotEqual(_, _) => ExpectedValue::Boolean,
+            OperationNode::LessThan(_, _) => ExpectedValue::Boolean,
+            OperationNode::LessThanEq(_, _) => ExpectedValue::Boolean,
+            OperationNode::GreaterThan(_, _) => ExpectedValue::Boolean,
+            OperationNode::GreaterThanEq(_, _) => ExpectedValue::Boolean,
+            OperationNode::Not(_) => ExpectedValue::Boolean,
+            OperationNode::Or(_, _) => ExpectedValue::Boolean,
+            OperationNode::And(_, _) => ExpectedValue::Boolean,
+            OperationNode::Range(_, _, _) => ExpectedValue::Number,
+            OperationNode::Ternary(_, _, _) => ExpectedValue::Value,
+        }
     }
 }
 
