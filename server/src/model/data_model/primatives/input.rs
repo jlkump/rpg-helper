@@ -6,13 +6,19 @@ use super::values::Value;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Input {
-    name: String,  // This helps us pair InputRequest to Input for the evaluation of the EvalTree
-    value: Value,
+    pub name: String,  // This helps us pair InputRequest to Input for the evaluation of the EvalTree
+    pub value: Value,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct InputRequest {
-    name: String,
+    pub name: String,
     requested_type: TypeRef,
-    restrictions: Vec<EquationRef>,
+    restrictions: Option<Vec<EquationRef>>,
+}
+
+impl InputRequest {
+    pub fn new(name: String, requested_type: TypeRef, restrictions: Option<Vec<EquationRef>>) -> InputRequest {
+        InputRequest { name, requested_type, restrictions }
+    }
 }

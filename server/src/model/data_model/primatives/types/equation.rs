@@ -166,19 +166,21 @@ impl EvalNode {
                     OperandNode::Number(n) => Ok(Value::Num(Number::generic(*n))),
                     OperandNode::Boolean(b) => Ok(Value::Bool(Bool::generic(*b))),
                     OperandNode::ValueRef(v) => Ok(v.to_ref(context)?.clone()),
-                    OperandNode::DieRoll(_) => {
+                    OperandNode::DieRoll(_, name) => {
                         if let Some(i) = inputs {
-                            todo!()
-                        } else {
-                            Err(QueryError::Eval(EvalError::RequiresDieRoll))
+                            if let Some(v) = i.iter().find(|v| v.name.eq(name)) {
+                                return Ok(v.value.clone());
+                            }
                         }
+                        Err(QueryError::Eval(EvalError::RequiresDieRoll))
                     },
-                    OperandNode::Input(_) => {
+                    OperandNode::Input(ir) => {
                         if let Some(i) = inputs {
-                            todo!()
-                        } else {
-                            Err(QueryError::Eval(EvalError::RequiresInput))
+                            if let Some(v) = i.iter().find(|v| v.name.eq(&ir.name)) {
+                                return Ok(v.value.clone());
+                            }
                         }
+                        Err(QueryError::Eval(EvalError::RequiresDieRoll))
                     },
                 }
             },
@@ -265,8 +267,8 @@ impl EvalNode {
             EvalNode::Operand(o) => {
                 match o {
                     OperandNode::Number(_) | OperandNode::Boolean(_) | OperandNode::ValueRef(_) => {},
-                    // TODO: Need to name input requests
-                    OperandNode::DieRoll(d_type) => requests.push(d_type.to_input_request()), 
+                    // TODO: Need to name input requests for die rolls
+                    OperandNode::DieRoll(d_type, name) => requests.push(d_type.to_input_request(&name)), 
                     OperandNode::Input(i) => requests.push(i.clone()),
                 }
             },
@@ -317,7 +319,7 @@ enum OperandNode {
     Number(f32),
     Boolean(bool),
     ValueRef(ValueRef),
-    DieRoll(DieRollTypeRef),
+    DieRoll(DieRollTypeRef, String), // Die roll type and name for input
     Input(InputRequest),
 }
 
@@ -327,7 +329,7 @@ impl OperandNode {
             OperandNode::Number(_) => ExpectedValue::Number,
             OperandNode::Boolean(_) => ExpectedValue::Boolean,
             OperandNode::ValueRef(_) => ExpectedValue::Value,
-            OperandNode::DieRoll(_) => ExpectedValue::Number,
+            OperandNode::DieRoll(_, _) => ExpectedValue::Number,
             OperandNode::Input(_) => ExpectedValue::Value,
         }
     }

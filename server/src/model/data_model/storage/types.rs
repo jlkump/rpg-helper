@@ -203,8 +203,8 @@ pub struct DieRollTypeRef {
 }
 
 impl DieRollTypeRef {
-    pub fn to_input_request(&self) -> InputRequest {
-        todo!()
+    pub fn to_input_request(&self, name: &str) -> InputRequest {
+        InputRequest::new(name.to_string(), TypeRef { target: self.get_target(), type_kind: TypeRefKind::DieRoll(self.clone()) }, None)
     }
 }
 
