@@ -45,12 +45,12 @@ impl Equation {
     pub fn eval(&self) -> EquationCompute {
         EquationCompute {
             t: self.self_ref.clone(),
-            inputs: vec![],
+            inputs: None,
         }
     }
 
-    fn ast_compute(&self, context: &ViewContext) -> Query<Value> {
-        match self.ast.eval(context) {
+    fn ast_compute(&self, context: &ViewContext, inputs: Option<&Vec<Input>>) -> Query<Value> {
+        match self.ast.eval(context, inputs) {
             Ok(v) => return Ok(v),
             Err(e) => match e {
                 QueryError::Eval(e) => {
@@ -69,29 +69,30 @@ impl Equation {
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct EquationCompute {
     t: EquationRef,
-    inputs: Vec<Input>, // Input Request could be any type
+    inputs: Option<Vec<Input>>, // Input Request could be any type
 }
 
 impl EquationCompute {
     pub fn set_inputs(&mut self, inputs: Vec<Input>) {
-        // Error check correct number of inputs?
-        self.inputs = inputs;
+        self.inputs = Some(inputs);
     }
 
-    pub fn get_req_inputs(&self) -> Vec<InputRequest> {
-        todo!()
+    pub fn get_req_inputs(&self, context: &ViewContext) -> Query<Vec<InputRequest>> {
+        let mut res = vec![];
+        self.t.to_ref(context)?.ast.inputs(&mut res);
+        Ok(res)
     }
 
     pub fn as_number(&self, context: &ViewContext) -> Query<f32> {
-        Ok(self.t.to_ref(context)?.ast_compute(context)?.as_number(context)?)
+        Ok(self.t.to_ref(context)?.ast_compute(context, self.inputs.as_ref())?.as_number(context)?)
     }
 
     pub fn as_bool(&self, context: &ViewContext) -> Query<bool> {
-        Ok(self.t.to_ref(context)?.ast_compute(context)?.as_bool(context)?)
+        Ok(self.t.to_ref(context)?.ast_compute(context, self.inputs.as_ref())?.as_bool(context)?)
     }
 
     pub fn as_value(&self, context: &ViewContext) -> Query<Value> {
-        self.t.to_ref(context)?.ast_compute(context)
+        self.t.to_ref(context)?.ast_compute(context, self.inputs.as_ref())
     }
 }
 
@@ -112,8 +113,12 @@ impl EvalTree {
         self.root.expected_value()
     }
 
-    fn eval(&self, context: &ViewContext) -> Query<Value> {
-        self.root.recursive_eval(context)
+    fn eval(&self, context: &ViewContext, inputs: Option<&Vec<Input>>) -> Query<Value> {
+        self.root.recursive_eval(context, inputs)
+    }
+
+    fn inputs(&self, requests: &mut Vec<InputRequest>) {
+        self.root.recursive_add_inputs(requests);
     }
 }
 
@@ -123,109 +128,174 @@ enum EvalNode {
     Operation(OperationNode),
 }
 
-fn number_op<F>(v1: &Box<EvalNode>, v2: &Box<EvalNode>, context: &ViewContext, f: F) -> Query<Value> 
+fn number_op<F>(
+    v1: &Box<EvalNode>, 
+    v2: &Box<EvalNode>, 
+    context: &ViewContext, 
+    inputs: Option<&Vec<Input>>, 
+    f: F
+) -> Query<Value> 
 where
     F: Fn(f32, f32) -> f32
 {
-    let v1 = v1.recursive_eval(context)?.as_number(context)?;
-    let v2 = v2.recursive_eval(context)?.as_number(context)?;
+    let v1 = v1.recursive_eval(context, inputs)?.as_number(context)?;
+    let v2 = v2.recursive_eval(context, inputs)?.as_number(context)?;
     Ok(Value::Num(Number::generic(f(v1, v2))))
 }
 
-fn boolean_op<F>(v1: &Box<EvalNode>, v2: &Box<EvalNode>, context: &ViewContext, f: F) -> Query<Value> 
+fn boolean_op<F>(
+    v1: &Box<EvalNode>, 
+    v2: &Box<EvalNode>, 
+    context: &ViewContext, 
+    inputs: Option<&Vec<Input>>, 
+    f: F
+) -> Query<Value> 
 where
     F: Fn(Value, Value) -> bool
 {
-    let v1 = v1.recursive_eval(context)?;
-    let v2 = v2.recursive_eval(context)?;
+    let v1 = v1.recursive_eval(context, inputs)?;
+    let v2 = v2.recursive_eval(context, inputs)?;
     Ok(Value::Bool(Bool::generic(f(v1, v2))))
 }
 
 impl EvalNode {
-    fn recursive_eval(&self, context: &ViewContext) -> Query<Value> {
+    fn recursive_eval(&self, context: &ViewContext, inputs: Option<&Vec<Input>>) -> Query<Value> {
         match self {
             EvalNode::Operand(o) => {
                 match o {
                     OperandNode::Number(n) => Ok(Value::Num(Number::generic(*n))),
                     OperandNode::Boolean(b) => Ok(Value::Bool(Bool::generic(*b))),
                     OperandNode::ValueRef(v) => Ok(v.to_ref(context)?.clone()),
-                    OperandNode::DieRoll(_) => Err(QueryError::Eval(EvalError::RequiresDieRoll)),
-                    OperandNode::Input(_) => Err(QueryError::Eval(EvalError::RequiresInput)),
+                    OperandNode::DieRoll(_) => {
+                        if let Some(i) = inputs {
+                            todo!()
+                        } else {
+                            Err(QueryError::Eval(EvalError::RequiresDieRoll))
+                        }
+                    },
+                    OperandNode::Input(_) => {
+                        if let Some(i) = inputs {
+                            todo!()
+                        } else {
+                            Err(QueryError::Eval(EvalError::RequiresInput))
+                        }
+                    },
                 }
             },
             EvalNode::Operation(op) => {
                 match op {
                     OperationNode::Add(v1, v2) => 
-                        number_op(v1, v2, context, |n1, n2| n1 + n2),
+                        number_op(v1, v2, context, inputs, |n1, n2| n1 + n2),
                     OperationNode::Subtract(v1, v2) => 
-                        number_op(v1, v2, context, |n1, n2| n1 - n2),
+                        number_op(v1, v2, context, inputs, |n1, n2| n1 - n2),
                     OperationNode::Multiply(v1, v2) => 
-                        number_op(v1, v2, context, |n1, n2| n1 * n2),
+                        number_op(v1, v2, context, inputs, |n1, n2| n1 * n2),
                     OperationNode::Divide(v1, v2) =>
-                        number_op(v1, v2, context, |n1, n2| n1 / n2),
+                        number_op(v1, v2, context, inputs, |n1, n2| n1 / n2),
                     OperationNode::Negate(v1) => 
-                        Ok(Value::Num(Number::generic(-v1.recursive_eval(context)?.as_number(context)?))),
+                        Ok(Value::Num(Number::generic(-v1.recursive_eval(context, inputs)?.as_number(context)?))),
                     OperationNode::Pow(v1, v2) =>
-                        number_op(v1, v2, context, |n1, n2| n1.powf(n2)),
+                        number_op(v1, v2, context, inputs, |n1, n2| n1.powf(n2)),
                     OperationNode::Sqrt(v1) =>
-                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.sqrt()))),
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context, inputs)?.as_number(context)?.sqrt()))),
                     OperationNode::Round(v1) => 
-                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.round()))),
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context, inputs)?.as_number(context)?.round()))),
                     OperationNode::RoundDown(v1) =>
-                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.floor()))),
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context, inputs)?.as_number(context)?.floor()))),
                     OperationNode::RoundUp(v1) =>
-                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?.ceil()))),
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context, inputs)?.as_number(context)?.ceil()))),
                     OperationNode::Equal(v1, v2) =>
-                        boolean_op(v1, v2, context, |n1, n2| n1.eq(&n2)),
+                        boolean_op(v1, v2, context, inputs, |n1, n2| n1.eq(&n2)),
                     OperationNode::NotEqual(v1, v2) => 
-                        boolean_op(v1, v2, context, |n1, n2| n1.ne(&n2)),
+                        boolean_op(v1, v2, context, inputs, |n1, n2| n1.ne(&n2)),
                     OperationNode::LessThan(v1, v2) => {
-                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
-                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        let v1 = v1.recursive_eval(context, inputs)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context, inputs)?.as_number(context)?;
                         Ok(Value::Bool(Bool::generic(v1 < v2)))
                     },
                     OperationNode::LessThanEq(v1, v2) => {
-                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
-                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        let v1 = v1.recursive_eval(context, inputs)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context, inputs)?.as_number(context)?;
                         Ok(Value::Bool(Bool::generic(v1 <= v2)))
                     },
                     OperationNode::GreaterThan(v1, v2) => {
-                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
-                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        let v1 = v1.recursive_eval(context, inputs)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context, inputs)?.as_number(context)?;
                         Ok(Value::Bool(Bool::generic(v1 > v2)))
                     },
                     OperationNode::GreaterThanEq(v1, v2) => {
-                        let v1 = v1.recursive_eval(context)?.as_number(context)?;
-                        let v2 = v2.recursive_eval(context)?.as_number(context)?;
+                        let v1 = v1.recursive_eval(context, inputs)?.as_number(context)?;
+                        let v2 = v2.recursive_eval(context, inputs)?.as_number(context)?;
                         Ok(Value::Bool(Bool::generic(v1 >= v2)))
                     },
                     OperationNode::Not(v1) =>
-                        Ok(Value::Bool(Bool::generic(!v1.recursive_eval(context)?.as_bool(context)?))),
+                        Ok(Value::Bool(Bool::generic(!v1.recursive_eval(context, inputs)?.as_bool(context)?))),
                     OperationNode::Or(v1, v2) => {
-                        let v1 = v1.recursive_eval(context)?.as_bool(context)?;
-                        let v2 = v2.recursive_eval(context)?.as_bool(context)?;
+                        let v1 = v1.recursive_eval(context, inputs)?.as_bool(context)?;
+                        let v2 = v2.recursive_eval(context, inputs)?.as_bool(context)?;
                         Ok(Value::Bool(Bool::generic(v1 || v2)))
                     },
                     OperationNode::And(v1, v2) => {
-                        let v1 = v1.recursive_eval(context)?.as_bool(context)?;
-                        let v2 = v2.recursive_eval(context)?.as_bool(context)?;
+                        let v1 = v1.recursive_eval(context, inputs)?.as_bool(context)?;
+                        let v2 = v2.recursive_eval(context, inputs)?.as_bool(context)?;
                         Ok(Value::Bool(Bool::generic(v1 && v2)))
                     },
                     OperationNode::Range(v1, min, max) => {
-                        Ok(Value::Num(Number::generic(v1.recursive_eval(context)?.as_number(context)?
+                        Ok(Value::Num(Number::generic(v1.recursive_eval(context, inputs)?.as_number(context)?
                             .clamp(
-                                min.recursive_eval(context)?.as_number(context)?, 
-                                max.recursive_eval(context)?.as_number(context)?
+                                min.recursive_eval(context, inputs)?.as_number(context)?, 
+                                max.recursive_eval(context, inputs)?.as_number(context)?
                             )
                         )))
                     },
                     OperationNode::Ternary(v1, v2, v3) => {
-                        if v1.recursive_eval(context)?.as_bool(context)? {
-                            v2.recursive_eval(context)
+                        if v1.recursive_eval(context, inputs)?.as_bool(context)? {
+                            v2.recursive_eval(context, inputs)
                         } else {
-                            v3.recursive_eval(context)
+                            v3.recursive_eval(context, inputs)
                         }
                     }
+                }
+            },
+        }
+    }
+
+    fn recursive_add_inputs(&self, requests: &mut Vec<InputRequest>) {
+        match self {
+            EvalNode::Operand(o) => {
+                match o {
+                    OperandNode::Number(_) | OperandNode::Boolean(_) | OperandNode::ValueRef(_) => {},
+                    // TODO: Need to name input requests
+                    OperandNode::DieRoll(d_type) => requests.push(d_type.to_input_request()), 
+                    OperandNode::Input(i) => requests.push(i.clone()),
+                }
+            },
+            EvalNode::Operation(o) => {
+                match o {
+                    OperationNode::Add(v1, v2) |
+                    OperationNode::Subtract(v1, v2) |
+                    OperationNode::Multiply(v1, v2) | 
+                    OperationNode::Divide(v1, v2) |
+                    OperationNode::Pow(v1, v2) | 
+                    OperationNode::Equal(v1, v2) | 
+                    OperationNode::NotEqual(v1, v2) |
+                    OperationNode::LessThan(v1, v2) |
+                    OperationNode::LessThanEq(v1, v2) |
+                    OperationNode::GreaterThan(v1, v2) |
+                    OperationNode::GreaterThanEq(v1, v2) |
+                    OperationNode::Or(v1, v2) |
+                    OperationNode::And(v1, v2) => {
+                        v1.recursive_add_inputs(requests);
+                        v2.recursive_add_inputs(requests);
+                    },
+                    OperationNode::Negate(v1) | OperationNode::Sqrt(v1) | OperationNode::Round(v1) | OperationNode::RoundDown(v1) | OperationNode::RoundUp(v1) | OperationNode::Not(v1) => {
+                        v1.recursive_add_inputs(requests);
+                    },
+                    OperationNode::Range(v1, v2, v3) | OperationNode::Ternary(v1, v2, v3) => {
+                        v1.recursive_add_inputs(requests);
+                        v2.recursive_add_inputs(requests);
+                        v3.recursive_add_inputs(requests);
+                    },
                 }
             },
         }

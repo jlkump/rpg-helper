@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::primatives::types::{boolean::BooleanType, die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, meta::MetaType, modifier::ModifierType, number::NumberType, Type};
+use crate::model::data_model::primatives::{input::InputRequest, types::{boolean::BooleanType, die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, meta::MetaType, modifier::ModifierType, number::NumberType, Type}};
 
 use super::{view_context::ViewContext, ContainerKind, IndexRef, IndexStorage, Query, RefTarget};
 
@@ -200,6 +200,12 @@ impl IndexStorage<Equation, EquationRef> for TypeIndex<'_> {
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Clone)]
 pub struct DieRollTypeRef {
 
+}
+
+impl DieRollTypeRef {
+    pub fn to_input_request(&self) -> InputRequest {
+        todo!()
+    }
 }
 
 impl IndexRef<DieRollType> for DieRollTypeRef {
