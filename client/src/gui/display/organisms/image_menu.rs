@@ -398,12 +398,14 @@ fn image_panel(props: &ImagePanelProps) -> Html {
     };
     html! {
         if let Some(data) = props.data.clone() {
-            <div class={style}>
-                // <p>{data}</p>
-                <div class="wrapper" {onclick}>
-                    <img src={data.to_src().to_string()} />
+            if let Some(data) = data.as_upload_data() {
+                <div class={style}>
+                    <p>{data.name.clone()}</p>
+                    <div class="wrapper" {onclick}>
+                        <img src={data.src.clone()} />
+                    </div>
                 </div>
-            </div>
+            }
         } else {
             <p>{""}</p>
             <SkeletonPane style="width: 128px; height: 128px; margin: 5px;"/>
@@ -445,14 +447,15 @@ fn detailed_image_panel(props: &DetailedImagePanelProps) -> Html {
     );
     html! {
         if let Some(data) = props.data.clone() {
-            <div class={style}>
-                // TODO: Unwrap image data
-                <div class="wrapper">
-                    <img src={data.to_src().to_string()} />
+            if let Some(data) = data.as_upload_data() {
+                <div class={style}>
+                    <div class="wrapper">
+                        <img src={data.src.clone()} />
+                    </div>
+                    <h6>{data.name.clone()}</h6>
+                    <p><em>{format!("{}px, {}px", data.dimen.0, data.dimen.1)}</em></p>
                 </div>
-                // <h6>{data.name}</h6>
-                // <p><em>{format!("{}px, {}px", data.dimen.0, data.dimen.1)}</em></p>
-            </div>
+            }
         } else {
             <SkeletonPane style="min-width: 240px; min-height: 240px; margin: 5px;" />
         }

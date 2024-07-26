@@ -89,6 +89,13 @@ impl ImageData {
             ImageData::InternalUpload(data) => &data.src,
         }
     }
+
+    pub fn as_upload_data(&self) -> Option<&UploadImageData> {
+        if let ImageData::InternalUpload(s) = self {
+            return Some(s);
+        }
+        None
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -96,6 +103,7 @@ pub struct UploadImageData {
     pub src: String,
     pub name: String,
     pub size: i64, // In Bytes
+    pub dimen: (usize, usize)
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
