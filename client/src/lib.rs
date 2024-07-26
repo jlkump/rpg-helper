@@ -3,6 +3,7 @@ mod client;
 mod data;
 mod error;
 mod gui;
+mod model;
 mod router;
 mod store;
 mod syntax;

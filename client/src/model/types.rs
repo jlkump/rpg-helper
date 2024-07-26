@@ -1,67 +1,107 @@
 use chrono::prelude::*;
-use std::{collections::HashSet, fmt::{Debug, Display}};
+use std::{collections::HashSet, fmt::Debug};
 use serde::{Deserialize, Serialize};
+
+use super::data_model::primatives::values::Value;
+
+/////////////////////////////////////////
+//              Errors                ///
+/////////////////////////////////////////
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerError {
-    pub error: String,
+    pub error: ServerErrorType,
     pub message: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum RegistrationError {
-    UsernameTaken,
-    EmailTaken,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum LoginError {
-    UnknownUsernameOrPassword,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub enum UserDataError {
-    UserIdNotFound(uuid::Uuid),
-    UsernameNotFound(String)
+pub enum ServerErrorType {
+    Authorization(AuthError),
+    NotFound(NotFoundError),
+    InsufficientStorage(InsufficientStorageError),
+    FileTooLarge(FileTooLargeError),
+    Conflict(ConflictError),
+    Unsupported(UnsupportedError),
+    InternalError(InternalError),
+    NotImplemented, // Error for in-progress development
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum AuthError {
+    WrongPasswordOrUsername,
     NotLoggedIn,
     InvalidToken,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub enum UploadError {
-    UserNotFound(uuid::Uuid),
-    FileTooLarge,
-    UnsupportedFileType,
-    InsufficientUserStorage(i64, i64), // The amount requested and the amount the user has left
-    NameConflict(String), // Name conflict with existing user file upload
+pub enum NotFoundError {
+    UserId(uuid::Uuid),
+    Username(String),
+    File(String),
 }
 
-impl Display for AuthError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct InsufficientStorageError {
+    pub current: i64,
+    pub maximum: i64,
+    pub given_increase: i64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FileTooLargeError {
+    pub given_file_size: i64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum ConflictError {
+    Username,
+    Email,
+    FileName,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum UnsupportedError {
+    FileType, // Filetype given is not supported
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub enum InternalError {
+    Database,
+    Filesystem,
+    Parse,
+    Encrypt,
+    Other(String), // General all-catch error, should primarly be used for development and replaced when a pattern emerges.
+}
+
+/////////////////////////////////////////
+//              Data                  ///
+/////////////////////////////////////////
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub enum ImageData {
+    ExternalPath(String),
+    InternalUpload(UploadImageData),
+}
+
+impl ImageData {
+    pub fn to_src(&self) -> &str { // Use lazy html tag on imgs to prevent them all loading at once
         match self {
-            AuthError::NotLoggedIn => write!(f, "Unauthorized: User not logged in."),
-            AuthError::InvalidToken => write!(f, "Unauthorized: Invalid token."),
+            ImageData::ExternalPath(s) => s,
+            ImageData::InternalUpload(data) => &data.src,
         }
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub enum ImageUrl {
-    ExternalPath(String),
-    InternalServerPath(String)
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub struct UploadImageData {
+    pub src: String,
+    pub name: String,
+    pub size: i64, // In Bytes
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
-pub struct ImageData {
-    pub src: String,
-    pub name: String,
-    pub is_external: bool,
-    pub dimen: (i64, i64),
-    pub size: i64, // In Bytes
+pub enum ImageUrl {
+    External(String), // The external src link
+    Internal(String), // Just the path to the uploaded file. 
 }
 
 #[derive(Serialize, Deserialize, Debug)]

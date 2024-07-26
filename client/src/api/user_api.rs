@@ -1,8 +1,7 @@
 use std::{fmt::{Debug, Display}, io::Bytes};
 
-use crate::{api::types::ServerError, router::Route};
+use crate::{model::types::ServerError, router::Route};
 
-use super::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::{LoginError, PublicUserData, RegistrationError, UploadError, UserData, UserDataError, UserLoginResponse}, API_URL};
 use gloo::console::{error, log};
 use reqwasm::http::{self, Response};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use yewdux::prelude::*;
 
-use crate::api::types::UserData;
+use crate::model::types::UserData;
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone, PartialEq, Store)]
 pub struct AuthUser {
