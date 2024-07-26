@@ -96,6 +96,12 @@ impl EquationCompute {
     }
 }
 
+struct SyntaxError {
+    given_str: String,
+    location: usize,
+    message: String,
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 struct EvalTree {
     root: EvalNode,
@@ -106,6 +112,10 @@ impl EvalTree {
     fn from_str(s: &str) -> EvalTree {
         // Tokenize string
         // Return err if syntax error exists
+        // TODO:
+        // [ ]. Tokenize string into components
+        //      - Tokenize value refs as whole ref, then sub-tokenize for value-refs that refer to children, parent, etc.
+        // [ ]. Name inputs during the building of the tree.
         todo!()
     }
     

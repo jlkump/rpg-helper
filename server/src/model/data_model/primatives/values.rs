@@ -129,6 +129,10 @@ impl Value {
     pub fn get_name(&self) -> &str {
         todo!()
     }
+
+    pub fn get_parent(&self) -> Option<ValueRef> {
+        todo!()
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -185,6 +189,8 @@ impl ValueEffect {
             ValueEffect::RemoveFromList(target) => {
                 if let Value::List(list) = &mut v {
                     // TODO: find the element to remove by name
+                    let res = list.iter().map(|i| i.clone()).filter(|i| i.get_name().ne(target)).collect();
+                    v = Value::List(List::new(list.t.clone(), res));
                 }
             },
             ValueEffect::ChangeEnumValue(inst) => {

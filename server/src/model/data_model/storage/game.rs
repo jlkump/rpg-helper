@@ -30,10 +30,12 @@ pub struct GameplayData<'a> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct GameMasterData<'a> {
-    future_events: Timeline<'a>,
     // The view of data for the game master to manipulate?
     // The Game already has the data for the GameMaster, but this provides extra info
-    // Such as the list of pre-determined events for the timeline
+    // Such as the list of pre-determined events for the timeline or player groups for assigning timeline end events
+    // or permissions.
+    future_events: Timeline<'a>,
+    character_groups: Vec<Vec<CharacterId>>,
 }
 
 impl<'g> Game<'g> {

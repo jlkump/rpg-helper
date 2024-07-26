@@ -19,25 +19,9 @@ impl ValueIndex<'_> {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
-pub struct MetaInstRef { // MetaRef could also be MetaInst
-    // Hold data on the ruleset / setting it came from?
-    pub type_name: String,
-    pub ref_name: String,
-}
-
-impl IndexRef<MetaInst> for MetaInstRef {
-    fn get_ref_name(&self) -> String {
-        todo!()
-    }
-    
-    fn get_container(&self) -> &super::ContainerKind {
-        todo!()
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Clone)]
 pub struct ValueRef {
+    parent: Option<Box<ValueRef>>, // Unknown option?
     name: String,
     target: RefTarget,
     subtarget: Option<Box<ValueRefSubtarget>>,
@@ -78,6 +62,23 @@ impl IndexRef<Value> for ValueRef {
             None => {},
         }
         res
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub struct MetaInstRef { // MetaRef could also be MetaInst
+    // Hold data on the ruleset / setting it came from?
+    pub type_name: String,
+    pub ref_name: String,
+}
+
+impl IndexRef<MetaInst> for MetaInstRef {
+    fn get_ref_name(&self) -> String {
+        todo!()
+    }
+    
+    fn get_container(&self) -> &super::ContainerKind {
+        todo!()
     }
 }
 

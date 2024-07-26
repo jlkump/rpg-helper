@@ -12,6 +12,15 @@ pub struct List { // Name a list? Might be useful. For example: Creo::Exp?
     values: Vec<Value>,
 }
 
+impl List {
+    pub fn new(t: TypeRef, values: Vec<Value>) -> List {
+        List {
+            t,
+            values
+        }
+    }
+}
+
 impl Deref for List {
     type Target = Vec<Value>;
 
