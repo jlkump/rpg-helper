@@ -31,7 +31,9 @@ pub fn dashboard(_: &Props) -> Html {
                     }
                     Err(e) => {
                         page_loading.set(false);
-                        e.route_based_on_err(&navigator);
+                        if let Some(r) = e.route_based_on_err() {
+                            navigator.push(&r);
+                        };
                     }
                 }
             });

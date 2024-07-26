@@ -2,7 +2,7 @@ use stylist::yew::styled_component;
 use yew::{platform::spawn_local, prelude::*};
 use yew_icons::{Icon, IconId};
 
-use crate::{api::{types::PublicUserData, user_api::api_public_user_info}, gui::{contexts::theme::use_theme, display::atoms::{loading::{SkeletonTextArea, SkeletonPane}, profile::ProfilePortrait}}};
+use crate::{api::user_api::api_public_user_info, gui::{contexts::theme::use_theme, display::atoms::{loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait}}, model::types::PublicUserData};
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct Props {

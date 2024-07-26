@@ -1,6 +1,6 @@
 use std::{fmt::{Debug, Display}, io::Bytes};
 
-use crate::{model::types::ServerError, router::Route};
+use crate::{model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, PublicUserData, ServerError, ServerErrorType, UserData, UserLoginResponse}}, router::Route};
 
 use gloo::console::{error, log};
 use reqwasm::http::{self, Response};
@@ -10,104 +10,58 @@ use wasm_bindgen::{closure::Closure, JsCast, JsValue};
 use web_sys::{js_sys::{Promise, Uint8Array}, Blob, File, FileReader, FormData};
 use yew_router::navigator::Navigator;
 
+use super::API_URL;
+
 // TODO: Expand Error types for each HTTP Response type
-pub enum Error<T> {
-    Standard(T),
-    Unauthorized,
+pub enum Error {
     API(String),
     Server(ServerError),
     RequestFailed(String),
     ParseFailed(String),
-    Other(String)
 }
 
-impl<T> From<serde_json::Error> for Error<T> {
+impl From<serde_json::Error> for Error {
     fn from(value: serde_json::Error) -> Self {
         Self::ParseFailed(value.to_string())
     }
 }
 
-impl<T> From<reqwest::Error> for Error<T> {
+impl From<reqwest::Error> for Error {
     fn from(value: reqwest::Error) -> Self {
-        Self::Other(value.to_string())
+        Self::API(value.to_string())
     }
 }
 
-impl<T> Display for Error<T> 
-where 
-    T: Display
-{
+impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Standard(t) => write!(f, "{}", t),
-            Error::Unauthorized => write!(f, "Unauthorized"),
             Error::API(e) =>  write!(f, "API Failure: {}", e),
             Error::RequestFailed(e) => write!(f, "Request Failure: {}", e),
             Error::ParseFailed(e) => write!(f, "Parse Failure: {}", e),
-            Error::Other(e) => write!(f, "{}", e),
-            Error::Server(e) => write!(f, "[Server Error] {}: {}", e.error, e.message),
+            Error::Server(e) => write!(f, "[Server Error] {:?}: {}", e, e.message),
         }
     }
 }
 
-impl Display for UserDataError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            UserDataError::UserIdNotFound(i) => write!(f, "User id \"{}\" not found", i),
-            UserDataError::UsernameNotFound(n) => write!(f, "Username \"{}\" not found", n),
-        }
-    }
-}
+impl Error {
 
-impl<T> Error<T> 
-where 
-    T: Debug + ErrorRoute
-{
-    pub fn route_based_on_err(self, navigator: &Navigator) -> Option<T> {
-        match self {
-            Error::Standard(e) => return e.route(navigator),
-            Error::API(mes) => navigator.push(&Route::Error { error: format!("API Failure: \"{}\"", mes)}),
-            Error::RequestFailed(mes) => navigator.push(&Route::Error { error: format!("Request failed. Server may be down. \"{}\"", mes) }),
-            Error::ParseFailed(mes) => navigator.push(&Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) }),
-            Error::Unauthorized => navigator.push(&Route::Home),
-            Error::Other(e) => navigator.push(&Route::Error { error: format!("Other Error: \"{}\"", e) }),
-            Error::Server(e) => navigator.push(&Route::Error { error: format!("Server Error. Type: {}, mes: \"{}\"", e.error, e.message) }),
-        }
-        return None
-    }
-}
-
-pub trait ErrorRoute { fn route(self, navigator: &Navigator) -> Option<Self> where Self: Sized; }
-
-impl ErrorRoute for RegistrationError { fn route(self, _: &Navigator) -> Option<Self> { Some(self) } }
-
-impl ErrorRoute for LoginError { fn route(self, _: &Navigator) -> Option<Self> { Some(self) } }
-
-impl ErrorRoute for UploadError { fn route(self, _: &Navigator) -> Option<Self> { Some(self) } }
-
-impl ErrorRoute for String { 
-    fn route(self, navigator: &Navigator) -> Option<Self> {
-        navigator.push(&Route::Error { error: format!("Got Error: {}", self) }); None
-    }
-}
-
-impl ErrorRoute for UserDataError {
-    fn route(self, navigator: &Navigator) -> Option<Self> {
-        match self {
-            UserDataError::UserIdNotFound(_) | UserDataError::UsernameNotFound(_) => 
-                navigator.push(&Route::NotFound),
-        }
-        None
+    /// If the given error results in a route error, this simplifies the process by returning the route.
+    /// If the error does not re-route, then the method returns None.
+    /// Currently all errors re-route. 
+    pub fn route_based_on_err(self) -> Option<Route> {
+        return Some(match self {
+            Error::API(mes) => Route::Error { error: format!("API Failure: \"{}\"", mes)},
+            Error::RequestFailed(mes) => Route::Error { error: format!("Request failed. Server may be down. \"{}\"", mes) },
+            Error::ParseFailed(mes) => Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) },
+            Error::Server(e) => Route::Error { error: format!("Server Error. Type: {:?}, mes: \"{}\"", e, e.message) },
+        });
     }
 }
 
 // Helper function to handle the general error http responses from the backend
-async fn handle_response<E>(response: &Response) -> Result<(), Error<E>> 
-where 
-    E: DeserializeOwned
-{
+async fn handle_response(response: &Response) -> Result<(), Error> {
     if response.status() == 401 {
-        return Err(Error::Unauthorized);
+        return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
     }
 
     if response.status() == 500 {
@@ -119,22 +73,19 @@ where
     }
 
     if response.status() != 200 {
-        let error_response = response.json::<E>().await;
+        let error_response = response.json::<ServerError>().await;
         
         match error_response {
-            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Ok(error_response) => return Err(Error::Server(error_response)),
             Err(e) => return Err(Error::API(e.to_string()))
         }
     }
     Ok(())
 }
 
-async fn handle_reqwest_response<E>(response: reqwest::Response) -> Result<(), Error<E>> 
-where 
-    E: DeserializeOwned
-{
+async fn handle_reqwest_response(response: reqwest::Response) -> Result<(), Error> {
     if response.status() == 401 {
-        return Err(Error::Unauthorized);
+        return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
     }
 
     if response.status() == 500 {
@@ -146,17 +97,17 @@ where
     }
 
     if response.status() != 200 {
-        let error_response = response.json::<E>().await;
+        let error_response = response.json::<ServerError>().await;
         
         match error_response {
-            Ok(error_response) => return Err(Error::Standard(error_response)),
+            Ok(error_response) => return Err(Error::Server(error_response)),
             Err(e) => return Err(Error::API(e.to_string()))
         }
     }
     Ok(())
 }
 
-pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, Error<RegistrationError>> {
+pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, Error> {
     let url = format!("{}/auth/register", API_URL);
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
@@ -168,7 +119,7 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
         Err(e) => return Err(Error::RequestFailed(e.to_string())),
     };
 
-    handle_response::<RegistrationError>(&response).await?;
+    handle_response(&response).await?;
 
     let res_json = response.json::<UserData>().await;
     match res_json {
@@ -177,7 +128,7 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
     }
 }
 
-pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginResponse, Error<LoginError>> {
+pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginResponse, Error> {
     let url = format!("{}/auth/login", API_URL);
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
@@ -190,7 +141,7 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
         Err(e) => return Err(Error::RequestFailed(e.to_string())),
     };
 
-    handle_response::<LoginError>(&response).await?;
+    handle_response(&response).await?;
 
     let res_json = response.json::<UserLoginResponse>().await;
     match res_json {
@@ -200,7 +151,7 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
 }
 
 
-pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
+pub async fn api_user_info() -> Result<UserData, Error> {
     let url = format!("{}/user", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
@@ -211,7 +162,7 @@ pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
         Err(e) => return Err(Error::RequestFailed(e.to_string())),
     };
 
-    handle_response::<UserDataError>(&response).await?;
+    handle_response(&response).await?;
 
     let res_json = response.json::<UserData>().await;
     match res_json {
@@ -220,7 +171,7 @@ pub async fn api_user_info() -> Result<UserData, Error<UserDataError>> {
     }
 }
 
-pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData, Error<UserDataError>> {
+pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData, Error> {
     let url = format!("{}/public/user/{}", API_URL, user_id);
     let response = match http::Request::get(&url)
         // .credentials(http::RequestCredentials::Include)
@@ -231,7 +182,7 @@ pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData,
         Err(e) => return Err(Error::RequestFailed(e.to_string())),
     };
 
-    handle_response::<UserDataError>(&response).await?;
+    handle_response(&response).await?;
 
     let res_json = response.json::<PublicUserData>().await;
     match res_json {
@@ -240,7 +191,7 @@ pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData,
     }
 }
 
-pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File, auth_token: &str) -> Result<(), Error<UploadError>> {
+pub async fn api_user_upload(name: String, file: &File, auth_token: &str) -> Result<(), Error> {
     let mut form = reqwest::multipart::Form::new();
     
     let file_contents = read_file(file).await?;
@@ -251,15 +202,14 @@ pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File, auth_to
         .mime_str("application/octet-stream")?;
 
     form = form.part("file", file_part);
-    form = form.text("name", meta_data.name);
-
+    form = form.text("name", name);
 
     let url = format!("{}/user/upload", API_URL);
 
     let mut headers = HeaderMap::new();
     headers.insert(
         AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {}", auth_token)).map_err(|e| Error::Other(e.to_string()))?
+        HeaderValue::from_str(&format!("Bearer {}", auth_token)).map_err(|e| Error::API(e.to_string()))?
     );
 
     let client = reqwest::Client::builder()
@@ -280,17 +230,17 @@ pub async fn api_user_upload(meta_data: FileUploadMetadata, file: &File, auth_to
     if !response.status().is_success() {
         let error_body = response.text().await?;
         error!("Error response body:", error_body);
-        return Err(Error::Other("Failed".to_string()));
+        return Err(Error::API("Failed".to_string()));
     }
 
-    handle_reqwest_response::<UploadError>(response).await?;
+    handle_reqwest_response(response).await?;
     Ok(())
 }
 
-async fn read_file(file: &File) -> Result<Vec<u8>, Error<UploadError>> {
-    let reader = FileReader::new().map_err(|_| Error::Other("Could not create FileReader".into()))?;
+async fn read_file(file: &File) -> Result<Vec<u8>, Error> {
+    let reader = FileReader::new().map_err(|_| Error::API("Could not create FileReader".into()))?;
     let reader_ref = reader.clone();
-    let file_blob: Blob = file.clone().dyn_into().map_err(|_| Error::Other("Could not cast File to Blob".into()))?;
+    let file_blob: Blob = file.clone().dyn_into().map_err(|_| Error::API("Could not cast File to Blob".into()))?;
 
     let promise = Promise::new(&mut |resolve, reject| {
         let onload = Closure::once_into_js(move |_event: web_sys::Event| {
@@ -305,16 +255,16 @@ async fn read_file(file: &File) -> Result<Vec<u8>, Error<UploadError>> {
         reader.read_as_array_buffer(&file_blob).expect("Could not read file");
     });
 
-    wasm_bindgen_futures::JsFuture::from(promise).await.map_err(|_| Error::Other("File reading failed".into()))?;
+    wasm_bindgen_futures::JsFuture::from(promise).await.map_err(|_| Error::API("File reading failed".into()))?;
 
-    let array_buffer = reader_ref.result().map_err(|_| Error::Other("Could not get result from FileReader".into()))?;
+    let array_buffer = reader_ref.result().map_err(|_| Error::API("Could not get result from FileReader".into()))?;
     let uint8_array = Uint8Array::new(&array_buffer);
     let vec = uint8_array.to_vec();
 
     Ok(vec)
 }
 
-pub async fn api_logout_user() -> Result<(), Error<String>> {
+pub async fn api_logout_user() -> Result<(), Error> {
     let url = format!("{}/auth/logout", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
@@ -325,7 +275,7 @@ pub async fn api_logout_user() -> Result<(), Error<String>> {
         Err(e) => return Err(Error::RequestFailed(e.to_string())),
     };
 
-    handle_response::<String>(&response).await?;
+    handle_response(&response).await?;
 
     Ok(())
 }

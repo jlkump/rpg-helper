@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::{api::types::ImageData, gui::display::organisms::{image_menu::ImageMenu, nav_bar::NavBar}};
+use crate::{gui::display::organisms::{image_menu::ImageMenu, nav_bar::NavBar}, model::types::ImageData};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
@@ -31,7 +31,7 @@ pub fn home(_: &Props) -> Html {
                 </div>
                 <div>
                     if let Some(image) = &*image_selected {
-                        <img src={image.src.clone()} style="width: 100%; height: 100%; object-fit: contain;" />
+                        <img src={image.to_src().to_string()} style="width: 100%; height: 100%; object-fit: contain;" />
                     }
                 </div>
             </div>

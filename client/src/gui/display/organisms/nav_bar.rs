@@ -161,7 +161,9 @@ fn user_menu(props: &UserMenuProps) -> Html {
                     },
                     Err(e) => {
                         loading.set(false);
-                        e.route_based_on_err(&navigator);
+                        if let Some(r) = e.route_based_on_err() {
+                            navigator.push(&r);
+                        };
                     },
                 }
 

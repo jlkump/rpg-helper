@@ -8,7 +8,7 @@ use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::{schema::{FileUploadMetadata, UserLoginSchema, UserRegistrationSchema}, types::PublicUserData, user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info, api_user_upload}}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, router::Route, store::{set_auth_token, set_auth_user, AuthUser}};
+use crate::{api::user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info, api_user_upload}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData}, router::Route, store::{set_auth_token, set_auth_user, AuthUser}};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
@@ -141,24 +141,27 @@ fn registration_onsubmit_callback(
                         },
                         Err(e) => {
                             loading.set(false);
-                            if let Some(e) = e.route_based_on_err(&navigator) {
-                                let err;
-                                let key;
-                                match e {
-                                    crate::api::types::RegistrationError::UsernameTaken => {
-                                        err = ValidationError::new("UsernameTaken").with_message(Cow::from("Username is taken"));
-                                        key = "username";
-                                    },
-                                    crate::api::types::RegistrationError::EmailTaken => {
-                                        err = ValidationError::new("EmailTaken").with_message(Cow::from("Email is taken"));
-                                        key = "email";
-                                    },
-                                }
-                                vald_errors
-                                    .borrow_mut()
-                                    .errors_mut()
-                                    .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
+                            if let Some(r) = e.route_based_on_err() {
+                                navigator.push(&r);
                             }
+                            // if let Some(e) = e.route_based_on_err(&navigator) {
+                            //     let err;
+                            //     let key;
+                            //     match e {
+                            //         crate::api::types::RegistrationError::UsernameTaken => {
+                            //             err = ValidationError::new("UsernameTaken").with_message(Cow::from("Username is taken"));
+                            //             key = "username";
+                            //         },
+                            //         crate::api::types::RegistrationError::EmailTaken => {
+                            //             err = ValidationError::new("EmailTaken").with_message(Cow::from("Email is taken"));
+                            //             key = "email";
+                            //         },
+                            //     }
+                            //     vald_errors
+                            //         .borrow_mut()
+                            //         .errors_mut()
+                            //         .insert(key, validator::ValidationErrorsKind::Field(vec![err]));
+                            // }
                         },
                     }
                 },
@@ -345,17 +348,20 @@ fn login_onsubmit_callback(
                         },
                         Err(e) => {
                             loading.set(false);
-                            if let Some(err) = e.route_based_on_err(&navigator) {
-                                match err {
-                                    crate::api::types::LoginError::UnknownUsernameOrPassword => {
-                                        let err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Unknown username or incorrect password"));
-                                        vald_errors
-                                            .borrow_mut()
-                                            .errors_mut()
-                                            .insert("password", validator::ValidationErrorsKind::Field(vec![err]));
-                                    },
-                                }
+                            if let Some(r) = e.route_based_on_err() {
+                                navigator.push(&r);
                             }
+                            // if let Some(err) = e.route_based_on_err(&navigator) {
+                            //     match err {
+                            //         crate::api::types::LoginError::UnknownUsernameOrPassword => {
+                            //             let err = ValidationError::new("WrongPasswordOrUsername").with_message(Cow::from("Unknown username or incorrect password"));
+                            //             vald_errors
+                            //                 .borrow_mut()
+                            //                 .errors_mut()
+                            //                 .insert("password", validator::ValidationErrorsKind::Field(vec![err]));
+                            //         },
+                            //     }
+                            // }
                         },
                     }
                 },
@@ -447,7 +453,9 @@ pub fn user_profile(props: &ProfileProps) -> Html {
                     },
                     Err(e) => {
                         loading_cloned.set(false);
-                        e.route_based_on_err(&navigator);
+                        if let Some(r) = e.route_based_on_err() {
+                            navigator.push(&r);
+                        }
                     },
                 }
 
@@ -573,7 +581,9 @@ pub fn user_profile(_: &UserPreferncesProps) -> Html {
                     },
                     Err(e) => {
                         loading_cloned.set(false);
-                        e.route_based_on_err(&navigator);
+                        if let Some(r) = e.route_based_on_err() {
+                            navigator.push(&r);
+                        }
                     }
                 }
 

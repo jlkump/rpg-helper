@@ -7,7 +7,7 @@ use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
 use yewdux::use_store;
 
-use crate::{api::{schema::FileUploadMetadata, types::ImageData, user_api::api_user_upload}, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}, store::AuthUser};
+use crate::{api::user_api::api_user_upload, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}, model::types::ImageData, store::AuthUser};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -121,7 +121,7 @@ pub fn image_menu(
         })
     };
 
-    let temp_img_data = ImageData { src: "img/test/Antonio Tremis - AI Portrait.png".to_string(), name: "Antonio Tremis Portrait".to_string(), is_external: false, dimen: (128, 128), size: 12314 };
+    let temp_img_data = ImageData::ExternalPath("img/test/Antonio Tremis - AI Portrait.png".to_string());
     html! {
         <Popup class={menu_style} style={style.clone()} {z_index} active={active.clone()} {on_close_callback}>
             <div class="header">
@@ -230,7 +230,7 @@ fn image_upload(props: &ImageUploadProps) -> Html {
                     if let Some(file) = &*uploaded_file {
                         remove_vald_error(&mut vald_errors, "file-upload", "file-missing");
                         if let Some(auth_token) = &store.auth_token {
-                            let meta_data = FileUploadMetadata { name: name.clone() };
+                            let meta_data = name.clone();
                             let res = api_user_upload(meta_data, file, auth_token).await;
                             match res {
                                 Ok(_) => {
@@ -238,28 +238,25 @@ fn image_upload(props: &ImageUploadProps) -> Html {
                                 },
                                 Err(e) => {
                                     match e {
-                                        crate::api::user_api::Error::Standard(e) => {
-                                            match e {
-                                                crate::api::types::UploadError::UserNotFound(id) => {
-                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("User id {} not found", id));
-                                                },
-                                                crate::api::types::UploadError::FileTooLarge => {
-                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
-                                                },
-                                                crate::api::types::UploadError::UnsupportedFileType => {
-                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
-                                                },
-                                                crate::api::types::UploadError::InsufficientUserStorage(i, o) => {
-                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Not enough user storage. {} / {}", i, o));
-                                                },
-                                                crate::api::types::UploadError::NameConflict(other) => {
-                                                    insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Name conflict {}", other));
-                                                },
-                                            }
-                                        },
-                                        crate::api::user_api::Error::Unauthorized => {
-                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", "Unauthorized user".to_string());
-                                        },
+                                        // crate::api::user_api::Error::Standard(e) => {
+                                        //     match e {
+                                        //         UploadError::UserNotFound(id) => {
+                                        //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("User id {} not found", id));
+                                        //         },
+                                        //         UploadError::FileTooLarge => {
+                                        //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
+                                        //         },
+                                        //         UploadError::UnsupportedFileType => {
+                                        //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
+                                        //         },
+                                        //         UploadError::InsufficientUserStorage(i, o) => {
+                                        //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Not enough user storage. {} / {}", i, o));
+                                        //         },
+                                        //         UploadError::NameConflict(other) => {
+                                        //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Name conflict {}", other));
+                                        //         },
+                                        //     }
+                                        // },
                                         crate::api::user_api::Error::API(s) => {
                                             insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
                                         },
@@ -270,9 +267,6 @@ fn image_upload(props: &ImageUploadProps) -> Html {
                                             insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
                                         },
                                         crate::api::user_api::Error::ParseFailed(s) => {
-                                            insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
-                                        },
-                                        crate::api::user_api::Error::Other(s) => {
                                             insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
                                         },
                                     }
@@ -331,7 +325,7 @@ fn image_url_input(props: &ImageUrlInputProps) -> Html {
         Callback::from(move |e: SubmitEvent| {
             e.prevent_default();
             if !(*url).eq("") {
-                handler.emit(ImageData { src: (*url).clone(), name: (*url).clone(), is_external: true, dimen: (0, 0), size: 0 })
+                handler.emit(ImageData::ExternalPath((*url).clone()))
             }
             // TODO: Validations
         })
@@ -405,9 +399,9 @@ fn image_panel(props: &ImagePanelProps) -> Html {
     html! {
         if let Some(data) = props.data.clone() {
             <div class={style}>
-                <p>{data.name}</p>
+                // <p>{data}</p>
                 <div class="wrapper" {onclick}>
-                    <img src={data.src} />
+                    <img src={data.to_src().to_string()} />
                 </div>
             </div>
         } else {
@@ -452,11 +446,12 @@ fn detailed_image_panel(props: &DetailedImagePanelProps) -> Html {
     html! {
         if let Some(data) = props.data.clone() {
             <div class={style}>
+                // TODO: Unwrap image data
                 <div class="wrapper">
-                    <img src={data.src} />
+                    <img src={data.to_src().to_string()} />
                 </div>
-                <h6>{data.name}</h6>
-                <p><em>{format!("{}px, {}px", data.dimen.0, data.dimen.1)}</em></p>
+                // <h6>{data.name}</h6>
+                // <p><em>{format!("{}px, {}px", data.dimen.0, data.dimen.1)}</em></p>
             </div>
         } else {
             <SkeletonPane style="min-width: 240px; min-height: 240px; margin: 5px;" />
