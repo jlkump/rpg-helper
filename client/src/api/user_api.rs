@@ -13,7 +13,9 @@ use yew_router::navigator::Navigator;
 use super::API_URL;
 
 // TODO: Expand Error types for each HTTP Response type
+#[derive(Debug)]
 pub enum Error {
+    Unauthorized,
     API(String),
     Server(ServerError),
     RequestFailed(String),
@@ -35,6 +37,7 @@ impl From<reqwest::Error> for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Error::Unauthorized => write!(f, "Unauthorized failure"),
             Error::API(e) =>  write!(f, "API Failure: {}", e),
             Error::RequestFailed(e) => write!(f, "Request Failure: {}", e),
             Error::ParseFailed(e) => write!(f, "Parse Failure: {}", e),
@@ -48,29 +51,31 @@ impl Error {
     /// If the given error results in a route error, this simplifies the process by returning the route.
     /// If the error does not re-route, then the method returns None.
     /// Currently all errors re-route. 
-    pub fn route_based_on_err(self) -> Option<Route> {
-        return Some(match self {
+    pub fn route_based_on_err(self) -> Route {
+        match self {
+            Error::Unauthorized => Route::Error { error: format!("Unauthorized error") },
             Error::API(mes) => Route::Error { error: format!("API Failure: \"{}\"", mes)},
             Error::RequestFailed(mes) => Route::Error { error: format!("Request failed. Server may be down. \"{}\"", mes) },
             Error::ParseFailed(mes) => Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) },
             Error::Server(e) => Route::Error { error: format!("Server Error. Type: {:?}, mes: \"{}\"", e, e.message) },
-        });
+        }
     }
 }
 
 // Helper function to handle the general error http responses from the backend
 async fn handle_response(response: &Response) -> Result<(), Error> {
-    if response.status() == 401 {
-        return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
-    }
+    // if response.status() == 401 {
+    //     // return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
+    //     return Err(Error::Unauthorized);
+    // }
 
-    if response.status() == 500 {
-        let e = response.json::<ServerError>().await;
-        match e {
-            Ok(server_err) => return Err(Error::Server(server_err)),
-            Err(e) => return Err(Error::API(e.to_string())),
-        }
-    }
+    // if response.status() == 500 {
+    //     let e = response.json::<ServerError>().await;
+    //     match e {
+    //         Ok(server_err) => return Err(Error::Server(server_err)),
+    //         Err(e) => return Err(Error::API(e.to_string())),
+    //     }
+    // }
 
     if response.status() != 200 {
         let error_response = response.json::<ServerError>().await;
@@ -84,17 +89,17 @@ async fn handle_response(response: &Response) -> Result<(), Error> {
 }
 
 async fn handle_reqwest_response(response: reqwest::Response) -> Result<(), Error> {
-    if response.status() == 401 {
-        return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
-    }
+    // if response.status() == 401 {
+    //     return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
+    // }
 
-    if response.status() == 500 {
-        let e = response.json::<ServerError>().await;
-        match e {
-            Ok(server_err) => return Err(Error::Server(server_err)),
-            Err(e) => return Err(Error::API(e.to_string())),
-        }
-    }
+    // if response.status() == 500 {
+    //     let e = response.json::<ServerError>().await;
+    //     match e {
+    //         Ok(server_err) => return Err(Error::Server(server_err)),
+    //         Err(e) => return Err(Error::API(e.to_string())),
+    //     }
+    // }
 
     if response.status() != 200 {
         let error_response = response.json::<ServerError>().await;
@@ -108,6 +113,7 @@ async fn handle_reqwest_response(response: reqwest::Response) -> Result<(), Erro
 }
 
 pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, Error> {
+    log!("Calling api register user");
     let url = format!("{}/auth/register", API_URL);
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
@@ -129,6 +135,7 @@ pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<Use
 }
 
 pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginResponse, Error> {
+    log!("Calling api login user");
     let url = format!("{}/auth/login", API_URL);
     let response = match http::Request::post(&url)
         .header("Content-Type", "application/json")
@@ -152,6 +159,7 @@ pub async fn api_login_user(credentials: &UserLoginSchema) -> Result<UserLoginRe
 
 
 pub async fn api_user_info() -> Result<UserData, Error> {
+    log!("Calling api fetch logged-in user");
     let url = format!("{}/user", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
@@ -172,6 +180,7 @@ pub async fn api_user_info() -> Result<UserData, Error> {
 }
 
 pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData, Error> {
+    log!("Calling get public user data");
     let url = format!("{}/public/user/{}", API_URL, user_id);
     let response = match http::Request::get(&url)
         // .credentials(http::RequestCredentials::Include)
@@ -192,6 +201,7 @@ pub async fn api_public_user_info(user_id: uuid::Uuid) -> Result<PublicUserData,
 }
 
 pub async fn api_user_upload(name: String, file: &File, auth_token: &str) -> Result<(), Error> {
+    log!("Calling api upload file");
     let mut form = reqwest::multipart::Form::new();
     
     let file_contents = read_file(file).await?;
@@ -265,6 +275,7 @@ async fn read_file(file: &File) -> Result<Vec<u8>, Error> {
 }
 
 pub async fn api_logout_user() -> Result<(), Error> {
+    log!("Calling api logout user");
     let url = format!("{}/auth/logout", API_URL);
     let response = match http::Request::get(&url)
         .credentials(http::RequestCredentials::Include)
