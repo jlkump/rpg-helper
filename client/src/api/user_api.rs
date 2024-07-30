@@ -64,19 +64,6 @@ impl Error {
 
 // Helper function to handle the general error http responses from the backend
 async fn handle_response(response: &Response) -> Result<(), Error> {
-    // if response.status() == 401 {
-    //     // return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
-    //     return Err(Error::Unauthorized);
-    // }
-
-    // if response.status() == 500 {
-    //     let e = response.json::<ServerError>().await;
-    //     match e {
-    //         Ok(server_err) => return Err(Error::Server(server_err)),
-    //         Err(e) => return Err(Error::API(e.to_string())),
-    //     }
-    // }
-
     if response.status() != 200 {
         let error_response = response.json::<ServerError>().await;
         
@@ -89,18 +76,6 @@ async fn handle_response(response: &Response) -> Result<(), Error> {
 }
 
 async fn handle_reqwest_response(response: reqwest::Response) -> Result<(), Error> {
-    // if response.status() == 401 {
-    //     return Err(Error::Server(ServerError { error: ServerErrorType::Authorization(AuthError::NotLoggedIn), message: "User not authorized".to_string() }));
-    // }
-
-    // if response.status() == 500 {
-    //     let e = response.json::<ServerError>().await;
-    //     match e {
-    //         Ok(server_err) => return Err(Error::Server(server_err)),
-    //         Err(e) => return Err(Error::API(e.to_string())),
-    //     }
-    // }
-
     if response.status() != 200 {
         let error_response = response.json::<ServerError>().await;
         

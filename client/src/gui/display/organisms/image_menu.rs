@@ -238,38 +238,6 @@ fn image_upload(props: &ImageUploadProps) -> Html {
                                 },
                                 Err(e) => {
                                     insert_vald_error(&mut vald_errors, "file-upload", "server-err", e.to_string());
-                                    // match e {
-                                    //     // crate::api::user_api::Error::Standard(e) => {
-                                    //     //     match e {
-                                    //     //         UploadError::UserNotFound(id) => {
-                                    //     //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("User id {} not found", id));
-                                    //     //         },
-                                    //     //         UploadError::FileTooLarge => {
-                                    //     //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
-                                    //     //         },
-                                    //     //         UploadError::UnsupportedFileType => {
-                                    //     //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", "File too large".to_string());
-                                    //     //         },
-                                    //     //         UploadError::InsufficientUserStorage(i, o) => {
-                                    //     //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Not enough user storage. {} / {}", i, o));
-                                    //     //         },
-                                    //     //         UploadError::NameConflict(other) => {
-                                    //     //             insert_vald_error(&mut vald_errors, "file-upload", "server-err", format!("Name conflict {}", other));
-                                    //     //         },
-                                    //     //     }
-                                    //     // },
-                                    //     crate::api::user_api::Error::API(s) => {
-                                    //     },
-                                    //     crate::api::user_api::Error::Server(s) => {
-                                    //         insert_vald_error(&mut vald_errors, "file-upload", "server-err", s.message);
-                                    //     },
-                                    //     crate::api::user_api::Error::RequestFailed(s) => {
-                                    //         insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
-                                    //     },
-                                    //     crate::api::user_api::Error::ParseFailed(s) => {
-                                    //         insert_vald_error(&mut vald_errors, "file-upload", "server-err", s);
-                                    //     },
-                                    // }
                                 },
                             }
                         } else {

@@ -191,7 +191,7 @@ impl Component for Tooltip {
                         { ctx.props().tooltip_content.clone() }
                     </TooltipPane>
                 }
-                <div onmouseenter={on_entered_tooltip} onmouseleave={on_exited_tooltip} onmousemove={on_mouse_move}>
+                <div style="display: flex; width: max-content;" onmouseenter={on_entered_tooltip} onmouseleave={on_exited_tooltip} onmousemove={on_mouse_move}>
                     { ctx.props().children.clone() }
                 </div>
             </>
@@ -259,9 +259,9 @@ fn tooltip_pane(props: &TooltipPaneProps) -> Html {
         }
     } else {
         match quadrant {
-            Quadrant::TopLeft => "translate(2%, 2%)",
+            Quadrant::TopLeft => "translate(10px, 2%)",
             Quadrant::TopRight => "translate(-102%, 2%)",
-            Quadrant::BottomLeft => "translate(2%, -102%)",
+            Quadrant::BottomLeft => "translate(10px, -102%)",
             Quadrant::BottomRight => "translate(-102%, -102%)",
         }
     };

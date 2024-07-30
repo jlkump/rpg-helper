@@ -131,7 +131,7 @@ fn user_menu(props: &UserMenuProps) -> Html {
                 position: absolute;
                 bottom: -10px;
                 right: 0px;
-                transform: translate(0%, 100%);
+                transform: translate(12px, 100%);
                 padding-left: 10px;
                 padding-right: 10px;
                 border: 3px solid ${border};
