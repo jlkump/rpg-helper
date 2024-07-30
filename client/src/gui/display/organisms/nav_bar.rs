@@ -96,7 +96,7 @@ pub fn nav_bar(props: &Props) -> Html {
                     <div class={get_hamburger_style(&theme)} onclick={onclick}>
                         <HamburgerMenu color={theme.hamburger_menu.clone()} open={*menu_open}/>
                     </div>
-                    <Logo />
+                    <Logo class="center-logo" />
                     <UserMenu {logged_in}/>
                 </span>
                 <div class={props.content_class.clone()} style="flex: 90%;">
@@ -125,17 +125,69 @@ fn user_menu(props: &UserMenuProps) -> Html {
             display: flex;
             align-items: center;
             justify-content: center;
-        "#
+            position: relative;
+
+            .menu {
+                position: absolute;
+                bottom: -10px;
+                right: 0px;
+                transform: translate(0%, 100%);
+                padding-left: 10px;
+                padding-right: 10px;
+                border: 3px solid ${border};
+                width: 100%;
+                min-width: 150px;
+                display: none;
+                background: ${paper_dark};
+            }
+
+            .menu a {
+                color: ${text_default};
+            }
+
+            .menu > ul {
+                list-style-type: none;
+                width: 100%;
+                padding: 0;
+                margin-top: 8px;
+                margin-bottom: 8px;
+            }
+
+            .menu li {
+                border-radius: 10px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                padding: 10px;
+                font-size: 1.5em;
+            }
+
+            .menu li:hover {
+                background: ${list_hover};
+                color: ${text_invert};
+            }
+
+            .menu.open {
+                display: block;
+            }
+        "#,
+        border=theme.border_colored,
+        paper_dark=theme.paper_dark,
+        list_hover=theme.panel_color_primary,
+        text_default=theme.text_default,
+        text_invert=theme.text_invert,
     );
 
     let hover_color = css!(
         r#"
             cursor: pointer;
+            color: ${text_colored};
             &:hover {
                 color: ${hover};
             }
         "#,
-        hover = theme.text_colored_highlight,
+        text_colored=theme.text_colored,
+        hover=theme.text_colored_highlight,
     );
 
     let navigator = use_navigator().unwrap();
@@ -170,19 +222,39 @@ fn user_menu(props: &UserMenuProps) -> Html {
             });
         })
     };
+
+    let user_menu_open = use_state(|| false);
+    let user_menu_classes = if *user_menu_open {
+        "menu open"
+    } else {
+        "menu"
+    };
+    let profile_onclick = {
+        let user_menu_open = user_menu_open.clone();
+        Callback::from(move |_| user_menu_open.set(!*user_menu_open))
+    };
+
     html! {
         if props.logged_in {
             <div class={style}>
                 if *loading {
                     <Loader color={theme.text_colored.clone()} />
                 } else {
-                    <div onclick={handle_logout}>
-                        <h3 class={hover_color.clone()}>{"Logout"}</h3>
-                    </div>
                     if let Some(user) = &store.auth_user {
-                        <Link<Route> to={Route::Profile { id: user.id.to_string() }}><div>
-                            <ProfilePortrait style="margin-left: 10px;" hover=true loading={*loading} src={user.profile_photo.clone()} />
-                        </div></Link<Route>>
+                        <div>
+                            <ProfilePortrait style="margin-left: 10px;" hover=true loading={*loading} src={user.profile_photo.clone()} onclick={profile_onclick.clone()}/>
+                            if *user_menu_open {
+                                <div style="position: fixed; width: 100vw; height: 100vh; left: 0; top: 0;" onclick={profile_onclick}></div>
+                            }
+                            <div class={user_menu_classes}>
+                                <ul>
+                                    <Link<Route> to={Route::Profile { id: user.id.to_string() }}><li>{"Profile"}</li></Link<Route>>
+                                    <li>{"Messages"}</li>
+                                    <li>{"Preferences"}</li>
+                                    <li onclick={handle_logout}>{"Logout"}</li>
+                                </ul>
+                            </div>
+                        </div>
                     }
                 }
             </div>
@@ -190,14 +262,14 @@ fn user_menu(props: &UserMenuProps) -> Html {
             <div class={style}>
                 <div style="margin-right: 10px">
                     <Link<Route> to={Route::Login} classes={css!("text-decoration: none;")}>
-                        <h3 class={hover_color.clone()}>{"Login"}</h3>
+                        <h4 class={hover_color.clone()}>{"Login"}</h4>
                     </Link<Route>>
                 </div>
-                <div>
-                    <Link<Route> to={Route::Register} classes={css!("text-decoration: none;")}>
-                        <h3 class={hover_color.clone()}>{"Sign up"}</h3>
-                    </Link<Route>>
-                </div>
+                // <div>
+                //     <Link<Route> to={Route::Register} classes={css!("text-decoration: none;")}>
+                //         <h5 class={hover_color.clone()}>{"Sign up"}</h5>
+                //     </Link<Route>>
+                // </div>
             </div>
         }
     }
@@ -396,6 +468,20 @@ fn get_bar_style(theme: &Theme) -> Style {
             border-width: 0px 0px 4px 0px;
             border-style: solid;
             border-color: {};
+
+            .center-logo {{
+                position: absolute;
+                left: 50%;
+                transform: translate(-55%, 0);
+            }}
+
+            @media screen and (max-width: 800px) {{
+                .center-logo {{
+                    position: relative;
+                    left: 0;
+                    transform: translate(0, 0);
+                }}
+            }}
         "#,
         theme.paper_dark,
         theme.navbar_line

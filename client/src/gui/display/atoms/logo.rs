@@ -10,6 +10,10 @@ pub struct Props {
     pub size: LogoSize,
     #[prop_or(true)]
     pub text: bool,
+    #[prop_or_default]
+    pub class: Classes,
+    #[prop_or_default]
+    pub style: Option<AttrValue>,
 }
 
 #[derive(Clone, PartialEq)]
@@ -64,7 +68,7 @@ pub fn logo(props: &Props) -> Html {
     );
 
     html! {
-        <div class={logo_style}>
+        <div class={classes!(logo_style, props.class.clone())} style={props.style.clone()}>
             <Link<Route> to={Route::Home} classes={css!("display: flex; flex-direction: row; align-items: center;")}><img src="/img/generic/Dice RPG Icon.svg" class={image_style}/>
                 if props.text {
                     <h3 class={text_style}>{"RPG Helper"}</h3>

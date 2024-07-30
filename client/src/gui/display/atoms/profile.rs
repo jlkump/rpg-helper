@@ -18,6 +18,8 @@ pub struct Props {
     pub class: Classes,
     #[prop_or_default]
     pub style: Option<AttrValue>,
+    #[prop_or_default]
+    pub onclick: Option<Callback<MouseEvent>>,
 }
 
 #[styled_component(ProfilePortrait)]
@@ -49,9 +51,9 @@ pub fn profile_portrait(props: &Props) -> Html {
 
     html! {
         if props.loading {
-            <div class={classes!(props.class.clone(), hover, style, css!("background-image: linear-gradient(${bg_1}, ${bg_2});", bg_1=theme.skeleton_background_primary.clone(), bg_2=theme.skeleton_background_secondary.clone()))} style={props.style.clone()}></div>
+            <div class={classes!(props.class.clone(), hover, style, css!("background-image: linear-gradient(${bg_1}, ${bg_2});", bg_1=theme.skeleton_background_primary.clone(), bg_2=theme.skeleton_background_secondary.clone()))} style={props.style.clone()} onclick={props.onclick.clone()}></div>
         } else {
-            <img class={classes!(props.class.clone(), hover, style)} style={props.style.clone()} src={props.src.clone()} />
+            <img class={classes!(props.class.clone(), hover, style)} style={props.style.clone()} src={props.src.clone()} onclick={props.onclick.clone()}/>
         }
     }
 }

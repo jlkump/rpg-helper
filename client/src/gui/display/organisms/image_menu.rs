@@ -7,7 +7,7 @@ use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
 use yewdux::use_store;
 
-use crate::{api::user_api::api_user_upload, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}, model::types::ImageData, store::AuthUser};
+use crate::{api::user_api::api_user_upload, gui::{contexts::theme::use_theme, display::atoms::{form_input::{FileFormInput, FormInput}, loading::SkeletonPane, popup::Popup}}, model::types::{ImageData, UploadImageData}, store::AuthUser};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -121,11 +121,11 @@ pub fn image_menu(
         })
     };
 
-    let temp_img_data = ImageData::ExternalPath("img/test/Antonio Tremis - AI Portrait.png".to_string());
+    let temp_img_data = ImageData::InternalUpload(UploadImageData { src: "/img/test/Antonio Tremis - AI Portrait.png".to_string(), name: "Antonio Tremis".to_string(), size: 1242, dimen: (124, 124) });
     html! {
         <Popup class={menu_style} style={style.clone()} {z_index} active={active.clone()} {on_close_callback}>
             <div class="header">
-                <h1 style="text-align: center;">{"Image Select"}</h1>
+                <h3 style="text-align: center;">{"Image Select"}</h3>
                 <hr/>
             </div>
             <div class="container"
@@ -362,10 +362,18 @@ fn image_panel(props: &ImagePanelProps) -> Html {
             align-self: center;
             text-align: center;
             text-wrap: wrap;
+            position: relative;
 
             p {
                 margin-block-start: 0em;
                 margin-block-end: 0.5em;
+            }
+
+            .text-header {
+                position: absolute;
+                bottom: 1px;
+                width: 100%;
+                background: ${bg};
             }
 
             .wrapper {
@@ -379,13 +387,20 @@ fn image_panel(props: &ImagePanelProps) -> Html {
                 border: 3px solid ${highlight};
             }
 
+            .wrapper:focus {
+                border: 3px solid ${focus_highlight};
+            }
+
             img {
                 width: 100%;
                 height: 100%;
                 object-fit: cover;
             }
 
-        "#, highlight=theme.text_colored_highlight
+        "#, 
+        bg=theme.paper_dark,
+        focus_highlight=theme.text_colored,
+        highlight=theme.text_colored_highlight
     );
     let onclick = {
         let click_handler = props.onclick.clone();
@@ -400,8 +415,10 @@ fn image_panel(props: &ImagePanelProps) -> Html {
         if let Some(data) = props.data.clone() {
             if let Some(data) = data.as_upload_data() {
                 <div class={style}>
-                    <p>{data.name.clone()}</p>
                     <div class="wrapper" {onclick}>
+                        <div class="text-header">
+                            <p>{data.name.clone()}</p>
+                        </div>
                         <img src={data.src.clone()} />
                     </div>
                 </div>
