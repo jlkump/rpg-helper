@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use stylist::yew::styled_component;
 
-use crate::{gui::display::organisms::{image_menu::ImageMenu, nav_bar::NavBar}, model::types::ImageData};
+use crate::{gui::display::{atoms::collapsable_headers::{Header, HeaderType}, organisms::{image_menu::ImageMenu, nav_bar::NavBar}}, model::types::ImageData};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props {
@@ -26,13 +26,22 @@ pub fn home(_: &Props) -> Html {
             <ImageMenu {active} z_index=11 on_image_selected={callback} />
             <div style="display: flex; height: 100%; width: 100%; justify-content: center;">
                 <div>
-                    <h4>{format!("Image Selected: {:?}", image_selected)}</h4>
-                    <button {onclick}>{"Open image menu"}</button>
-                </div>
-                <div>
-                    if let Some(image) = &*image_selected {
-                        <img src={image.to_src().to_string()} style="width: 100%; height: 100%; object-fit: contain;" />
-                    }
+                    <Header header_type={HeaderType::H1} content={
+                        html! {
+                            <div>
+                                if let Some(image) = &*image_selected {
+                                    <img src={image.to_src().to_string()} style="width: 100%; height: 100%; object-fit: contain;" />
+                                }
+                                <button {onclick}>{"Open image menu"}</button>
+                            </div>
+                        }
+                    }>{format!("Image Selected: {:?}", image_selected)}<hr/></Header>
+
+                    <Header header_type={HeaderType::H2} content={html!{{"Test Content"}}}>{"Header 2"}</Header>
+                    <Header header_type={HeaderType::H3} content={html!{{"Test Content"}}}>{"Header 3"}</Header>
+                    <Header header_type={HeaderType::H4} content={html!{{"Test Content"}}}>{"Header 4"}</Header>
+                    <Header header_type={HeaderType::H5} content={html!{{"Test Content"}}}>{"Header 5"}</Header>
+                    <Header header_type={HeaderType::H6} content={html!{{"Test Content"}}}>{"Header 6"}</Header>
                 </div>
             </div>
         </NavBar>

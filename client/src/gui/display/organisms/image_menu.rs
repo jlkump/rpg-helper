@@ -122,6 +122,7 @@ pub fn image_menu(
     };
 
     let temp_img_data = ImageData::InternalUpload(UploadImageData { src: "/img/test/Antonio Tremis - AI Portrait.png".to_string(), name: "Antonio Tremis".to_string(), size: 1242, dimen: (124, 124) });
+    
     html! {
         <Popup class={menu_style} style={style.clone()} {z_index} active={active.clone()} {on_close_callback}>
             <div class="header">

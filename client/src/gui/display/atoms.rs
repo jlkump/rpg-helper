@@ -1,5 +1,6 @@
 pub mod button;
 pub mod character_portrait;
+pub mod collapsable_headers;
 pub mod colored_panel;
 pub mod form_input;
 pub mod hamburger_menu;

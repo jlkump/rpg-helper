@@ -28,43 +28,37 @@ fn app() -> Html {
                     h1 {
                         color: ${h1};
                         font-size: 2.5em;
-                        margin-top: 10px;
-                        margin-bottom: 10px;
+                        margin: 10px 5px 10px 5px;
                     }
 
                     h2 {
                         color: ${h2};
                         font-size: 2em;
-                        margin-top: 5px;
-                        margin-bottom: 5px;
+                        margin: 5px 2.5px 5px 2.5px;
                     }
 
                     h3 {
                         color: ${h3};
                         font-size: 1.75em;
-                        margin-top: 2px;
-                        margin-bottom: 2px;
+                        margin: 2px 1.5px 2px 1.5px;
                     }
 
                     h4 {
                         color: ${h4};
                         font-size: 1.5em;
-                        margin-top: 2px;
-                        margin-bottom: 2px;
+                        margin: 2px 1.5px 2px 1.5px;
                     }
 
                     h5 {
                         color: ${h5};
                         font-size: 1.25em;
-                        margin-top: 2px;
-                        margin-bottom: 2px;
+                        margin: 2px 1.5px 2px 1.5px;
                     }
 
                     h6 {
                         color: ${h6};
                         font-size: 1em;
-                        margin-top: 2px;
-                        margin-bottom: 2px;
+                        margin: 2px 1.5px 2px 1.5px;
                     }
 
                     hr {
