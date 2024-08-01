@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::{data_model::primatives::{location::Location, permissions::{CharacterId, GamePermissions, PlayerId}, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::ServerError};
+use crate::model::{data_model::primatives::{location::Location, permissions::GamePermissions, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::{CharacterId, GameId, PlayerId, ServerError}};
 
 use super::{character::Character, location::LocationRef, ruleset::Ruleset, setting::Setting, timeline::{Date, Event, EventRef, Timeline}, types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, ModifierTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, RefTarget, Storable};
 
-pub type GameId = uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Game<'a> {

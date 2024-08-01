@@ -1,4 +1,4 @@
-use crate::model::data_model::primatives::{location::Location, permissions::CharacterId, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage};
+use crate::model::{data_model::primatives::{location::Location, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::CharacterId};
 
 use super::{character::Character, game::{Game, GameMasterData}, location::LocationRef, playset::Playset, ruleset::Ruleset, setting::Setting, types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, ModifierTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, QueryError, RefTarget};
 

@@ -2,12 +2,9 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::storage::{location::{LocationRef, MapRef}, timeline::EventTypeRef, types::TypeRef, values::ValueRef, wiki::WikiPageRef};
+use crate::model::{data_model::storage::{location::{LocationRef, MapRef}, timeline::EventTypeRef, types::TypeRef, values::ValueRef, wiki::WikiPageRef}, types::{CharacterId, PlayerId}};
 
 // This might be better placed in storage module?
-
-pub type PlayerId = uuid::Uuid;
-pub type CharacterId = uuid::Uuid;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct GamePermissions {
@@ -17,6 +14,7 @@ pub struct GamePermissions {
 
     // Rework
     players: Vec<PlayerId>,      // Who is invited an allowed to play in the game
+    groups: HashMap<String, Vec<CharacterId>>, // Group-name to list of characters in the group
     game_masters: Vec<PlayerId>, // Who can be game master
     active_gm: PlayerId,         // Who is the active game master (allow multiple? Should be ok to, but will check later)
 }
@@ -59,6 +57,7 @@ pub enum PermissionSetting {
     OwnerAndGameMaster,
     // The OnlyGameMasters setting means that the user with this permission only have it if they are the active GM.
     AllPlayers,
+    GroupOnly(String), // Name of the group that is allowed
     Custom(CustomPermissionSetting)
 }
 

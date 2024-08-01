@@ -28,3 +28,16 @@ pub enum UserUpdateSchema {
     FavoritedSetting(uuid::Uuid),
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SearchSchema {
+    pub search_string: String,
+    pub sorting: SortOptions,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+pub enum SortOptions {
+    Alphabetical,
+    ReverseAlphabetical,
+    LastUpdated,
+    LeastUpdated,
+}

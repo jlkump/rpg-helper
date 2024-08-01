@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use types::{MetaTypeRef, TypeRef};
 use view_context::ViewContext;
 
-use super::primatives::{permissions::CharacterId, types::equation::{EquationCompute, EvalError}};
+use crate::model::types::CharacterId;
+
+use super::primatives::types::equation::{EquationCompute, EvalError};
 
 pub mod character;
 pub mod game;

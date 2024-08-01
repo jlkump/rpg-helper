@@ -4,9 +4,16 @@ use serde::{Deserialize, Serialize};
 
 use super::data_model::primatives::values::Value;
 
-/////////////////////////////////////////
-//              Errors                ///
-/////////////////////////////////////////
+////////////////////////////////////////
+//              IDs                   //
+////////////////////////////////////////
+pub type GameId = uuid::Uuid;
+pub type PlayerId = uuid::Uuid;
+pub type CharacterId = uuid::Uuid;
+
+////////////////////////////////////////
+//              Errors                //
+////////////////////////////////////////
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerError {

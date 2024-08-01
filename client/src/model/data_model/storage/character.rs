@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::model::data_model::primatives::{permissions::{CharacterId, PlayerId}, types::equation::Equation};
+use crate::model::{data_model::primatives::types::equation::Equation, types::{CharacterId, PlayerId}};
 
 use super::{location::LocationIndex, ruleset::RulesetId, timeline::{Date, Timeline}, values::ValueIndex, wiki::WikiIndex};
 

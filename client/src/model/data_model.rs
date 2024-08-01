@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use storage::game::{Game, GameId};
+use storage::game::Game;
+
+use super::types::GameId;
 
 //////////////////////////////////////
 //       Data Model for Tool        //
