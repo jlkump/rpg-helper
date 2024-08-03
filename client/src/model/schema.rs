@@ -34,10 +34,9 @@ pub struct SearchSchema {
     pub sorting: SortOptions,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone, Copy)]
 pub enum SortOptions {
     Alphabetical,
     ReverseAlphabetical,
     LastUpdated,
-    LeastUpdated,
 }
