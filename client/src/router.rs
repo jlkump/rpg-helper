@@ -1,41 +1,64 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::gui::display::pages::{character_creator::CharacterCreator, character_viewer::CharacterViewer, dashboard::Dashboard, error_pages::{ErrorPage, PageNotFound}, home::Home, ruleset_creator::RulesetCreator, setting_editor::SettingEditor, user::{LoginUser, RegisterUser, UserProfile, UserPrefernces}};
+use crate::gui::display::pages::{generic::{dashboard::Dashboard, error_pages::{ErrorPage, PageNotFound}, home::Home}, user::{LoginUser, RegisterUser, UserProfile, UserPrefernces}};
 
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum Route {
+    // Main Routes
     #[at("/")]
     Home,
     #[at("/About")]
     About,
-    #[at("/Login")]
-    Login,
-    #[at("/Register")]
-    Register,
     #[at("/Dashboard")]
     Dashboard,
-    #[at("/Profile/:id")]
-    Profile { id: String },
-    #[at("/Preferences")]
-    Preferences,
-    #[at("/Character-Creator")]
-    CharacterCreator,
-    #[at("/Ruleset-Creator")]
-    RulesetCreator,
-    #[at("/Setting-Editor")]
-    SettingEditor,
-    #[at("/Game-Select")]
-    JoinGame,
-    #[at("/Game-Host")]
-    HostGame,
-    #[at("/Character-Sheet")]
-    CharacterSheet,
     #[at("/Error/:error")]
     Error { error: String },
     #[not_found]
     #[at("/404")]
     NotFound,
+
+    // User Routes
+    #[at("/Login")]
+    Login,
+    #[at("/Register")]
+    Register,
+    #[at("/Preferences")]
+    Preferences,
+    #[at("/Profile/:id")]
+    Profile { id: String },
+
+    // Character Routes
+    #[at("/Character/Viewer")]
+    CharacterViewer,
+    #[at("/Character/Editor/:id")]
+    CharacterEditor { id: String },
+
+    // Ruleset Routes
+    #[at("/Ruleset/Viewer")]
+    RulesetViewer,
+    #[at("/Ruleset/Editor/:id")]
+    RulesetEditor { id: String },
+
+    // Setting Routes
+    #[at("/Setting/Viewer")]
+    SettingViewer,
+    #[at("/Setting/Editor/:id")]
+    SettingEditor { id: String },
+
+    // Game Routes
+    #[at("/Game/Viewer")]
+    GameViewer,
+    #[at("/Game/Editor/:id")]
+    GameEditor { id: String },
+    #[at("/Game/Host-Select")]
+    GameHostSelect,
+    #[at("/Game/Host/:id")]
+    GameHost { id: String },
+    #[at("/Game/Join/:id")]
+    JoinGame { id: String },
+    #[at("/Game/Play/:id")]
+    PlayGame { id: String },
 }
 
 fn switch(routes: Route) -> Html {
@@ -43,19 +66,30 @@ fn switch(routes: Route) -> Html {
     match routes {
         Route::Home => html! { <Home/> },
         Route::About => html! { <Redirect<Route> to={Route::Home} />},
+        Route::Dashboard => html! { <Dashboard /> },
+        Route::Error { error } => html! { <ErrorPage {error} />},
+        Route::NotFound => html! { <PageNotFound/> },
+
         Route::Login => html! { <LoginUser/> },
         Route::Register => html! { <RegisterUser/> },
-        Route::Dashboard => html! { <Dashboard /> },
         Route::Profile { id } => html! { if let Ok(id) = uuid::Uuid::parse_str(&id) { <UserProfile {id}/> } else { <Redirect<Route> to={Route::NotFound} /> } },
-        Route::Error { error } => html! { <ErrorPage {error} />},
         Route::Preferences => html! { <UserPrefernces /> },
-        Route::CharacterCreator => html! { <CharacterCreator /> },
-        Route::RulesetCreator => html! { <RulesetCreator /> },
-        Route::SettingEditor => html! { <SettingEditor /> },
-        Route::JoinGame => html! { <Redirect<Route> to={Route::Home} /> },
-        Route::HostGame => html! { <Redirect<Route> to={Route::Home} /> },
-        Route::CharacterSheet => html! { <CharacterViewer/> },
-        Route::NotFound => html! { <PageNotFound/> },
+
+        Route::CharacterViewer => todo!(),
+        Route::CharacterEditor { id } => todo!(),
+
+        Route::RulesetViewer => todo!(),
+        Route::RulesetEditor { id } => todo!(),
+
+        Route::SettingViewer => todo!(),
+        Route::SettingEditor { id } => todo!(),
+
+        Route::GameViewer => todo!(), // View active public games able to join
+        Route::GameEditor { id } => todo!(),
+        Route::GameHostSelect => todo!(),
+        Route::GameHost {id } => todo!(),
+        Route::JoinGame { id } => todo!(),
+        Route::PlayGame { id } => todo!(),
     }
 }
 

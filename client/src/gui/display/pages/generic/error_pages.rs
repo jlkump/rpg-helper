@@ -26,7 +26,7 @@ pub struct ErrorPageProps {
 }
 
 #[styled_component(ErrorPage)]
-pub fn page_not_found(props: &ErrorPageProps) -> Html {    
+pub fn error_page(props: &ErrorPageProps) -> Html {    
     html! {
         <NavBar content_class={css!("display: flex; flex-direction: column; align-items: center; margin-top: 50px;")}>
             <ScrollDiv class={css!("display: flex; flex-direction: column; align-items: center; width: 60%; text-align: center; word-wrap: break-word;")}>

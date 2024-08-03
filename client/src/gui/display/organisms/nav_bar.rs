@@ -376,17 +376,17 @@ fn get_signed_in_menu_options(navigator: &Navigator) -> Html {
                     <Icon icon_id={IconId::LucideLayoutDashboard} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Dashboard"}</div>
                 </li>
-                <li onclick={get_route_callback(navigator, Route::CharacterCreator)}>
-                    <Icon icon_id={IconId::OcticonsPersonAdd16} width={"1em".to_owned()} height={"1em".to_owned()}/>
-                    <div style="margin-left: 10px;">{"Character Creator"}</div>
-                </li>
-                <li onclick={get_route_callback(navigator, Route::RulesetCreator)}>
+                <li onclick={get_route_callback(navigator, Route::RulesetViewer)}>
                     <Icon icon_id={IconId::LucideHammer} width={"1em".to_owned()} height={"1em".to_owned()}/>
-                    <div style="margin-left: 10px;">{"Ruleset Creator"}</div>
+                    <div style="margin-left: 10px;">{"Rulesets"}</div>
                 </li>
-                <li onclick={get_route_callback(navigator, Route::SettingEditor)}>
+                <li onclick={get_route_callback(navigator, Route::SettingViewer)}>
                     <Icon icon_id={IconId::LucideMountainSnow} width={"1em".to_owned()} height={"1em".to_owned()}/>
-                    <div style="margin-left: 10px;">{"Setting Editor"}</div>
+                    <div style="margin-left: 10px;">{"Settings"}</div>
+                </li>
+                <li onclick={get_route_callback(navigator, Route::CharacterViewer)}>
+                    <Icon icon_id={IconId::OcticonsPersonAdd16} width={"1em".to_owned()} height={"1em".to_owned()}/>
+                    <div style="margin-left: 10px;">{"Characters"}</div>
                 </li>
             </ul>
 
@@ -395,11 +395,11 @@ fn get_signed_in_menu_options(navigator: &Navigator) -> Html {
             </div>
 
             <ul>
-                <li onclick={get_route_callback(navigator, Route::HostGame)}>
+                <li onclick={get_route_callback(navigator, Route::GameHostSelect)}>
                     <Icon icon_id={IconId::FeatherServer} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Host Game"}</div>
                 </li>
-                <li onclick={get_route_callback(navigator, Route::JoinGame)}>
+                <li onclick={get_route_callback(navigator, Route::GameViewer)}>
                     <Icon icon_id={IconId::BootstrapBoxArrowInLeft} width={"1em".to_owned()} height={"1em".to_owned()}/>
                     <div style="margin-left: 10px;">{"Join Game"}</div>
                 </li>
