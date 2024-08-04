@@ -1,16 +1,34 @@
-use crate::model::data_model::primatives::{location::Location, types::Type, wiki::WikiPage};
+use crate::model::{data_model::primatives::{location::Location, types::Type, wiki::WikiPage}, types::RulesetId};
 
-use super::{location::{LocationIndex, LocationRef}, types::{TypeIndex, TypeRef}, values::ValueIndex, wiki::{WikiIndex, WikiPageRef}, IndexStorage, Query};
-
-pub type RulesetId = uuid::Uuid;
+use super::{character::CharacterTemplate, location::{LocationIndex, LocationRef}, types::{TypeIndex, TypeRef}, values::ValueIndex, wiki::{WikiIndex, WikiPageRef}, IndexStorage, Query};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ruleset {
     id: RulesetId,
     wiki: WikiIndex,
     types: TypeIndex,
-    // presets: ValueIndex<'a>,
     locations: LocationIndex,
+    character_templates: Vec<CharacterTemplate>,
+}
+
+impl Ruleset {
+    pub fn new(
+        id: RulesetId, 
+        wiki: WikiIndex, 
+        types: TypeIndex, 
+        locations: LocationIndex, 
+        character_templates: Vec<CharacterTemplate>
+    ) -> Ruleset {
+        Ruleset { id, wiki, types, locations, character_templates }
+    }
+
+    pub fn get_wiki(&self) -> &WikiIndex {
+        &self.wiki
+    }
+
+    pub fn get_mut_wiki(&mut self) -> &mut WikiIndex {
+        &mut self.wiki
+    }
 }
 
 impl IndexStorage<WikiPage, WikiPageRef> for Ruleset {

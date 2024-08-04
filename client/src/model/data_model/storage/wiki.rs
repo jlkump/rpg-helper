@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::primatives::wiki::{WikiData, WikiPage};
+use crate::model::{data_model::primatives::wiki::{WikiData, WikiPage}, types::WikiPageId};
 
 use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
 
@@ -10,6 +10,21 @@ use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget}
 pub struct WikiIndex {
     pages: HashMap<String, WikiData>,
     view_context: Option<ViewContext>,
+    display_data_paths: HashMap<WikiPageRef, WikiPageId>, // display data is stored on-disk in a ruleset / setting specific folder, where WikiPage data is stored in a file by WikiPageId.
+}
+
+impl WikiIndex {
+    pub fn new(
+        pages: HashMap<String, WikiData>, 
+        view_context: Option<ViewContext>, 
+        display_data_paths: HashMap<WikiPageRef, WikiPageId>
+    ) -> WikiIndex {
+        WikiIndex { pages, view_context, display_data_paths }
+    }
+
+    pub fn set_view_ctx(&mut self, v_ctx: ViewContext) {
+        self.view_context = Some(v_ctx);
+    }
 }
 
 impl IndexStorage<WikiPage, WikiPageRef> for WikiIndex {
@@ -21,6 +36,7 @@ impl IndexStorage<WikiPage, WikiPageRef> for WikiIndex {
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct WikiPageRef {
+    // This path of the wiki page is relative to the "virtual" file structure, not the actual structure on disk.
     path: String,
 }
 
@@ -33,20 +49,3 @@ impl IndexRef<WikiPage> for WikiPageRef {
         todo!()
     }
 }
-
-// impl<'a> std::ops::Add for WikiIndex<'a> {
-//     type Output = WikiIndex<'a>;
-//     /// When adding two WikiIndexes, the values in each are combined.
-//     /// The rhs values take priority over lhs value in cases of a conflict.
-//     /// The rhs' view context is also the one used
-//     fn add(self, rhs: Self) -> Self::Output {
-//         let mut res = WikiIndex {
-//             pages: HashMap::new(),
-//             view_context: rhs.view_context,
-//         };
-//         for it in self.pages.into_iter().chain(rhs.pages.into_iter()) {
-//             res.pages.insert(it.0, it.1); // Rhs values will override lhs values
-//         }
-//         res
-//     }
-// }

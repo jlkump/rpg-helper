@@ -14,7 +14,7 @@ impl NumberType {
     // Used to construct the generic number type used for every ruleset.
     pub fn generic() -> &'static NumberType {
         static NUMBER: Lazy<NumberType> = Lazy::new(|| NumberType {
-            container: ContainerKind::Ruleset,
+            container: ContainerKind::Ruleset(uuid::Uuid::nil()),
             name: String::from("Number"),
         });
         return &NUMBER;

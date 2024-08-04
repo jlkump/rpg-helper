@@ -12,6 +12,16 @@ pub struct TypeIndex {
     view_context: Option<ViewContext>,
 }
 
+impl TypeIndex {
+    pub fn new(types: HashMap<String, Type>, view_context: Option<ViewContext>) -> TypeIndex {
+        TypeIndex { types, view_context }
+    }
+
+    pub fn set_view_ctx(&mut self, v_ctx: ViewContext) {
+        self.view_context = Some(v_ctx);
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct TypeRef {
     target: RefTarget,

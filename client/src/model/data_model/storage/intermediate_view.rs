@@ -11,6 +11,26 @@ pub struct IntermediateView {
 }
 
 impl IntermediateView {
+    pub fn from_ruleset(r: Ruleset) -> IntermediateView {
+        IntermediateView { ruleset: Some(r), setting: None, characters: vec![], game_master_data: None }
+    }
+
+    pub fn set_ruleset(&mut self, r: Ruleset) {
+        self.ruleset = Some(r);
+    }
+
+    pub fn set_setting(&mut self, s: Setting) {
+        self.setting = Some(s);
+    }
+
+    pub fn set_characters(&mut self, c: Vec<Character>) {
+        self.characters = c;
+    }
+
+    pub fn set_gamemaster_data(&mut self, d: GameMasterData) {
+        self.game_master_data = Some(d);
+    }
+
     pub fn get_ruleset(&self) -> Option<&Ruleset> {
         self.ruleset.as_ref()
     }

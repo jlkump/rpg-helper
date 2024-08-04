@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, rc::Weak};
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::storage::{ContainerKind, Storable};
+use crate::model::data_model::storage::{wiki::WikiPageRef, ContainerKind, Storable};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub enum WikiData {
@@ -23,7 +23,7 @@ impl Storable for WikiData {
 pub struct WikiPage {
     heading: String,            // Wikipages are identified by heading.
     sub_headings: Vec<String>,  // User can make links by heading and subheading for display. Ex: [[heading#subheading]]
-    display_data: String,       // Stored as Markdown text
+    self_ref: WikiPageRef,
     container: ContainerKind,
 }
 

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::types::ImageData;
+use super::types::{ImageData, RulesetId};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UserRegistrationSchema {
@@ -39,4 +39,9 @@ pub enum SortOptions {
     Alphabetical,
     ReverseAlphabetical,
     LastUpdated,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RulesetRequestSchema {
+    pub id: RulesetId,
 }

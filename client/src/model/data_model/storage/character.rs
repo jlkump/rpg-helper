@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use crate::model::{data_model::primatives::types::equation::Equation, types::{CharacterId, PlayerId}};
+use crate::model::{data_model::primatives::types::equation::Equation, types::{CharacterId, PlayerId, RulesetId}};
 
-use super::{location::LocationIndex, ruleset::RulesetId, timeline::{Date, Timeline}, values::ValueIndex, wiki::WikiIndex};
+use super::{location::LocationIndex, timeline::{Date, Timeline}, values::ValueIndex, wiki::WikiIndex};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Character {
@@ -29,5 +29,6 @@ pub struct Character {
 pub struct CharacterTemplate {
     name_of_template: String,
     values: ValueIndex,             // Default values for the character, such as characteristics, abilities, etc.
+    equations: HashMap<String, Equation>, // Default starting equations
     requires_ruleset: RulesetId,
 }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use types::{MetaTypeRef, TypeRef};
 use view_context::ViewContext;
 
-use crate::model::types::CharacterId;
+use crate::model::types::{CharacterId, GameId, RulesetId, SettingId};
 
 use super::primatives::types::equation::{EquationCompute, EvalError};
 
@@ -33,19 +33,19 @@ pub enum RefTarget {
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub enum ContainerKind {
-    Ruleset,
-    Setting,
-    GameplayData,
-    GamemasterData,
+    Ruleset(RulesetId),
+    Setting(SettingId),
+    GameplayData(GameId),
+    GamemasterData(GameId),
     Character(CharacterId),
 }
 
 impl From<&ContainerKind> for RefTarget {
     fn from(value: &ContainerKind) -> Self {
         match value {
-            ContainerKind::Setting | ContainerKind::Ruleset => RefTarget::Playset,
-            ContainerKind::GameplayData => RefTarget::GamemasterData,
-            ContainerKind::GamemasterData => RefTarget::GamemasterData,
+            ContainerKind::Setting(_) | ContainerKind::Ruleset(_) => RefTarget::Playset,
+            ContainerKind::GameplayData(_) => RefTarget::GamemasterData,
+            ContainerKind::GamemasterData(_) => RefTarget::GamemasterData,
             ContainerKind::Character(id) => RefTarget::Character(id.clone()),
         }
     }

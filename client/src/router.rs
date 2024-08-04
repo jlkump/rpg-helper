@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::{gui::display::pages::{generic::{dashboard::Dashboard, error_pages::{ErrorPage, PageNotFound}, home::Home}, editors::ruleset::RulesetCreator, user::{LoginUser, RegisterUser, UserPrefernces, UserProfile}}, model::data_model::storage::ruleset::RulesetId};
+use crate::{gui::display::pages::{generic::{dashboard::Dashboard, error_pages::{ErrorPage, PageNotFound}, home::Home}, editors::ruleset::RulesetCreator, user::{LoginUser, RegisterUser, UserPrefernces, UserProfile}}, model::types::RulesetId};
 
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum Route {

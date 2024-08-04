@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::data_model::primatives::{location::Location, types::Type, values::Value, wiki::{WikiData, WikiPage}};
+use crate::model::{data_model::primatives::{location::Location, types::Type, values::Value, wiki::{WikiData, WikiPage}}, types::SettingId};
 
 use super::{location::{LocationIndex, LocationRef}, types::{TypeIndex, TypeRef}, values::{ValueIndex, ValueRef}, wiki::{WikiIndex, WikiPageRef}, IndexRef, IndexStorage, Query, Storable};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Setting {
-    id: uuid::Uuid,
+    id: SettingId,
     wiki: WikiIndex,
     types: TypeIndex,
     // presets: ValueIndex<'a>,

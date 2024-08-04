@@ -1,6 +1,7 @@
 use crate::{error::Error, model::types::ServerError};
 
 pub mod user_api;
+pub mod data_api;
 
 pub const API_URL: &str = "http://localhost:8090/api";
 

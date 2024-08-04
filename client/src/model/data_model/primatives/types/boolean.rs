@@ -12,7 +12,7 @@ pub struct BooleanType {
 impl BooleanType {
     pub fn generic() -> &'static BooleanType {
         static NUMBER: Lazy<BooleanType> = Lazy::new(|| BooleanType {
-            container: ContainerKind::Ruleset,
+            container: ContainerKind::Ruleset(uuid::Uuid::nil()),
             name: String::from("Bool"),
         });
         return &NUMBER;

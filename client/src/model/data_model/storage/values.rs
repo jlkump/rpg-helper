@@ -14,6 +14,14 @@ pub struct ValueIndex {
 }
 
 impl ValueIndex {
+    pub fn new(
+        values: HashMap<String, Value>, 
+        modifiers: HashMap<ValueRef, Vec<Modifier>>,
+        view_context: Option<ViewContext>,
+    ) -> ValueIndex {
+        ValueIndex { values, modifiers, view_context }
+    }
+
     pub fn get_all_modifiers_for(&self, v_ref: &ValueRef) -> Option<&Vec<Modifier>> {
         self.modifiers.get(v_ref)
     }
@@ -21,7 +29,7 @@ impl ValueIndex {
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Clone)]
 pub struct ValueRef {
-    parent: Option<Box<ValueRef>>, // Unknown option?
+    parent: Option<Box<ValueRef>>,
     name: String,
     target: RefTarget,
     subtarget: Option<Box<ValueRefSubtarget>>,

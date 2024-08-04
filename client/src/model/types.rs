@@ -7,9 +7,12 @@ use super::data_model::primatives::values::Value;
 ////////////////////////////////////////
 //              IDs                   //
 ////////////////////////////////////////
+pub type RulesetId = uuid::Uuid;
+pub type SettingId = uuid::Uuid;
 pub type GameId = uuid::Uuid;
 pub type PlayerId = uuid::Uuid;
 pub type CharacterId = uuid::Uuid;
+pub type WikiPageId = uuid::Uuid;
 
 ////////////////////////////////////////
 //              Errors                //

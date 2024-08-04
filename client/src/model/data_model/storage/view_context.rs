@@ -1,6 +1,6 @@
 use std::rc::{Rc, Weak};
 
-use super::{game::Game, intermediate_view::IntermediateView, IndexRef, Query, Storable};
+use super::{game::Game, intermediate_view::IntermediateView, ruleset::Ruleset, wiki::WikiIndex, IndexRef, Query, Storable};
 
 #[derive(Debug, Clone)]
 pub enum ViewContext {
@@ -43,7 +43,14 @@ impl ViewContext {
         }
     }
 
+    /// Allows any value that is storable to go to the Reference.
+    /// This is probably easier by doing a self_ref() method?
     pub fn value_to_ref<T: Storable, R: IndexRef<T>>(&self, v: &T) -> Query<R> {
+        todo!()
+    }
+
+    pub fn get_wiki_index(&self) -> Option<WikiIndex> {
+        // Combines each sub-WikiIndex into a collective WikiIndex. Works b/c each piece of data knows its original container.
         todo!()
     }
 }
