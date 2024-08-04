@@ -1,9 +1,9 @@
-use std::{ops::Deref, rc::Rc};
+use std::ops::Deref;
 
 use stylist::yew::styled_component;
-use yew::{hook, html, use_state, Children, ContextProvider, Html, Properties, UseStateHandle};
+use yew::{hook, html, Children, ContextProvider, Html, Properties, UseStateHandle};
 
-use crate::model::data_model::storage::{game::Game, intermediate_view::IntermediateView, view_context::ViewContext};
+use crate::model::data_model::storage::view_context::ViewContext;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ViewDataCtx {

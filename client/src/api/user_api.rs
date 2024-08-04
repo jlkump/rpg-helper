@@ -1,26 +1,14 @@
-use std::{fmt::{Debug, Display}, io::Bytes};
+use std::fmt::Display;
 
-use crate::{model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{AuthError, PublicUserData, ServerError, ServerErrorType, UserData, UserLoginResponse}}, router::Route};
+use crate::{api::{handle_reqwest_response, handle_response}, error::Error, model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::{PublicUserData, UserData, UserLoginResponse}}, router::Route};
 
 use gloo::console::{error, log};
-use reqwasm::http::{self, Response};
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use serde::de::DeserializeOwned;
+use reqwasm::http;
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use wasm_bindgen::{closure::Closure, JsCast, JsValue};
-use web_sys::{js_sys::{Promise, Uint8Array}, Blob, File, FileReader, FormData};
-use yew_router::navigator::Navigator;
+use web_sys::{js_sys::{Promise, Uint8Array}, Blob, File, FileReader};
 
 use super::API_URL;
-
-// TODO: Expand Error types for each HTTP Response type
-#[derive(Debug)]
-pub enum Error {
-    Unauthorized,
-    API(String),
-    Server(ServerError),
-    RequestFailed(String),
-    ParseFailed(String),
-}
 
 impl From<serde_json::Error> for Error {
     fn from(value: serde_json::Error) -> Self {
@@ -42,6 +30,7 @@ impl Display for Error {
             Error::RequestFailed(e) => write!(f, "Request Failure: {}", e),
             Error::ParseFailed(e) => write!(f, "Parse Failure: {}", e),
             Error::Server(e) => write!(f, "[Server Error] {:?}: {}", e, e.message),
+            Error::QueryError(e) => write!(f, "[Query Error] {:?}", e),
         }
     }
 }
@@ -58,33 +47,9 @@ impl Error {
             Error::RequestFailed(mes) => Route::Error { error: format!("Request failed. Server may be down. \"{}\"", mes) },
             Error::ParseFailed(mes) => Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) },
             Error::Server(e) => Route::Error { error: format!("Server Error. Type: {:?}, mes: \"{}\"", e, e.message) },
+            Error::QueryError(e) => Route::Error { error: format!("Query Error. Type: {:?}", e) },
         }
     }
-}
-
-// Helper function to handle the general error http responses from the backend
-async fn handle_response(response: &Response) -> Result<(), Error> {
-    if response.status() != 200 {
-        let error_response = response.json::<ServerError>().await;
-        
-        match error_response {
-            Ok(error_response) => return Err(Error::Server(error_response)),
-            Err(e) => return Err(Error::API(e.to_string()))
-        }
-    }
-    Ok(())
-}
-
-async fn handle_reqwest_response(response: reqwest::Response) -> Result<(), Error> {
-    if response.status() != 200 {
-        let error_response = response.json::<ServerError>().await;
-        
-        match error_response {
-            Ok(error_response) => return Err(Error::Server(error_response)),
-            Err(e) => return Err(Error::API(e.to_string()))
-        }
-    }
-    Ok(())
 }
 
 pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, Error> {

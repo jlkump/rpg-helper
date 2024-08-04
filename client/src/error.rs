@@ -1,19 +1,11 @@
-#[derive(Debug)]
-pub enum InsertionError<T> {
-    Conflicting(Vec<T>)
-}
+use crate::model::{data_model::storage::QueryError, types::ServerError};
 
 #[derive(Debug)]
-pub enum FieldError {
-    Mismatch(String, String),
-    Nonexistant(String)
-}
-
-#[derive(Debug)]
-pub enum DefinitionError<T> {
-    Redef(T)
-}
-
 pub enum Error {
-    
+    Unauthorized,
+    API(String),
+    Server(ServerError),
+    RequestFailed(String),
+    ParseFailed(String),
+    QueryError(QueryError)
 }

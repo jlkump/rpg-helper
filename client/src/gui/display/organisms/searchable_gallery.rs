@@ -5,7 +5,7 @@ use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
 use yew_icons::{Icon, IconId};
 
-use crate::{api::user_api::Error, gui::{contexts::theme::use_theme, display::atoms::{form_input::FormInput, loading::SkeletonPane, scroll_div::ScrollDiv, tooltip::Tooltip}}, model::schema::{SearchSchema, SortOptions}};
+use crate::{error::Error, gui::{contexts::theme::use_theme, display::atoms::{form_input::FormInput, loading::SkeletonPane, scroll_div::ScrollDiv, tooltip::Tooltip}}, model::schema::{SearchSchema, SortOptions}};
 
 pub fn test_gallery(create: Option<Callback<()>>) -> Html {
     let default = TestDataFetcher {

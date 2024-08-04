@@ -8,7 +8,7 @@ use stylist::{css, yew::styled_component};
 use yew_router::{components::Link, hooks::use_navigator, navigator::{self, Navigator}};
 use yewdux::{dispatch, use_store, Dispatch};
 
-use crate::{api::user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info, api_user_upload, Error}, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData}, router::Route, store::{set_auth_token, set_auth_user, AuthUser}};
+use crate::{api::user_api::{api_login_user, api_public_user_info, api_register_user, api_user_info, api_user_upload}, error::Error, gui::{contexts::theme::use_theme, display::{atoms::{button::SubmitButton, form_input::FormInput, loading::{SkeletonPane, SkeletonTextArea}, profile::ProfilePortrait, scroll_div::ScrollDiv}, molecules::profile_card::ProfileCard, organisms::nav_bar::NavBar}}, model::{schema::{UserLoginSchema, UserRegistrationSchema}, types::PublicUserData}, router::Route, store::{set_auth_token, set_auth_user, AuthUser}};
 use validator::{Validate, ValidationError, ValidationErrors};
 
 
