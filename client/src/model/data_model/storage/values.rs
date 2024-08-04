@@ -7,13 +7,13 @@ use crate::model::data_model::primatives::values::{meta::MetaInst, modifier::Mod
 use super::{view_context::ViewContext, IndexRef, IndexStorage, QueryError, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct ValueIndex<'a> {
+pub struct ValueIndex {
     values: HashMap<String, Value>,
     modifiers: HashMap<ValueRef, Vec<Modifier>>, // Modifiers are not actually stored as a variant of Value
-    view_context: Option<ViewContext<'a>>,
+    view_context: Option<ViewContext>,
 }
 
-impl ValueIndex<'_> {
+impl ValueIndex {
     pub fn get_all_modifiers_for(&self, v_ref: &ValueRef) -> Option<&Vec<Modifier>> {
         self.modifiers.get(v_ref)
     }
@@ -98,7 +98,7 @@ impl IndexRef<Modifier> for ModifierRef {
     }
 }
 
-impl IndexStorage<Modifier, ModifierRef> for ValueIndex<'_> {
+impl IndexStorage<Modifier, ModifierRef> for ValueIndex {
     fn get<'a>(&'a self, r: &ModifierRef) -> super::Query<&'a Modifier> {
         match self.modifiers.get(&r.target) {
             Some(m) => {

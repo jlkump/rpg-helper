@@ -7,9 +7,9 @@ use crate::model::data_model::primatives::{input::InputRequest, types::{boolean:
 use super::{view_context::ViewContext, ContainerKind, IndexRef, IndexStorage, Query, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct TypeIndex<'a> {
+pub struct TypeIndex {
     types: HashMap<String, Type>,
-    view_context: Option<ViewContext<'a>>,
+    view_context: Option<ViewContext>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
@@ -58,7 +58,7 @@ impl IndexRef<Type> for TypeRef {
     }
 }
 
-impl IndexStorage<Type, TypeRef> for TypeIndex<'_> {
+impl IndexStorage<Type, TypeRef> for TypeIndex {
     fn get(&self, r: &TypeRef) -> Query<&Type> {
         todo!()
     }
@@ -126,7 +126,7 @@ impl IndexRef<EnumerationType> for EnumerationTypeRef {
     }
 }
 
-impl IndexStorage<EnumerationType, EnumerationTypeRef> for TypeIndex<'_> {
+impl IndexStorage<EnumerationType, EnumerationTypeRef> for TypeIndex {
     fn get<'a>(&'a self, r: &EnumerationTypeRef) -> Query<&'a EnumerationType> {
         todo!()
     }
@@ -154,7 +154,7 @@ impl IndexRef<MetaType> for MetaTypeRef {
     }
 }
 
-impl IndexStorage<MetaType, MetaTypeRef> for TypeIndex<'_> {
+impl IndexStorage<MetaType, MetaTypeRef> for TypeIndex {
     fn get(&self, r: &MetaTypeRef) -> Query<&MetaType> {
         todo!()
     }
@@ -189,7 +189,7 @@ impl IndexRef<Equation> for EquationRef {
     }
 }
 
-impl IndexStorage<Equation, EquationRef> for TypeIndex<'_> {
+impl IndexStorage<Equation, EquationRef> for TypeIndex {
     fn get<'a>(&'a self, r: &EquationRef) -> Query<&'a Equation> {
         todo!()
     }
@@ -218,7 +218,7 @@ impl IndexRef<DieRollType> for DieRollTypeRef {
     }
 }
 
-impl IndexStorage<DieRollType, DieRollTypeRef> for TypeIndex<'_> {
+impl IndexStorage<DieRollType, DieRollTypeRef> for TypeIndex {
     fn get<'a>(&'a self, r: &DieRollTypeRef) -> Query<&'a DieRollType> {
         todo!()
     }
@@ -241,7 +241,7 @@ impl IndexRef<ModifierType> for ModifierTypeRef {
     }
 }
 
-impl IndexStorage<ModifierType, ModifierTypeRef> for TypeIndex<'_> {
+impl IndexStorage<ModifierType, ModifierTypeRef> for TypeIndex {
     fn get<'a>(&'a self, r: &ModifierTypeRef) -> Query<&'a ModifierType> {
         todo!()
     }

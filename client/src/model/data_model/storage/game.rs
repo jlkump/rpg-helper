@@ -6,13 +6,13 @@ use super::{character::Character, location::LocationRef, ruleset::Ruleset, setti
 
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Game<'a> {
-    id: GameId,
-    ruleset: Ruleset<'a>,
-    setting: Setting<'a>,
-    game_data: GameplayData<'a>,
-    gamemaster_data: Option<GameMasterData<'a>>, // The data is available only if the player has GM permissions
-    characters: Vec<Character<'a>>,
+pub struct Game {
+    pub id: GameId,
+    ruleset: Ruleset,
+    setting: Setting,
+    game_data: GameplayData,
+    gamemaster_data: Option<GameMasterData>, // The data is available only if the player has GM permissions
+    characters: Vec<Character>,
     dead_characters: Vec<CharacterId>, // What to do with dead characters? Store just the ID then fetch from database?
     game_permissions: GamePermissions, // The permissons for all data contained in the game. 
                                        // Can only be edited by the GM
@@ -22,22 +22,22 @@ pub struct Game<'a> {
 /// It is different than the setting changing, as the gameplay data only affects the current game.
 /// Changes here will not affect the setting or ruleset.
 #[derive(Debug, PartialEq, Clone)]
-pub struct GameplayData<'a> {
-    timeline: Timeline<'a>, // These are events that the GM creates.
+pub struct GameplayData {
+    timeline: Timeline, // These are events that the GM creates.
     current_date: Date,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct GameMasterData<'a> {
+pub struct GameMasterData {
     // The view of data for the game master to manipulate?
     // The Game already has the data for the GameMaster, but this provides extra info
     // Such as the list of pre-determined events for the timeline or player groups for assigning timeline end events
     // or permissions.
-    future_events: Timeline<'a>,
+    future_events: Timeline,
     character_groups: Vec<Vec<CharacterId>>,
 }
 
-impl<'g> Game<'g> {
+impl Game {
     pub fn filter_permissions(&self, player_id: PlayerId) -> Self {
         // Gives back a game struct that contains the data that is available to be viewed by the player
         todo!()
@@ -49,26 +49,26 @@ impl<'g> Game<'g> {
         todo!()
     }
 
-    pub fn get_mut_ruleset(&mut self) -> &mut Ruleset<'g> {
+    pub fn get_mut_ruleset(&mut self) -> &mut Ruleset {
         &mut self.ruleset
     }
 
-    pub fn get_mut_setting(&mut self) -> &mut Setting<'g> {
+    pub fn get_mut_setting(&mut self) -> &mut Setting {
         &mut self.setting
     }
 
-    pub fn get_mut_gameplay_data(&mut self) -> &mut GameplayData<'g> {
+    pub fn get_mut_gameplay_data(&mut self) -> &mut GameplayData {
         &mut self.game_data
     }
 
-    pub fn get_mut_gamemaster_data(&mut self) -> Option<&mut GameMasterData<'g>> {
+    pub fn get_mut_gamemaster_data(&mut self) -> Option<&mut GameMasterData> {
         self.gamemaster_data.as_mut()
     }
 }
 
 // ---------------- Ref Implementations ---------------------------
 
-impl IndexStorage<WikiPage, WikiPageRef> for Game<'_> {
+impl IndexStorage<WikiPage, WikiPageRef> for Game {
     fn get(&self, r: &WikiPageRef) -> Query<&WikiPage> {
         match r.get_target() {
             RefTarget::Playset => {
@@ -86,7 +86,7 @@ impl IndexStorage<WikiPage, WikiPageRef> for Game<'_> {
     }
 }
 
-impl IndexStorage<Location, LocationRef> for Game<'_> {
+impl IndexStorage<Location, LocationRef> for Game {
     fn get(&self, r: &LocationRef) -> Query<&Location> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -99,7 +99,7 @@ impl IndexStorage<Location, LocationRef> for Game<'_> {
 
 // ------------- Values ---------------
 
-impl IndexStorage<Value, ValueRef> for Game<'_> {
+impl IndexStorage<Value, ValueRef> for Game {
     fn get(&self, r: &ValueRef) -> Query<&Value> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -110,7 +110,7 @@ impl IndexStorage<Value, ValueRef> for Game<'_> {
     }
 }
 
-impl IndexStorage<MetaInst, MetaInstRef> for Game<'_> {
+impl IndexStorage<MetaInst, MetaInstRef> for Game {
     fn get<'a>(&'a self, r: &MetaInstRef) -> Query<&'a MetaInst> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -122,7 +122,7 @@ impl IndexStorage<MetaInst, MetaInstRef> for Game<'_> {
 }
 // ------------- Types  ---------------
 
-impl IndexStorage<Type, TypeRef> for Game<'_> {
+impl IndexStorage<Type, TypeRef> for Game {
     fn get(&self, r: &TypeRef) -> Query<&Type> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -133,19 +133,19 @@ impl IndexStorage<Type, TypeRef> for Game<'_> {
     }
 }
 
-impl IndexStorage<EnumerationType, EnumerationTypeRef> for Game<'_> {
+impl IndexStorage<EnumerationType, EnumerationTypeRef> for Game {
     fn get<'a>(&'a self, r: &EnumerationTypeRef) -> Query<&'a EnumerationType> {
         todo!()
     }
 }
 
-impl IndexStorage<DieRollType, DieRollTypeRef> for Game<'_> {
+impl IndexStorage<DieRollType, DieRollTypeRef> for Game {
     fn get<'a>(&'a self, r: &DieRollTypeRef) -> Query<&'a DieRollType> {
         todo!()
     }
 }
 
-impl IndexStorage<Equation, EquationRef> for Game<'_> {
+impl IndexStorage<Equation, EquationRef> for Game {
     fn get<'a>(&'a self, r: &EquationRef) -> Query<&'a Equation> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -156,7 +156,7 @@ impl IndexStorage<Equation, EquationRef> for Game<'_> {
     }
 }
 
-impl IndexStorage<ModifierType, ModifierTypeRef> for Game<'_> {
+impl IndexStorage<ModifierType, ModifierTypeRef> for Game {
     fn get<'a>(&'a self, r: &ModifierTypeRef) -> Query<&'a ModifierType> {
         todo!()
     }

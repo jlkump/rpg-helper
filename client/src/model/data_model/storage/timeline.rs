@@ -6,10 +6,10 @@ use super::{types::{EquationRef, MetaTypeRef, TypeRef}, values::{MetaInstRef, Va
 
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Timeline<'a> {
+pub struct Timeline {
     events: Vec<Event>,
     current_date: Date,
-    view_context: Option<ViewContext<'a>>,
+    view_context: Option<ViewContext>,
     // There is a current date unique for the Game and the player's characters.
     // The character may be behind the date of the game.
 }

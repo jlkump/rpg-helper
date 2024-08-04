@@ -5,27 +5,27 @@ use crate::model::data_model::primatives::{location::Location, types::Type, valu
 use super::{location::{LocationIndex, LocationRef}, types::{TypeIndex, TypeRef}, values::{ValueIndex, ValueRef}, wiki::{WikiIndex, WikiPageRef}, IndexRef, IndexStorage, Query, Storable};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Setting<'a> {
+pub struct Setting {
     id: uuid::Uuid,
-    wiki: WikiIndex<'a>,
-    types: TypeIndex<'a>,
+    wiki: WikiIndex,
+    types: TypeIndex,
     // presets: ValueIndex<'a>,
-    locations: LocationIndex<'a>,
+    locations: LocationIndex,
 }
 
-impl IndexStorage<WikiPage, WikiPageRef> for Setting<'_> {
+impl IndexStorage<WikiPage, WikiPageRef> for Setting {
     fn get<'a>(&'a self, r: &WikiPageRef) -> Query<&'a WikiPage> {
         self.wiki.get(r)
     }
 }
 
-impl IndexStorage<Type, TypeRef> for Setting<'_> {
+impl IndexStorage<Type, TypeRef> for Setting {
     fn get<'a>(&'a self, r: &TypeRef) -> Query<&'a Type> {
         self.types.get(r)
     }
 }
 
-impl IndexStorage<Location, LocationRef> for Setting<'_> {
+impl IndexStorage<Location, LocationRef> for Setting {
     fn get<'a>(&'a self, r: &LocationRef) -> Query<&'a Location> {
         self.locations.get(r)
     }

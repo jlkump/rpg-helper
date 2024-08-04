@@ -5,27 +5,27 @@ use super::{location::{LocationIndex, LocationRef}, types::{TypeIndex, TypeRef},
 pub type RulesetId = uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Ruleset<'a> {
+pub struct Ruleset {
     id: RulesetId,
-    wiki: WikiIndex<'a>,
-    types: TypeIndex<'a>,
+    wiki: WikiIndex,
+    types: TypeIndex,
     // presets: ValueIndex<'a>,
-    locations: LocationIndex<'a>,
+    locations: LocationIndex,
 }
 
-impl IndexStorage<WikiPage, WikiPageRef> for Ruleset<'_> {
+impl IndexStorage<WikiPage, WikiPageRef> for Ruleset {
     fn get<'a>(&'a self, r: &WikiPageRef) -> Query<&'a WikiPage> {
         self.wiki.get(r)
     }
 }
 
-impl IndexStorage<Type, TypeRef> for Ruleset<'_> {
+impl IndexStorage<Type, TypeRef> for Ruleset {
     fn get<'a>(&'a self, r: &TypeRef) -> Query<&'a Type> {
         self.types.get(r)
     }
 }
 
-impl IndexStorage<Location, LocationRef> for Ruleset<'_> {
+impl IndexStorage<Location, LocationRef> for Ruleset {
     fn get<'a>(&'a self, r: &LocationRef) -> Query<&'a Location> {
         self.locations.get(r)
     }

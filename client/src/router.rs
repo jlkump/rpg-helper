@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::gui::display::pages::{generic::{dashboard::Dashboard, error_pages::{ErrorPage, PageNotFound}, home::Home}, user::{LoginUser, RegisterUser, UserProfile, UserPrefernces}};
+use crate::{gui::display::pages::{generic::{dashboard::Dashboard, error_pages::{ErrorPage, PageNotFound}, home::Home}, editors::ruleset::RulesetCreator, user::{LoginUser, RegisterUser, UserPrefernces, UserProfile}}, model::data_model::storage::ruleset::RulesetId};
 
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum Route {
@@ -79,7 +79,7 @@ fn switch(routes: Route) -> Html {
         Route::CharacterEditor { id } => todo!(),
 
         Route::RulesetViewer => todo!(),
-        Route::RulesetEditor { id } => todo!(),
+        Route::RulesetEditor { id } => html! { <RulesetCreator ruleset_id={RulesetId::parse_str(&id).unwrap()}/> },
 
         Route::SettingViewer => todo!(),
         Route::SettingEditor { id } => todo!(),

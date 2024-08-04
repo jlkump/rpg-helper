@@ -7,13 +7,13 @@ use crate::model::data_model::primatives::location::{Location, LocationType, Map
 use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct LocationIndex<'a> {
+pub struct LocationIndex {
     regions: HashMap<String, Location>,
     sectors: HashMap<String, Location>,
     locales: HashMap<String, Location>,
     landmarks: HashMap<String, Location>,
     maps: HashMap<uuid::Uuid, Map>,
-    view_context: Option<ViewContext<'a>>,
+    view_context: Option<ViewContext>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
@@ -43,7 +43,7 @@ impl IndexRef<Location> for LocationRef {
     }
 }
 
-impl IndexStorage<Location, LocationRef> for LocationIndex<'_> {
+impl IndexStorage<Location, LocationRef> for LocationIndex {
     fn get<'a>(&'a self, r: &LocationRef) -> Query<&'a Location> {
         let l;
         match r.t {
@@ -75,7 +75,7 @@ impl IndexRef<Map> for MapRef {
     }
 }
 
-impl IndexStorage<Map, MapRef> for LocationIndex<'_> {
+impl IndexStorage<Map, MapRef> for LocationIndex {
     fn get(&self, r: &MapRef) -> Query<&Map> {
         todo!()
     }

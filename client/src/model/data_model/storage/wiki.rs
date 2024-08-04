@@ -7,12 +7,12 @@ use crate::model::data_model::primatives::wiki::{WikiData, WikiPage};
 use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct WikiIndex<'g> {
+pub struct WikiIndex {
     pages: HashMap<String, WikiData>,
-    view_context: Option<ViewContext<'g>>,
+    view_context: Option<ViewContext>,
 }
 
-impl IndexStorage<WikiPage, WikiPageRef> for WikiIndex<'_> {
+impl IndexStorage<WikiPage, WikiPageRef> for WikiIndex {
     fn get(&self, r: &WikiPageRef) -> Query<&WikiPage> {
         // TODO Break up path by '/' s to get the tree path
         todo!()

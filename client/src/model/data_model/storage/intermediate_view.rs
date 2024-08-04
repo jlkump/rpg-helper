@@ -3,14 +3,14 @@ use crate::model::{data_model::primatives::{location::Location, types::{die_roll
 use super::{character::Character, game::{Game, GameMasterData}, location::LocationRef, playset::Playset, ruleset::Ruleset, setting::Setting, types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, ModifierTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, QueryError, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct IntermediateView<'a> {
-    ruleset: Option<Ruleset<'a>>,
-    setting: Option<Setting<'a>>,
-    characters: Vec<Character<'a>>,
-    game_master_data: Option<GameMasterData<'a>>,
+pub struct IntermediateView {
+    ruleset: Option<Ruleset>,
+    setting: Option<Setting>,
+    characters: Vec<Character>,
+    game_master_data: Option<GameMasterData>,
 }
 
-impl<'g> IntermediateView<'g> {
+impl IntermediateView {
     pub fn get_ruleset(&self) -> Option<&Ruleset> {
         self.ruleset.as_ref()
     }
@@ -28,22 +28,22 @@ impl<'g> IntermediateView<'g> {
         None
     }
 
-    pub fn get_playset<'a>(&'a self) -> Option<Playset<'a, 'g>> {
+    pub fn get_playset<'a>(&'a self) -> Option<Playset<'a>> {
         if self.ruleset.is_none() && self.setting.is_none() { 
             return None; 
         }
         Some(Playset::new(self.ruleset.as_ref(), self.setting.as_ref()))
     }
 
-    pub fn get_mut_ruleset(&mut self) -> Option<&mut Ruleset<'g>> {
+    pub fn get_mut_ruleset(&mut self) -> Option<&mut Ruleset> {
         self.ruleset.as_mut()
     }
 
-    pub fn get_mut_setting(&mut self) -> Option<&mut Setting<'g>> {
+    pub fn get_mut_setting(&mut self) -> Option<&mut Setting> {
         self.setting.as_mut()
     }
 
-    pub fn get_mut_character(&mut self, id: &CharacterId) -> Option<&mut Character<'g>> {
+    pub fn get_mut_character(&mut self, id: &CharacterId) -> Option<&mut Character> {
         for c in self.characters.iter_mut() {
             if c.id.eq(id) {
                 return Some(c);
@@ -55,7 +55,7 @@ impl<'g> IntermediateView<'g> {
 
 // ---------------- Ref Implementations ---------------------------
 
-impl IndexStorage<WikiPage, WikiPageRef> for IntermediateView<'_> {
+impl IndexStorage<WikiPage, WikiPageRef> for IntermediateView {
     fn get(&self, r: &WikiPageRef) -> Query<&WikiPage> {
         match r.get_target() {
             RefTarget::Playset => {
@@ -77,7 +77,7 @@ impl IndexStorage<WikiPage, WikiPageRef> for IntermediateView<'_> {
     }
 }
 
-impl IndexStorage<Location, LocationRef> for IntermediateView<'_> {
+impl IndexStorage<Location, LocationRef> for IntermediateView {
     fn get(&self, r: &LocationRef) -> Query<&Location> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -90,7 +90,7 @@ impl IndexStorage<Location, LocationRef> for IntermediateView<'_> {
 
 // ---------- Values -------------
 
-impl IndexStorage<Value, ValueRef> for IntermediateView<'_> {
+impl IndexStorage<Value, ValueRef> for IntermediateView {
     fn get(&self, r: &ValueRef) -> Query<&Value> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -101,7 +101,7 @@ impl IndexStorage<Value, ValueRef> for IntermediateView<'_> {
     }
 }
 
-impl IndexStorage<MetaInst, MetaInstRef> for IntermediateView<'_> {
+impl IndexStorage<MetaInst, MetaInstRef> for IntermediateView {
     fn get<'a>(&'a self, r: &MetaInstRef) -> Query<&'a MetaInst> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -114,7 +114,7 @@ impl IndexStorage<MetaInst, MetaInstRef> for IntermediateView<'_> {
 
 // ----------- Types -------------
 
-impl IndexStorage<Type, TypeRef> for IntermediateView<'_> {
+impl IndexStorage<Type, TypeRef> for IntermediateView {
     fn get(&self, r: &TypeRef) -> Query<&Type> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -125,19 +125,19 @@ impl IndexStorage<Type, TypeRef> for IntermediateView<'_> {
     }
 }
 
-impl IndexStorage<EnumerationType, EnumerationTypeRef> for IntermediateView<'_> {
+impl IndexStorage<EnumerationType, EnumerationTypeRef> for IntermediateView {
     fn get<'a>(&'a self, r: &EnumerationTypeRef) -> Query<&'a EnumerationType> {
         todo!()
     }
 }
 
-impl IndexStorage<DieRollType, DieRollTypeRef> for IntermediateView<'_> {
+impl IndexStorage<DieRollType, DieRollTypeRef> for IntermediateView {
     fn get<'a>(&'a self, r: &DieRollTypeRef) -> Query<&'a DieRollType> {
         todo!()
     }
 }
 
-impl IndexStorage<Equation, EquationRef> for IntermediateView<'_> {
+impl IndexStorage<Equation, EquationRef> for IntermediateView {
     fn get<'a>(&'a self, r: &EquationRef) -> Query<&'a Equation> {
         match r.get_target() {
             RefTarget::Playset => todo!(),
@@ -148,7 +148,7 @@ impl IndexStorage<Equation, EquationRef> for IntermediateView<'_> {
     }
 }
 
-impl IndexStorage<ModifierType, ModifierTypeRef> for IntermediateView<'_> {
+impl IndexStorage<ModifierType, ModifierTypeRef> for IntermediateView {
     fn get<'a>(&'a self, r: &ModifierTypeRef) -> Query<&'a ModifierType> {
         todo!()
     }

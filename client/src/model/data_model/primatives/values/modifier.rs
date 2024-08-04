@@ -17,7 +17,7 @@ impl Modifier {
         Ok(self.modifer_type.to_ref(context)?.apply(self.target.to_ref(context)?.clone(), context))
     }
 
-    pub fn get_type<'a>(&self, context: &ViewContext<'a>) -> Query<&'a ModifierType> {
+    pub fn get_type(&self, context: &ViewContext) -> Query<ModifierType> {
         self.modifer_type.to_ref(context)
     }
 }

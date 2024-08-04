@@ -96,17 +96,27 @@ where
     }
 
     /// Converts the IndexReference to the actual value of the Storable.
-    fn to_ref<'a>(&self, context: &ViewContext<'a>) -> Query<&'a T>
+    fn to_ref(&self, context: &ViewContext) -> Query<T>
     where
         Self: Sized,
-        Game<'a>: IndexStorage<T, Self>,
-        IntermediateView<'a>: IndexStorage<T, Self>,
+        Game: IndexStorage<T, Self>,
+        IntermediateView: IndexStorage<T, Self>,
+        T: Clone
     {
         match context {
-            ViewContext::GameView(g) => g.get(&self),
-            ViewContext::IntermediateView(i) => i.get(&self),
+            ViewContext::GameView(g) 
+                => if let Some(g) = g.upgrade() {
+                    g.get(&self).map(|r| r.clone())
+                } else {
+                    Err(QueryError::ViewContextDoesNotExist)
+                },
+            ViewContext::IntermediateView(i) 
+                => if let Some(i) = i.upgrade() {
+                    i.get(&self).map(|r| r.clone())
+                } else {
+                    Err(QueryError::ViewContextDoesNotExist)
+                },
         }
-        // view.get(&self)
     }
 
     /// Helper for converting from a Reference to a DNE exist error for display and debugging.
