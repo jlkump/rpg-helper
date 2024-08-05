@@ -1,42 +1,39 @@
+use std::{borrow::BorrowMut, rc::Rc};
+
 use crate::model::{data_model::primatives::{location::Location, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::CharacterId};
 
 use super::{character::Character, game::{Game, GameMasterData}, location::LocationRef, playset::Playset, ruleset::Ruleset, setting::Setting, types::{DieRollTypeRef, EnumerationTypeRef, EquationRef, ModifierTypeRef, TypeRef}, values::{MetaInstRef, ValueRef}, wiki::WikiPageRef, IndexRef, IndexStorage, Query, QueryError, RefTarget};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct IntermediateView {
-    ruleset: Option<Ruleset>,
-    setting: Option<Setting>,
-    characters: Vec<Character>,
-    game_master_data: Option<GameMasterData>,
+    ruleset: Option<Rc<Ruleset>>,
+    setting: Option<Rc<Setting>>,
+    characters: Vec<Rc<Character>>,
 }
 
 impl IntermediateView {
     pub fn from_ruleset(r: Ruleset) -> IntermediateView {
-        IntermediateView { ruleset: Some(r), setting: None, characters: vec![], game_master_data: None }
+        IntermediateView { ruleset: Some(Rc::new(r)), setting: None, characters: vec![] }
     }
 
     pub fn set_ruleset(&mut self, r: Ruleset) {
-        self.ruleset = Some(r);
+        self.ruleset = Some(Rc::new(r));
     }
 
     pub fn set_setting(&mut self, s: Setting) {
-        self.setting = Some(s);
+        self.setting = Some(Rc::new(s));
     }
 
-    pub fn set_characters(&mut self, c: Vec<Character>) {
+    pub fn set_characters(&mut self, c: Vec<Rc<Character>>) {
         self.characters = c;
     }
 
-    pub fn set_gamemaster_data(&mut self, d: GameMasterData) {
-        self.game_master_data = Some(d);
-    }
-
     pub fn get_ruleset(&self) -> Option<&Ruleset> {
-        self.ruleset.as_ref()
+        self.ruleset.as_ref().map(|s| s.as_ref())
     }
 
     pub fn get_setting(&self) -> Option<&Setting> {
-        self.setting.as_ref()
+        self.setting.as_ref().map(|s| s.as_ref())
     }
 
     pub fn get_character(&self, id: &CharacterId) -> Option<&Character> {
@@ -52,21 +49,21 @@ impl IntermediateView {
         if self.ruleset.is_none() && self.setting.is_none() { 
             return None; 
         }
-        Some(Playset::new(self.ruleset.as_ref(), self.setting.as_ref()))
+        Some(Playset::new(self.get_ruleset(), self.get_setting()))
     }
 
-    pub fn get_mut_ruleset(&mut self) -> Option<&mut Ruleset> {
-        self.ruleset.as_mut()
+    pub fn get_ruleset_rc(&self) -> Option<Rc<Ruleset>> {
+        self.ruleset.clone()
     }
 
-    pub fn get_mut_setting(&mut self) -> Option<&mut Setting> {
-        self.setting.as_mut()
+    pub fn get_setting_rc(&self) -> Option<Rc<Setting>> {
+        self.setting.clone()
     }
 
-    pub fn get_mut_character(&mut self, id: &CharacterId) -> Option<&mut Character> {
-        for c in self.characters.iter_mut() {
+    pub fn get_character_rc(&self, id: &CharacterId) -> Option<Rc<Character>> {
+        for c in self.characters.iter() {
             if c.id.eq(id) {
-                return Some(c);
+                return Some(c.clone());
             }
         }
         None

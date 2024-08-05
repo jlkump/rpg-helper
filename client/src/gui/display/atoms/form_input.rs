@@ -26,6 +26,8 @@ where
     pub onblur: Callback<(String, T)>,
     pub to_type: Callback<String, T>,
     pub errors: Rc<RefCell<ValidationErrors>>,
+    #[prop_or_default]
+    pub style: AttrValue,
 }
 
 #[function_component(FormInput)]
@@ -80,7 +82,7 @@ where
     let autocomplete = props.autocomplete.clone().unwrap_or(props.name.clone());
 
     html! {
-        <div class={div_style}>
+        <div class={div_style} style={props.style.clone()}>
             <label html={props.name.clone()} hidden=true for={props.name.clone()}></label>
             <input
                 id={props.name.clone()}

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::{Deserialize, Serialize};
 
 use crate::model::{data_model::primatives::{location::Location, permissions::GamePermissions, types::{die_roll::DieRollType, enumeration::EnumerationType, equation::Equation, modifier::ModifierType, Type}, values::{meta::MetaInst, Value}, wiki::WikiPage}, types::{CharacterId, GameId, PlayerId, ServerError}};
@@ -8,13 +10,13 @@ use super::{character::Character, location::LocationRef, ruleset::Ruleset, setti
 #[derive(Debug, PartialEq, Clone)]
 pub struct Game {
     pub id: GameId,
-    ruleset: Ruleset,
-    setting: Setting,
-    game_data: GameplayData,
-    gamemaster_data: Option<GameMasterData>, // The data is available only if the player has GM permissions
-    characters: Vec<Character>,
+    ruleset: Rc<Ruleset>,
+    setting: Rc<Setting>,
+    game_data: Rc<GameplayData>,
+    gamemaster_data: Option<Rc<GameMasterData>>, // The data is available only if the player has GM permissions
+    characters: Vec<Rc<Character>>,
     dead_characters: Vec<CharacterId>, // What to do with dead characters? Store just the ID then fetch from database?
-    game_permissions: GamePermissions, // The permissons for all data contained in the game. 
+    game_permissions: Rc<GamePermissions>, // The permissons for all data contained in the game. 
                                        // Can only be edited by the GM
 }
 
@@ -23,7 +25,7 @@ pub struct Game {
 /// Changes here will not affect the setting or ruleset.
 #[derive(Debug, PartialEq, Clone)]
 pub struct GameplayData {
-    timeline: Timeline, // These are events that the GM creates.
+    timeline: Rc<Timeline>, // These are events that the GM creates.
     current_date: Date,
 }
 
@@ -33,7 +35,7 @@ pub struct GameMasterData {
     // The Game already has the data for the GameMaster, but this provides extra info
     // Such as the list of pre-determined events for the timeline or player groups for assigning timeline end events
     // or permissions.
-    future_events: Timeline,
+    future_events: Rc<Timeline>,
     character_groups: Vec<Vec<CharacterId>>,
 }
 
@@ -49,20 +51,24 @@ impl Game {
         todo!()
     }
 
-    pub fn get_mut_ruleset(&mut self) -> &mut Ruleset {
-        &mut self.ruleset
+    pub fn get_ruleset_rc(&self) -> Rc<Ruleset> {
+        self.ruleset.clone()
     }
 
-    pub fn get_mut_setting(&mut self) -> &mut Setting {
-        &mut self.setting
+    pub fn get_setting_rc(&self) -> Rc<Setting> {
+        self.setting.clone()
     }
 
-    pub fn get_mut_gameplay_data(&mut self) -> &mut GameplayData {
-        &mut self.game_data
+    pub fn get_character_rc(&self, id: &CharacterId) -> Option<Rc<Character>> {
+        self.characters.iter().find(|i| i.id.eq(id)).map(|c| c.clone())
+    }
+    
+    pub fn get_gameplay_data_rc(&self) -> Rc<GameplayData> {
+        self.game_data.clone()
     }
 
-    pub fn get_mut_gamemaster_data(&mut self) -> Option<&mut GameMasterData> {
-        self.gamemaster_data.as_mut()
+    pub fn get_gamemaster_data_rc(&self) -> Option<Rc<GameMasterData>> {
+        self.gamemaster_data.clone()
     }
 }
 

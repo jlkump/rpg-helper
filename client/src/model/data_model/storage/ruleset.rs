@@ -1,33 +1,46 @@
+use std::rc::Rc;
+
 use crate::model::{data_model::primatives::{location::Location, types::Type, wiki::WikiPage}, types::RulesetId};
 
 use super::{character::CharacterTemplate, location::{LocationIndex, LocationRef}, types::{TypeIndex, TypeRef}, values::ValueIndex, wiki::{WikiIndex, WikiPageRef}, IndexStorage, Query};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Ruleset {
-    id: RulesetId,
-    wiki: WikiIndex,
-    types: TypeIndex,
-    locations: LocationIndex,
-    character_templates: Vec<CharacterTemplate>,
+    pub id: RulesetId,
+    pub display_name: String,
+    pub display_description: String,
+    pub display_img_src: String,
+    wiki: Rc<WikiIndex>,
+    types: Rc<TypeIndex>,
+    locations: Rc<LocationIndex>,
+    character_templates: Vec<Rc<CharacterTemplate>>,
 }
 
 impl Ruleset {
     pub fn new(
-        id: RulesetId, 
+        id: RulesetId,
+        display_name: String,
+        display_description: String,
+        display_img_src: String, 
         wiki: WikiIndex, 
         types: TypeIndex, 
         locations: LocationIndex, 
         character_templates: Vec<CharacterTemplate>
     ) -> Ruleset {
-        Ruleset { id, wiki, types, locations, character_templates }
+        Ruleset { 
+            id, 
+            display_name,
+            display_description,
+            display_img_src,
+            wiki: Rc::new(wiki), 
+            types: Rc::new(types), 
+            locations: Rc::new(locations), 
+            character_templates: character_templates.into_iter().map(|f| Rc::new(f)).collect()
+        }
     }
 
     pub fn get_wiki(&self) -> &WikiIndex {
         &self.wiki
-    }
-
-    pub fn get_mut_wiki(&mut self) -> &mut WikiIndex {
-        &mut self.wiki
     }
 }
 
