@@ -63,6 +63,8 @@ pub fn ruleset_creator(props: &Props) -> Html {
                 resize: none;
                 background: ${panel_primary};
                 height: 20vh;
+                border: 2px solid ${border};
+                border-radius: 3px;
             }
 
             .img-wrapper {
@@ -135,8 +137,14 @@ pub fn ruleset_creator(props: &Props) -> Html {
                 h5 {
                     font-size: 0.75em;
                 }
+
+                .tabbed-editor {
+                    height: 150vh;
+                    margin: 10px;
+                }
             }
         "#,
+        border=theme.border_light,
         panel_primary=theme.panel_primary,
         img_border=theme.border_colored,
     );

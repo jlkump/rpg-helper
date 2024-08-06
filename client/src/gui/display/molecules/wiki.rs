@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use yew::prelude::*;
 use stylist::yew::styled_component;
@@ -8,34 +8,67 @@ use crate::{gui::{contexts::{data_context::use_data_context, theme::use_theme}, 
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct WikiTreeItemProps {
-    pub item_name: String,
-    // Things are gonna have to be Rc<RefCell> :(
-    pub data: Option<Rc<WikiData>>,
-    // pub onselected: Callback<WikiPage>,
+    pub data: Option<Rc<RefCell<WikiData>>>,
+    pub onselected: Callback<Rc<RefCell<WikiData>>>,
 }
 
 #[styled_component(WikiTreeItem)]
 pub fn wiki_tree_item(props: &WikiTreeItemProps) -> Html {
     let theme = use_theme();
+
     let css = css!(
         r#"
+            position: relative;
+
             & > div {
+                position: relative;
+                display: flex;
                 padding-top: 2.5px;
-                padding-left: 2.4rem;
+                padding-left: 0.4rem;
                 padding-bottom: 2.5px;
+            }
+
+            .item-name {
+                position: relative;
+                padding: 4px;
+                margin-left: 0.5em;
+
+                border-radius: 2.5px;
+
+                width: 80%;
                 cursor: pointer;
             }
 
-            & > div:hover {
+            .item-name > p {
+                margin: 0;
+                margin-left: 1.5em;
+            }
+
+            .item-name:hover {
                 background: ${hover};
             }
 
-            ul:before {
-                border-left: 1px solid black;
+            .edit-options {
+                display: grid;
+                grid-template-columns: auto auto auto auto;
+                margin-right: 2px;
+                margin-left: auto;
+                transition: opacity 0.25s;
+                opacity: 0%;
+            }
+
+            .edit-options.file {
+                grid-template-columns: auto auto;
+            }
+
+            & > div:hover .edit-options {
+                opacity: 100%;
             }
 
             .arrow {
-                top: -5px;
+                position: absolute;
+                left: 0;
+                top: 2px;
                 align-self: center;
                 color: ${arrow_color};
                 transition: transform 0.3s;
@@ -50,7 +83,10 @@ pub fn wiki_tree_item(props: &WikiTreeItemProps) -> Html {
                 transform: translate(0, 15%) rotate(0deg);
             }
 
-            .folder-icon {
+            .icon {
+                position: absolute;
+                top: 4px;
+
                 justify-self: center;
                 align-self: center;
             }
@@ -65,51 +101,109 @@ pub fn wiki_tree_item(props: &WikiTreeItemProps) -> Html {
         Callback::from(move |_| open.set(!*open))
     };
 
-    if let Some(data) = &props.data {
-        match data.as_ref() {
-            WikiData::Page(p) => {
-                html! {
 
+    if let Some(data) = &props.data {
+        match &*data.as_ref().borrow() {
+            WikiData::Page(p) => {
+                let file_onclick = {
+                    let callback = props.onselected.clone();
+                    let data = data.clone();
+                    Callback::from(move |_| { 
+                        let data = data.clone();
+                        callback.emit(data) 
+                    })
+                };
+                let trash_onclick = {
+                    Callback::from(|_| {})
+                };
+                let edit_onclick = {
+                    Callback::from(|_| {})
+                };
+                html! {
+                    <li class={css}>
+                        <div>
+                            <div class="item-name" onclick={file_onclick}>
+                                <Icon class="icon" height={"1em"} icon_id={IconId::FeatherFile} />
+                                <p>{p.get_name().to_string()}</p>
+                            </div>
+                            <div class="edit-options file">
+                                <Icon class="edit-icon" height={"1em"} icon_id={IconId::FeatherEdit3} onclick={edit_onclick}/>
+                                <Icon class="edit-icon" height={"1em"} icon_id={IconId::FeatherTrash2} onclick={trash_onclick}/>
+                            </div>
+                        </div>
+                    </li>
                 }
             },
             WikiData::Folder(f) => {
+                let file_new_onclick = {
+                    Callback::from(|_| {})
+                };
+                let folder_new_onclick = {
+                    Callback::from(|_| {})
+                };
+                let trash_onclick = {
+                    Callback::from(|_| {})
+                };
+                let edit_onclick = {
+                    Callback::from(|_| {})
+                };
 
+                let child_display = if *open {
+                    f.get_children().iter().map(|wiki_node| { html! {<WikiTreeItem data={Some(wiki_node.clone())} onselected={props.onselected.clone()}/>}}).collect()
+                } else {
+                    html! {}
+                };
                 html! {
                     <li class={css}>
-                        <Icon width={"1em"} height={"1em"} class={ if *open { "arrow open" } else { "arrow" } } icon_id={IconId::FeatherChevronDown} {onclick} />
-                        <div style="display: flex;">
-                            <Icon class="folder-icon" height={"1em"} class="folder-icon" icon_id={IconId::FeatherFolder} />
-                            {props.item_name.clone()}
+                        <div>
+    
+                            <Icon width={"1em"} height={"1em"} class={ if *open { "arrow open" } else { "arrow" } } icon_id={IconId::FeatherChevronDown} />
+                            <div class="item-name" {onclick} >
+                                <Icon class="icon" height={"1em"} icon_id={IconId::FeatherFolder} />
+                                <p>{f.get_name().to_string()}</p>
+                            </div>
+                            <div class="edit-options">
+                                <Icon class="edit-icon" height={"1em"} icon_id={IconId::FeatherFilePlus} onclick={file_new_onclick}/>
+                                <Icon class="edit-icon" height={"1em"} icon_id={IconId::FeatherFolderPlus} onclick={folder_new_onclick}/>
+                                <Icon class="edit-icon" height={"1em"} icon_id={IconId::FeatherEdit3} onclick={edit_onclick}/>
+                                <Icon class="edit-icon" height={"1em"} icon_id={IconId::FeatherTrash2} onclick={trash_onclick}/>
+                            </div>
                         </div>
-                        if *open {
-                            <ul>
-                                // TODO: Map wiki data to folder or file depending on contained wiki data.
-                                <li>{"Testing"}</li>
-                                <li>{"Testing"}</li>
-                                <li>{"Testing"}</li>
-                            </ul>
-                        }
+                        {child_display}
                     </li>
                 }
             },
         }
     } else {
         html! {
-            <li class={css}>
-                <div style="display: flex;" {onclick}>
-                    <Icon width={"1em"} height={"1em"} class={ if *open { "arrow open" } else { "arrow" } } icon_id={IconId::FeatherChevronDown} />
-                    <Icon class="folder-icon" height={"1em"} class="folder-icon" icon_id={IconId::FeatherFolder} />
-                    {props.item_name.clone()}
-                </div>
-                if *open {
-                    <ul>
-                        // TODO: Map wiki data to folder or file depending on contained wiki data.
-                        <li>{"Testing"}</li>
-                        <li>{"Testing"}</li>
-                        <li>{"Testing"}</li>
-                    </ul>
-                }
-            </li>
+            <li><div style="display: flex;"><Loader color={theme.border_light.clone()}/>{"Loading..."}</div></li>
         }
+    }
+}
+
+
+#[derive(Properties, PartialEq, Clone)]
+pub struct WikiPageDisplayProps {
+    pub data: Option<Rc<RefCell<WikiData>>>,
+    pub onselected: Callback<Rc<RefCell<WikiData>>>,
+}
+
+#[styled_component(WikiPageDisplay)]
+pub fn wiki_display_page(props: &WikiPageDisplayProps) -> Html {
+    html! {
+
+    }
+}
+
+#[derive(Properties, PartialEq, Clone)]
+pub struct WikiPageEditProps {
+    pub data: Option<Rc<RefCell<WikiData>>>,
+    pub onselected: Callback<Rc<RefCell<WikiData>>>,
+}
+
+#[styled_component(WikiPageEdit)]
+pub fn wiki_edit_page(props: &WikiPageEditProps) -> Html {
+    html! {
+        
     }
 }

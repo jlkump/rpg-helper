@@ -41,9 +41,7 @@ pub fn tabbed_pane(props: &Props) -> Html {
     html! {
         <div class={style}>
             <TabBar tabs={props.tabs.clone()} selected_tab={*selected_tab} {callbacks} />
-            <div>
-                { props.content.iter().nth(*selected_tab).unwrap().clone() }
-            </div>
+            { props.content.iter().nth(*selected_tab).unwrap().clone() }
         </div>
     }
 } 

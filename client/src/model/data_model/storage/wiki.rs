@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 
@@ -8,14 +8,14 @@ use super::{view_context::ViewContext, IndexRef, IndexStorage, Query, RefTarget}
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct WikiIndex {
-    pages: HashMap<String, WikiData>,
+    pages: HashMap<String, Rc<RefCell<WikiData>>>,
     view_context: Option<ViewContext>,
     display_data_paths: HashMap<WikiPageRef, WikiPageId>, // display data is stored on-disk in a ruleset / setting specific folder, where WikiPage data is stored in a file by WikiPageId.
 }
 
 impl WikiIndex {
     pub fn new(
-        pages: HashMap<String, WikiData>, 
+        pages: HashMap<String, Rc<RefCell<WikiData>>>, 
         view_context: Option<ViewContext>, 
         display_data_paths: HashMap<WikiPageRef, WikiPageId>
     ) -> WikiIndex {
@@ -24,6 +24,10 @@ impl WikiIndex {
 
     pub fn set_view_ctx(&mut self, v_ctx: ViewContext) {
         self.view_context = Some(v_ctx);
+    }
+
+    pub fn get_root_pages(&self) -> Vec<Rc<RefCell<WikiData>>> {
+        self.pages.values().into_iter().map(|m| m.clone()).collect()
     }
 }
 
