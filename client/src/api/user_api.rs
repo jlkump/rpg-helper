@@ -37,19 +37,19 @@ impl Display for Error {
 
 impl Error {
 
-    /// If the given error results in a route error, this simplifies the process by returning the route.
-    /// If the error does not re-route, then the method returns None.
-    /// Currently all errors re-route. 
-    pub fn route_based_on_err(self) -> Route {
-        match self {
-            Error::Unauthorized => Route::Error { error: format!("Unauthorized error") },
-            Error::API(mes) => Route::Error { error: format!("API Failure: \"{}\"", mes)},
-            Error::RequestFailed(mes) => Route::Error { error: format!("Request failed. Server may be down. \"{}\"", mes) },
-            Error::ParseFailed(mes) => Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) },
-            Error::Server(e) => Route::Error { error: format!("Server Error. Type: {:?}, mes: \"{}\"", e, e.message) },
-            Error::QueryError(e) => Route::Error { error: format!("Query Error. Type: {:?}", e) },
-        }
-    }
+    // If the given error results in a route error, this simplifies the process by returning the route.
+    // If the error does not re-route, then the method returns None.
+    // Currently all errors re-route. 
+    // pub fn route_based_on_err(self) -> Route {
+    //     match self {
+    //         Error::Unauthorized => Route::Error { error: format!("Unauthorized error") },
+    //         Error::API(mes) => Route::Error { error: format!("API Failure: \"{}\"", mes)},
+    //         Error::RequestFailed(mes) => Route::Error { error: format!("Request failed. Server may be down. \"{}\"", mes) },
+    //         Error::ParseFailed(mes) => Route::Error { error: format!("Parse of Server Data failed. Model may be different. \"{}\"", mes) },
+    //         Error::Server(e) => Route::Error { error: format!("Server Error. Type: {:?}, mes: \"{}\"", e, e.message) },
+    //         Error::QueryError(e) => Route::Error { error: format!("Query Error. Type: {:?}", e) },
+    //     }
+    // }
 }
 
 pub async fn api_register_user(user_data: &UserRegistrationSchema) -> Result<UserData, Error> {

@@ -5,11 +5,11 @@ use yew::{prelude::*, virtual_dom::VNode};
 use stylist::yew::styled_component;
 use yew_icons::{Icon, IconId};
 
-use crate::{gui::{contexts::{data_context::use_data_context, theme::use_theme}, display::{atoms::{loading::Loader, form_input::FormInput}, molecules::wiki::WikiTreeItem}}, model::data_model::storage::wiki::WikiIndex};
+use crate::{gui::{contexts::{data_context::use_data_context, theme::use_theme}, display::{atoms::{loading::Loader, form_input::FormInput}, molecules::wiki::{WikiTreeItem, WikiPageDisplay, WikiPageEdit}}}, model::data_model::storage::wiki::WikiIndex};
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct WikiEditorProps {
-    pub wiki_data: Option<Rc<WikiIndex>>,
+    pub wiki_data: Option<Rc<RefCell<WikiIndex>>>,
 }
 
 #[styled_component(WikiEditor)]
@@ -114,7 +114,7 @@ pub fn wiki_editor(props: &WikiEditorProps) -> Html {
                 </div>
                 <div class="file-tree">
                     if let Some(data) = &props.wiki_data {
-                        {data.get_root_pages().into_iter().map(|d| html! { <WikiTreeItem data={d} onselected={on_selected.clone()}/> }).collect::<Vec<VNode>>()}
+                        {data.as_ref().borrow().get_root_pages().into_iter().map(|d| html! { <WikiTreeItem data={d} onselected={on_selected.clone()}/> }).collect::<Vec<VNode>>()}
                     } else {
                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
                             <Loader color={theme.text_colored.clone()} />
@@ -124,7 +124,7 @@ pub fn wiki_editor(props: &WikiEditorProps) -> Html {
             </div>
             <div class="display">
                 if let Some(selected) = &*selected_page {
-
+                    <WikiPageDisplay data={selected.clone()} onselected={Callback::from(|_| {})} edit_option={true}/>
                 } else {
                     <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">{"Click a page to view and edit"}</div>
                 }

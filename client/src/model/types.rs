@@ -18,13 +18,13 @@ pub type WikiPageId = uuid::Uuid;
 //              Errors                //
 ////////////////////////////////////////
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct ServerError {
     pub error: ServerErrorType,
     pub message: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum ServerErrorType {
     Authorization(AuthError),
     NotFound(NotFoundError),
@@ -36,45 +36,45 @@ pub enum ServerErrorType {
     NotImplemented, // Error for in-progress development
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum AuthError {
     WrongPasswordOrUsername,
     NotLoggedIn,
     InvalidToken,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum NotFoundError {
     UserId(uuid::Uuid),
     Username(String),
     File(String),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct InsufficientStorageError {
     pub current: i64,
     pub maximum: i64,
     pub given_increase: i64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct FileTooLargeError {
     pub given_file_size: i64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum ConflictError {
     Username,
     Email,
     FileName,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum UnsupportedError {
     FileType, // Filetype given is not supported
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub enum InternalError {
     Database,
     Filesystem,

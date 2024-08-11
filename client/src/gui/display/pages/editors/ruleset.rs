@@ -4,7 +4,7 @@ use validator::ValidationErrors;
 use yew::{platform::spawn_local, prelude::*};
 use stylist::yew::styled_component;
 
-use crate::{api::data_api::fetch_ruleset_data, gui::{contexts::theme::use_theme, display::{atoms::{form_input::FormInput, loading::SkeletonPane, tooltip::Tooltip}, molecules::tabbed_pane::TabbedPane, organisms::{editors::{character_template_editor::CharacterTemplateEditor, location_editor::LocationEditor, type_editor::TypeEditor, wiki_editor::WikiEditor}, nav_bar::NavBar, searchable_gallery}}}, model::{data_model::storage::{intermediate_view::IntermediateView, ruleset::Ruleset}, schema::RulesetRequestSchema, types::RulesetId}};
+use crate::{api::data_api::fetch_ruleset_data, gui::{contexts::theme::use_theme, display::{atoms::{form_input::FormInput, loading::SkeletonPane, tooltip::Tooltip}, molecules::tabbed_pane::TabbedPane, organisms::{editors::{character_template_editor::CharacterTemplateEditor, location_editor::LocationEditor, type_editor::TypeEditor, wiki_editor::WikiEditor}, nav_bar::NavBar, searchable_gallery}}}, model::{data_model::storage::{intermediate_view::IntermediateView, ruleset::Ruleset}, types::RulesetId}};
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -19,13 +19,15 @@ pub fn ruleset_creator(props: &Props) -> Html {
     let wiki_data = use_state(|| None);
     let location_data = use_state(|| None);
     let character_template_data = use_state(|| None);
+
+
     use_effect_with((), {
         let ruleset_data = ruleset_data.clone();
         let id = props.ruleset_id.clone();
         move |_| {
             spawn_local(async move {
     
-                let res = fetch_ruleset_data(RulesetRequestSchema { id }).await;
+                let res = fetch_ruleset_data(id).await;
                 // match res {
                 //     Ok(d) => {
                 //         let r: Ruleset = d.into();

@@ -1,3 +1,4 @@
+pub mod autosave;
 pub mod button;
 pub mod character_portrait;
 pub mod collapsable_headers;
@@ -11,5 +12,4 @@ pub mod panel;
 pub mod popup;
 pub mod profile;
 pub mod scroll_div;
-mod table;
 pub mod tooltip;

@@ -42,6 +42,6 @@ pub enum SortOptions {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct RulesetRequestSchema {
-    pub id: RulesetId,
+pub struct RulesetCreateSchema {
+    pub ruleset_name: String,
 }

@@ -114,7 +114,9 @@ pub fn wiki_tree_item(props: &WikiTreeItemProps) -> Html {
                     })
                 };
                 let trash_onclick = {
-                    Callback::from(|_| {})
+                    Callback::from(|_| {
+                        // Use WikiRef to delete or edit
+                    })
                 };
                 let edit_onclick = {
                     Callback::from(|_| {})
@@ -184,8 +186,9 @@ pub fn wiki_tree_item(props: &WikiTreeItemProps) -> Html {
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct WikiPageDisplayProps {
-    pub data: Option<Rc<RefCell<WikiData>>>,
+    pub data: Rc<RefCell<WikiData>>,
     pub onselected: Callback<Rc<RefCell<WikiData>>>,
+    pub edit_option: bool,
 }
 
 #[styled_component(WikiPageDisplay)]
@@ -197,7 +200,7 @@ pub fn wiki_display_page(props: &WikiPageDisplayProps) -> Html {
 
 #[derive(Properties, PartialEq, Clone)]
 pub struct WikiPageEditProps {
-    pub data: Option<Rc<RefCell<WikiData>>>,
+    pub data: Rc<RefCell<WikiData>>,
     pub onselected: Callback<Rc<RefCell<WikiData>>>,
 }
 
