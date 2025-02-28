@@ -7,9 +7,9 @@ use super::{location::LocationIndex, ruleset::RulesetId, timeline::{Date, Timeli
 #[derive(Debug, PartialEq, Clone)]
 pub struct Character<'a> {
     pub creator: PlayerId,
-    pub name: String,                         // String of the character
+    pub name: String,                          // Name of the character
     pub id: CharacterId,                       // ID for database storage
-    wiki_pages: WikiIndex<'a>,                // Wiki pages the character has made, typically concerning the character
+    wiki_pages: WikiIndex<'a>,                 // Wiki pages the character has made, typically concerning the character
     equations: HashMap<String, Equation>, // For character specific equations
     values: ValueIndex<'a>,                   // Values for the character, such as characteristics, abilities, etc.
     // We will probably need to store starting / base values

@@ -9,7 +9,7 @@ pub struct DieRollType { // Defined by 1d4, 4d6, etc. format
     container: ContainerKind,
     pub num_dice: u8,
     pub num_sides: u16,
-    pub special_sides: BTreeMap<u16, ModifierTypeRef>, // Lets us hash the die roll type
+    pub special_sides: BTreeMap<u16, ModifierTypeRef>, // Using BTreeMap lets us hash the die roll type
 }
 
 impl Storable for DieRollType {
