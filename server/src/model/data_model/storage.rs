@@ -1,7 +1,7 @@
 use game::Game;
 use intermediate_view::IntermediateView;
 use serde::{Deserialize, Serialize};
-use types::{MetaTypeRef, TypeRef};
+use types::MetaTypeRef;
 use view_context::ViewContext;
 
 use super::primatives::{permissions::CharacterId, types::equation::{EquationCompute, EvalError}};
@@ -58,7 +58,7 @@ pub enum QueryError {
     TargetDoesNotExist(RefTarget),
     ViewContextDoesNotExist,
     FieldDoesNotExist(MetaTypeRef, String),
-    TypeMismatch(TypeRef, TypeRef),
+    TypeMismatch(String, String),
     Eval(EvalError),
 }
 
