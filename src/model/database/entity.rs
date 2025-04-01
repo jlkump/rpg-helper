@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use user::User;
 
+use super::DatabaseRecord;
+
 pub mod ruleset;
 pub mod user;
 
@@ -10,6 +12,7 @@ pub type EntityID = uuid::Uuid;
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum Entity
 {
+    Database(DatabaseRecord),
     User(User),
     Container(ContainerComponent),
     Store(StoreComponent),
@@ -22,6 +25,7 @@ impl Entity
     {
         match &self
         {
+            Self::Database(database_record) => todo!(),
             Self::User(user) => todo!(),
             Self::Container(cc) => cc.to_id(),
             Self::Store(sc) => sc.to_id(),
