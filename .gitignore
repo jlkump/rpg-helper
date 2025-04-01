@@ -1,1 +1,7 @@
 /target
+/dist
+/Config.toml
+/database
+/database_test
+/files
+/uploads
