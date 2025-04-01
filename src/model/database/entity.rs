@@ -1,10 +1,16 @@
 use serde::{Deserialize, Serialize};
+use user::User;
+
+pub mod ruleset;
+pub mod user;
+
 
 pub type EntityID = uuid::Uuid;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum Entity
 {
+    User(User),
     Container(ContainerComponent),
     Store(StoreComponent),
     // TODO: Do we store Users and Players as entities here?
@@ -16,6 +22,7 @@ impl Entity
     {
         match &self
         {
+            Self::User(user) => todo!(),
             Self::Container(cc) => cc.to_id(),
             Self::Store(sc) => sc.to_id(),
         }

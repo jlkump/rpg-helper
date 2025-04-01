@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use super::{core::Reference, database::{entity::{Entity, EntityID}, Query}, storable::Storable};
+use serde::{Deserialize, Serialize};
+
+use super::{core::Reference, database::entity::{Entity, EntityID}, storable::Storable};
 
 pub mod equation;
 pub mod event;
@@ -9,6 +11,16 @@ pub mod map;
 pub mod types;
 pub mod values;
 pub mod wiki;
+
+pub type Query<T> = Result<T, QueryError>;
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum QueryError
+{
+    // Input(EquationCompute),           // Input is required for Querry to be complete
+    ContainerNotFound(EntityID, String),
+    StorableNotFound(EntityID, String),
+}
 
 pub trait Store<T>
 where

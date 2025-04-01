@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::core::Error;
+use crate::model::{core::Error, database::Database};
 
-use super::{entity::EntityID, Database};
+use super::EntityID;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Ruleset
@@ -20,6 +20,6 @@ impl Ruleset
 {
     pub fn create_ruleset<T>(d: &mut T, ) -> Result<Ruleset, Error> where T: Database
     {
-
+        todo!()
     }
 }
