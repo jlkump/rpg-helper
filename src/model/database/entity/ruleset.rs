@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::{core::Error, database::{Database, DatabaseEntity, DatabaseEntityBuilder, DatabaseID}};
+use crate::model::{core::Error, database::{Database, DatabaseMutator, DatabaseEntity}};
 
 use super::EntityID;
 
@@ -16,8 +16,21 @@ pub struct Ruleset
     pub map_store: EntityID,
 }
 
-impl DatabaseID for Ruleset
+impl DatabaseEntity<RulesetBuilder> for Ruleset
 {
+    fn new() -> RulesetBuilder
+    {
+        RulesetBuilder 
+        { 
+            name: "Default Ruleset Name".to_string(), 
+            type_store: None,
+            value_store: None,
+            wiki_store: None,
+            location_store: None,
+            map_store: None
+        }
+    }
+
     fn to_id(&self) -> &EntityID 
     {
         &self.id
@@ -35,23 +48,8 @@ pub struct RulesetBuilder
     pub map_store: Option<EntityID>,
 }
 
-impl<D: Database> DatabaseEntityBuilder<D, Ruleset> for RulesetBuilder {}
-
-impl<D: Database> DatabaseEntity<D, RulesetBuilder> for Ruleset
-{
-    fn new() -> RulesetBuilder
-    {
-        RulesetBuilder 
-        { 
-            name: "Default Ruleset Name".to_string(), 
-            type_store: None,
-            value_store: None,
-            wiki_store: None,
-            location_store: None,
-            map_store: None
-        }
-    }
-    
+impl<D: Database> DatabaseMutator<D, RulesetBuilder> for Ruleset
+{    
     /// Given a ruleset to build, this function will create a ruleset
     /// record within the database. The handle of that record will be returned 
     /// (The Ruleset object itself) if the database operation succeeds.
@@ -72,7 +70,7 @@ impl<D: Database> DatabaseEntity<D, RulesetBuilder> for Ruleset
         todo!()
     }
     
-    fn database_get(db: &D, id: EntityID) -> Result<Self, Error> {
+    fn database_get(db: &D, id: EntityID) -> Result<Option<Self>, Error> {
         todo!()
     }
     
@@ -80,7 +78,7 @@ impl<D: Database> DatabaseEntity<D, RulesetBuilder> for Ruleset
         todo!()
     }
     
-    fn database_remove(db: &D, id: EntityID) -> Result<Self, Error> {
+    fn database_remove(db: &D, id: EntityID) -> Result<Option<Self>, Error> {
         todo!()
     }
 }

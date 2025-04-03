@@ -1,10 +1,9 @@
-use model::model::{database::{entity::EntityID, Database}, store::types::TypeStore};
+use rpg_helper::model::database::Database;
 use rustyline::{error::ReadlineError, DefaultEditor};
 
-use crate::{commands::execute_command, Cli};
+use crate::{commands::execute_command, data::{Context, ProgramData}, Cli};
 
-pub fn start_repl<T>(cli: Cli, db: &mut T) -> std::io::Result<()>
-    where T: Database
+pub fn start_repl<D: Database>(cli: Cli, db: D) -> std::io::Result<()>
 {   
     println!("\
         ┌──────────────────────┐\n\
@@ -21,7 +20,7 @@ pub fn start_repl<T>(cli: Cli, db: &mut T) -> std::io::Result<()>
     info!("CLI session started");
 
     let mut rl = DefaultEditor::new().unwrap();
-    let mut data = ProgramData::new();
+    let mut data = ProgramData::new(db);
 
     loop 
     {
@@ -46,7 +45,7 @@ pub fn start_repl<T>(cli: Cli, db: &mut T) -> std::io::Result<()>
                 }
                 
                 debug!("Attempting execution of command {}", line.as_str());
-                match execute_command(line.as_str(), &mut data, db)
+                match execute_command(line.as_str(), &mut data)
                 {
                     Ok(output) => println!("{}", output),
                     Err(e) => println!("[Error]: {}", e),

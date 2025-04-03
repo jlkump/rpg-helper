@@ -12,7 +12,7 @@ pub mod wiki;
 /// Any value stored in a store must be able to know how to reference itself
 pub trait Storable where Self: std::marker::Sized
 {
-    fn to_ref(&self) -> Reference<Self>;
+    fn to_ref(&self) -> Reference;
 }
 
 pub trait StorableBuilder<T> where 

@@ -44,7 +44,7 @@ wasm-bindgen-futures = "0.4.42"
 web-sys = { version = "0.3.69", features = ["DataTransfer", "DragEvent"] }
 
 [lib]
-name = "model"
+name = "rpg_helper"
 path = "src/lib.rs"
 test = true # Perform tests
 

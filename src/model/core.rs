@@ -1,7 +1,8 @@
-use std::marker::PhantomData;
+use serde::{Deserialize, Serialize};
 
-use super::{database::{entity::EntityID, DatabaseError}, storable::Storable, store::StoreError};
+use super::{database::{entity::EntityID, DatabaseError}, store::StoreError};
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum Error
 {
     Database(DatabaseError),
@@ -23,20 +24,17 @@ pub enum Error
 /// For example, given a ValueTypeRef, we first look at the ContainerID.
 /// The ContainerID querry returns a Ruleset. We then use the returned
 /// Ruleset to resolve the path.
-pub struct Reference<T>
-    where T: Storable
+pub struct Reference
 {
     container_id: EntityID,
     path: String,
-    _phantom: PhantomData<T>,
 }
 
-impl<T> Reference<T>
-    where T: Storable
+impl Reference
 {
-    pub fn new(container_id: EntityID, path: String) -> Reference<T>
+    pub fn new(container_id: EntityID, path: String) -> Reference
     {
-        Reference { container_id, path, _phantom: PhantomData }
+        Reference { container_id, path }
     }
 
     pub fn get_container_id(&self) -> &EntityID
@@ -49,4 +47,3 @@ impl<T> Reference<T>
         &self.path
     }
 }
-

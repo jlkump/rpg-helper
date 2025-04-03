@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::{core::{Error, Reference}, database::{entity::{Entity, EntityID, StoreComponent}, Database, DatabaseEntity, DatabaseEntityBuilder, DatabaseError, DatabaseID}, storable::{types::{Type, TypeBuilder}, StorableBuilder}};
+use crate::model::{core::{Error, Reference}, database::{entity::{Entity, EntityID, StoreComponent}, Database, DatabaseMutator, DatabaseError, DatabaseEntity}, storable::{types::{Type, TypeBuilder}, StorableBuilder}};
 
 use super::{Store, StoreError};
 
@@ -25,7 +25,7 @@ impl TypeStore
 
 impl Store<Type, TypeBuilder> for TypeStore 
 {
-    fn get(&self, r: &Reference<Type>) -> Result<Option<&Type>, Error> 
+    fn get(&self, r: &Reference) -> Result<Option<&Type>, Error> 
     {
         if r.get_container_id() != &self.id
         {
@@ -44,7 +44,7 @@ impl Store<Type, TypeBuilder> for TypeStore
         Ok(self.types.insert(r.name.clone(), r.build(self.id.clone(), path)))
     }
 
-    fn remove(&mut self, r: &Reference<Type>) -> Result<Option<Type>, Error> 
+    fn remove(&mut self, r: &Reference) -> Result<Option<Type>, Error> 
     {
         if r.get_container_id() != &self.id
         {
@@ -55,6 +55,11 @@ impl Store<Type, TypeBuilder> for TypeStore
             Ok(self.types.remove(r.get_path()))
         }
     }
+
+    fn get_all(&self) -> Vec<Type>
+    {
+        self.types.clone().into_values().collect()
+    }
 }
 
 pub struct TypeStoreBuilder
@@ -62,20 +67,29 @@ pub struct TypeStoreBuilder
     copy_from: Option<EntityID>
 }
 
-impl<D: Database> DatabaseEntityBuilder<D, TypeStore> for TypeStoreBuilder {}
-
-impl DatabaseID for TypeStore
+impl From<TypeStore> for Entity
 {
-    fn to_id(&self) -> &EntityID {
+    fn from(value: TypeStore) -> Self 
+    {
+        Entity::Store(StoreComponent::TypeStore(value))
+    }
+}
+
+impl DatabaseEntity<TypeStoreBuilder> for TypeStore
+{
+    fn new() -> TypeStoreBuilder 
+    {
+        TypeStoreBuilder { copy_from: None }
+    }
+
+    fn to_id(&self) -> &EntityID 
+    {
         &self.id
     }
 }
 
-impl<D: Database> DatabaseEntity<D, TypeStoreBuilder> for TypeStore
+impl<D: Database> DatabaseMutator<D, TypeStoreBuilder> for TypeStore
 {
-    fn new() -> TypeStoreBuilder {
-        TypeStoreBuilder { copy_from: None }
-    }
 
     fn database_insert(db: &D, builder: TypeStoreBuilder) -> Result<EntityID, Error> 
     {
@@ -90,22 +104,22 @@ impl<D: Database> DatabaseEntity<D, TypeStoreBuilder> for TypeStore
         Ok(id)
     }
 
-    fn database_get(db: &D, id: EntityID) -> Result<Self, Error>
+    fn database_get(db: &D, id: EntityID) -> Result<Option<Self>, Error>
     {
-        if let Ok(e) = db.get_entity(&id)
+        if let Some(e) = db.get_entity(&id)?
         {
             if let Entity::Store(s) = e 
             {
                 if let StoreComponent::TypeStore(t) = s
                 {
-                    return Ok(t);
+                    return Ok(Some(t));
                 }
             }
             Err(Error::Database(DatabaseError::EntityTypeMismatch))
         }
         else
         {
-            Err(Error::Database(DatabaseError::EntityNotFound(id)))
+            Err(Error::Database(DatabaseError::NonExistantEntity(id.clone())))
         }
     }
 
@@ -113,12 +127,18 @@ impl<D: Database> DatabaseEntity<D, TypeStoreBuilder> for TypeStore
     {
         // Check that the entity exists in the database and that it matches the same type
         // If it does, then replace the value in the database
-        let old = Self::database_get(db, entity.id)?; // If types don't match, we will return an error here
-        db.update_entity(&entity.id, Entity::Store(StoreComponent::TypeStore(entity.clone())))?;
-        Ok(old)
+        if let Some(old) =  Self::database_get(db, entity.id)?
+        {
+            db.update_entity(&entity.id, Entity::Store(StoreComponent::TypeStore(entity.clone())))?;
+            Ok(old)
+        }
+        else
+        {
+            Err(Error::Database(DatabaseError::NonExistantEntity(entity.id.clone())))
+        }
     }
 
-    fn database_remove(db: &D, id: EntityID) -> Result<Self, Error>
+    fn database_remove(db: &D, id: EntityID) -> Result<Option<Self>, Error>
     {
         // Check that there exists such an entity to remove
         let old = Self::database_get(db, id)?; // If types don't match, we will return an error here

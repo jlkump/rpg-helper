@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::model::{core::Error, database::Database};
+use crate::model::{core::Error, database::{Database, DatabaseEntity}};
 
 use super::EntityID;
 
@@ -14,6 +14,7 @@ pub const ROOT_ID: UserID = uuid::uuid!("11111111-1111-1111-1111-111111111111");
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct User
 {
+    id: UserID,                         // UUID for user
     pub secure: Option<UserSecureData>,     // None when sent to client without permission to view
     pub private: Option<UserPrivateData>,   // None when sent to client without permission to view
     pub public: Option<UserPublicData>,     // None when sent to client without permission to view
@@ -21,9 +22,29 @@ pub struct User
     pub updated_at: Option<DateTime<Utc>>,
 }
 
+impl DatabaseEntity<User> for User
+{
+    fn to_id(&self) -> &EntityID 
+    {
+        &self.id
+    }
+    
+    fn new() -> User 
+    {
+        User
+        {
+            id: todo!(),
+            secure: todo!(),
+            private: todo!(),
+            public: todo!(),
+            created_at: todo!(),
+            updated_at: todo!(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct UserSecureData {
-    pub id: UserID,                         // UUID for user
     pub username: String,                   // Username for the user profile
     pub email: String,                      // Email of the user
     pub password: String,                   // The Password hash and salt
@@ -71,7 +92,6 @@ impl User
     {
         let s = UserSecureData
         {
-            id: uuid::Uuid::new_v4(),
             username: username.clone(),
             email,
             password: bcrypt::hash(password, bcrypt::DEFAULT_COST).unwrap(),
@@ -98,6 +118,7 @@ impl User
 
         let u = User
         {
+            id: db.generate_id(),
             secure: Some(s),
             private: Some(p),
             public: Some(pu),

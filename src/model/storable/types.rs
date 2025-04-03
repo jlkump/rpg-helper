@@ -16,7 +16,7 @@ pub struct Type
 
 impl Storable for Type 
 {
-    fn to_ref(&self) -> crate::model::core::Reference<Self>
+    fn to_ref(&self) -> crate::model::core::Reference
     {
         Reference::new(self.container.clone(), self.name.clone())
     }
@@ -24,11 +24,11 @@ impl Storable for Type
 
 impl Type
 {
-    pub fn new(name: String) -> TypeBuilder
+    pub fn new(name: &str) -> TypeBuilder
     {
         TypeBuilder 
         { 
-            name, 
+            name: name.to_string(), 
             data: EType::Number, // Default to number, allow the type to change
             enum_list: Vec::new(),
             struct_map: HashMap::new(),
@@ -53,6 +53,7 @@ pub enum EType
                         //      All this type does is restrict the Value type's Reference
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct TypeBuilder
 {
     pub name: String,
@@ -149,8 +150,27 @@ impl TypeBuilder
     }
 }
 
-
 impl fmt::Display for Type
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
+    {
+        let s = match &self.data
+        {
+            EType::Number => "Number".to_owned(),
+            EType::Boolean => "Boolean".to_owned(),
+            EType::List(s) => format!("List<{}>", s),
+            EType::Enum(types) => format!("Enum {:?}", types),
+            EType::Struct(_) => "Struct".to_owned(),
+            EType::DieRoll() => "DieRoll".to_owned(),
+            EType::Modifier() => "Modifier".to_owned(),
+            EType::Equation() => "Equation".to_owned(),
+            EType::Reference(s) => format!("Ref<{}>", s),
+        };
+        write!(f, "{}: {}", &self.name, s)
+    }
+}
+
+impl fmt::Display for TypeBuilder
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {

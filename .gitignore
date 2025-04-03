@@ -6,3 +6,6 @@
 /files
 /uploads
 *.log
+/*_database
+/database
+rustfmt.toml

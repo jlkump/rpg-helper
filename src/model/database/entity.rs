@@ -3,7 +3,7 @@ use user::User;
 
 use crate::model::store::types::TypeStore;
 
-use super::DatabaseRecord;
+use super::{DatabaseEntity, DatabaseRecord};
 
 pub mod ruleset;
 pub mod user;
@@ -23,15 +23,40 @@ pub enum Entity
 
 impl Entity
 {
+    pub fn from_typestore(ts: TypeStore) -> Entity
+    {
+        Entity::Store(StoreComponent::TypeStore(ts))
+    }
+
+    pub fn try_into_typestore(self) -> Result<TypeStore, Entity>
+    {
+        if let Entity::Store(StoreComponent::TypeStore(t)) = self
+        {
+            Ok(t)
+        }
+        else
+        {
+            Err(self)
+        }
+    }
+}
+
+impl DatabaseEntity<Entity> for Entity
+{
     fn to_id(&self) -> &EntityID
     {
         match &self
         {
-            Self::Database(database_record) => todo!(),
-            Self::User(user) => todo!(),
-            Self::Container(cc) => cc.to_id(),
+            Self::Database(database_record) => &database_record.id,
+            Self::User(user) => user.to_id(),
+            Self::Container(cc) => todo!(),
             Self::Store(sc) => sc.to_id(),
         }
+    }
+    
+    fn new() -> Entity
+    {
+        todo!()
     }
 }
 
@@ -51,90 +76,24 @@ impl StoreComponent
 {
     fn to_id(&self) -> &EntityID
     {
-        todo!()
+        match self
+        {
+            StoreComponent::EquationStore() => todo!(),
+            StoreComponent::EventStore() => todo!(),
+            StoreComponent::LocationStore() => todo!(),
+            StoreComponent::MapStore() => todo!(),
+            StoreComponent::TypeStore(type_store) => type_store.to_id(),
+            StoreComponent::ValueStore() => todo!(),
+            StoreComponent::WikiStore() => todo!(),
+        }
     }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum ContainerComponent
 {
-    Ruleset {
-        uuid: uuid::Uuid,
-        name: String,
-        type_store: uuid::Uuid,
-        value_store: uuid::Uuid,
-        wiki_store: uuid::Uuid,
-        location_store: uuid::Uuid,
-        map_store: uuid::Uuid,
-    },
-    Setting {
-        uuid: uuid::Uuid,
-        name: String,
-        type_store: uuid::Uuid,
-        value_store: uuid::Uuid,
-        wiki_store: uuid::Uuid,
-        location_store: uuid::Uuid,
-        map_store: uuid::Uuid,
-    },
-    Game {
-        uuid: uuid::Uuid,
-        name: String,
-        ruleset_id: uuid::Uuid,
-        setting_id: uuid::Uuid,
-        value_store: uuid::Uuid,
-        wiki_store: uuid::Uuid,
-        location_store: uuid::Uuid,
-        map_store: uuid::Uuid,
-        timeline_store: uuid::Uuid,
-    },
-    Character {
-        uuid: uuid::Uuid,
-        name: String,
-        owner_id: uuid::Uuid,
-        game_id: uuid::Uuid,
-        value_store: uuid::Uuid,
-        wiki_store: uuid::Uuid,
-        timeline_store: uuid::Uuid,
-    },
-}
-
-impl ContainerComponent
-{
-    fn to_id(&self) -> &EntityID
-    {
-        match &self
-        {
-            ContainerComponent::Ruleset { uuid, .. } => uuid,
-            ContainerComponent::Setting { uuid, ..  } => uuid,
-            ContainerComponent::Game { uuid, .. } => uuid,
-            ContainerComponent::Character { uuid, .. } => uuid,
-        }
-    }
-}
-
-impl ContainerComponent
-{
-    fn type_store(&self) -> Option<&EntityID> {
-        todo!()
-    }
-
-    fn value_store(&self) -> Option<&EntityID> {
-        todo!()
-    }
-
-    fn wiki_store(&self) -> Option<&EntityID> {
-        todo!()
-    }
-
-    fn location_store(&self) -> Option<&EntityID> {
-        todo!()
-    }
-
-    fn map_store(&self) -> Option<&EntityID> {
-        todo!()
-    }
-
-    fn timeline_store(&self) -> Option<&EntityID> {
-        todo!()
-    }
+    Ruleset,
+    Setting,
+    Game,
+    Character,
 }

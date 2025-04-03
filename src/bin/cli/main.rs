@@ -5,7 +5,7 @@ use std::{fs::File, path::PathBuf};
 
 use clap::{command, Parser};
 use log::LevelFilter;
-use model::model::database::Database;
+use rpg_helper::model::database::imp::sled::SledDB;
 use repl::start_repl;
 use simplelog::{Config, WriteLogger};
 
@@ -26,8 +26,9 @@ struct Cli
     /// The log level, ranging from 0 to 5. By default, is set to 5.
     #[arg(long, value_name = "LOG_LEVEL")]
     log_level: Option<u8>,
-    // #[arg(short, long)]
-    // remote: bool,
+    /// The database to use [sled]. Default to sled
+    #[arg(short, long, value_name = "DATABASE")]
+    database: Option<String>,
 }
 
 const DEFAULT_LOG_LEVEL: u8 = 3;
@@ -48,34 +49,14 @@ fn main() -> std::io::Result<()>
     WriteLogger::init(log_level, Config::default(), File::create(file_name).unwrap()).unwrap();
     info!("Log initialized successfully with log level {}", cli.log_level.unwrap_or(DEFAULT_LOG_LEVEL));
 
-    let mut test = TestDB {};
-    start_repl(cli, &mut test)
-}
-
-struct TestDB
-{
-
-}
-
-impl Database for TestDB
-{
-    fn insert_entity(&self, e: model::model::database::entity::Entity) -> Result<(), model::model::database::DatabaseError> {
-        todo!()
-    }
-
-    fn get_entity(&self, id: &model::model::database::entity::EntityID) -> Result<model::model::database::entity::Entity, model::model::database::DatabaseError> {
-        todo!()
-    }
-
-    fn update_entity(&self, id: &model::model::database::entity::EntityID, n: model::model::database::entity::Entity) -> Result<model::model::database::entity::Entity, model::model::database::DatabaseError> {
-        todo!()
-    }
-
-    fn remove_entity(&self, id: &model::model::database::entity::EntityID) -> Result<model::model::database::entity::Entity, model::model::database::DatabaseError> {
-        todo!()
-    }
-
-    fn generate_id(&self) -> model::model::database::entity::EntityID {
-        todo!()
+    let s = cli.database.clone().unwrap_or("sled".to_owned());
+    match s.as_str()
+    {
+        "sled" => start_repl(cli, SledDB::open("./database/sled").unwrap()),
+        _ => 
+        {
+            error!("Uknown database option {}", s);
+            panic!("Unknown database option {}", s)
+        }
     }
 }

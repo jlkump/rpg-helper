@@ -1,11 +1,11 @@
 use editor::execute_editor;
-use model::model::{database::{Database, DatabaseEntity, DatabaseEntityBuilder, DatabaseID}, store::types::{TypeStore, TypeStoreBuilder}};
+use rpg_helper::model::{database::{entity::{Entity, StoreComponent}, Database, DatabaseEntity, DatabaseMutator}, store::{types::TypeStore, Store}};
 
-use crate::repl::{Context, ProgramData};
+use crate::data::{Context, ProgramData};
 
 mod editor;
 
-pub fn execute_command<D: Database>(command: &str, data: &mut ProgramData, db: &D) -> Result<String, String> 
+pub fn execute_command<D: Database>(command: &str, data: &mut ProgramData<D>) -> Result<String, String> 
 {
     let parts: Vec<&str> = command.trim().split_whitespace().collect();
     if parts.is_empty()
@@ -13,18 +13,17 @@ pub fn execute_command<D: Database>(command: &str, data: &mut ProgramData, db: &
         return Ok("".to_string());
     }
     
-    let con = data.context.clone(); 
-    match con
+    match data.context.clone()
     {
         Context::Default => 
         {
             match parts[0]
             {
                 "help" => help(),
-                "create" => create(parts, data, db),
-                "edit" => edit(parts, data, db),
+                "create" => create(parts, data),
+                "edit" => edit(parts, data),
                 "delete" => todo!(),
-                "list" => todo!(),
+                "list" => list(parts, data),
                 _ => 
                 {
                     info!("[Default] Unknown Command: \"{}\"", parts[0]);
@@ -32,7 +31,7 @@ pub fn execute_command<D: Database>(command: &str, data: &mut ProgramData, db: &
                 },
             }
         },
-        Context::Editor(e) => execute_editor(e, parts, data, db),
+        Context::Editor(e) => execute_editor(e, parts, data),
     }
 }
 
@@ -47,11 +46,12 @@ Available commands:
     edit <EntityID>                                - Opens a CLI editor for the given entity
     delete <EntityID>                              - Deletes an entity
     list [ruleset|setting|typestore|etc]           - Lists all the Entities of a given type
+    list <EntityID>                                - Lists all the values contained inside an entity
     exit                                           - Exit the program
     "#.to_string())
 }
 
-fn create<D: Database>(parts: Vec<&str>, data: &mut ProgramData, db: &D) -> Result<String, String>
+fn create<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<String, String>
 {
     if parts.len() < 1
     {
@@ -63,12 +63,21 @@ fn create<D: Database>(parts: Vec<&str>, data: &mut ProgramData, db: &D) -> Resu
     {
         "typestore" | "TypeStore" | "Typestore" => 
         {
-            let type_store = TypeStore::debug_new();
-            let id = type_store.to_id().clone();
-            data.type_stores.insert(id.clone(), type_store);
-            info!("[Default] Command Used: \"create {}\"", parts[1]);
-            info!("[Default] Created Typestore with EntityID: {}", id);
-            Ok(format!("Created new TypeStore {}", id))
+            match TypeStore::database_insert(&data.database, TypeStore::new())
+            {
+                Ok(id) =>
+                {
+                    info!("[Default] Command Used: \"create {}\"", parts[1]);
+                    info!("[Default] Created Typestore with EntityID: {}", id);
+                    Ok(format!("Created new TypeStore {}", id))
+                },
+                Err(e) => 
+                {
+                    warn!("[Default] Comand Failed: \"create {:?}\"", e);
+                    error!("[Default] {:?}", e);
+                    Err(format!("Failed to create typestore: {:?}", e))
+                },
+            }
         }
         _ => 
         {
@@ -78,7 +87,7 @@ fn create<D: Database>(parts: Vec<&str>, data: &mut ProgramData, db: &D) -> Resu
     }
 }
 
-fn edit<D: Database>(parts: Vec<&str>, data: &mut ProgramData, db: &D) -> Result<String, String>
+fn edit<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<String, String>
 {
     if parts.len() <= 1
     {
@@ -90,7 +99,7 @@ fn edit<D: Database>(parts: Vec<&str>, data: &mut ProgramData, db: &D) -> Result
     {
         Ok(id) =>
         {
-            if let Some(context) = data.get_editor_type_for_entity(&id) 
+            if let Ok(Some(context)) = data.get_editor_type_for_entity(&id) 
             {
                 info!("[Default] Command Used: \"edit {}\"", parts[1]);
                 data.context = Context::Editor(context.clone());
@@ -99,7 +108,7 @@ fn edit<D: Database>(parts: Vec<&str>, data: &mut ProgramData, db: &D) -> Result
             else 
             {
                 info!("[Default] Attempt to use \"edit\" command, invalid ID '{}'", parts[1]);
-                Err(format!("ID '{}' for edit is not found in the database or in memory.", parts[1]))
+                Err(format!("ID '{}' for edit is not found in the database a database error occured.", parts[1]))
             }
         },
         Err(_) => 
@@ -109,4 +118,80 @@ fn edit<D: Database>(parts: Vec<&str>, data: &mut ProgramData, db: &D) -> Result
         },
     }
 
+}
+
+
+fn list<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<String, String>
+{
+    match uuid::Uuid::parse_str(parts[1])
+    {
+        Ok(id) => 
+        {
+            match data.database.get_entity(&id)
+            {
+                Ok(e) => 
+                {
+                    if let Some(e) = e
+                    {
+                        info!("[Default] Data of entity with ID '{}' displayed", id);
+                        Ok(pretty_display_entity(e))
+                    }
+                    else
+                    {
+                        info!("[Default] Entity with ID '{}' not found in database", id);
+                        Err(format!("Could not find entity {}", id))
+                    }
+                },
+                Err(e) =>
+                {
+                    error!("[Default] Database error on reading entity with ID '{}': {:?}", id, e);
+                    Err(format!("Database error: {:?}", e))
+                },
+            }
+        },
+        Err(_) =>
+        {
+            match parts[1]
+            {
+
+                "typestore" | "Typestore" | "TypeStore" => todo!(),
+                _ => 
+                {
+                    info!("[Default] Unknown \"list\" target: \"{}\"", parts[1]);
+                    Err(format!("Unknown \"list\" target: {}", parts[1]))
+                },
+            }
+        },
+    }
+}
+
+pub fn pretty_display_entity(e: Entity) -> String
+{
+    match e
+    {
+        Entity::Database(database_record) => todo!(),
+        Entity::User(user) => todo!(),
+        Entity::Container(container_component) => todo!(),
+        Entity::Store(store_component) => 
+        {
+            match store_component
+            {
+                StoreComponent::EquationStore() => todo!(),
+                StoreComponent::EventStore() => todo!(),
+                StoreComponent::LocationStore() => todo!(),
+                StoreComponent::MapStore() => todo!(),
+                StoreComponent::TypeStore(type_store) => 
+                {
+                    let mut res = String::from(format!("Typestore {}\n", type_store.to_id()));
+                    for t in type_store.get_all()
+                    {
+                        res.push_str(&format!("   {}\n", t));
+                    }
+                    res
+                },
+                StoreComponent::ValueStore() => todo!(),
+                StoreComponent::WikiStore() => todo!(),
+            }
+        },
+    }
 }

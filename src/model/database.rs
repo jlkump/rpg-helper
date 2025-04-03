@@ -1,4 +1,4 @@
-use std::{collections::HashSet, io};
+use std::collections::HashSet;
 
 use entity::{user::UserID, Entity, EntityID};
 use serde::{Deserialize, Serialize};
@@ -14,21 +14,26 @@ pub trait Database
     //      Logging and history updates for every
     //      change made to entities in the database.
     fn insert_entity(&self, e: Entity) -> Result<(), DatabaseError>;
-    fn get_entity(&self, id: &EntityID) -> Result<Entity, DatabaseError>;
+    fn get_entity(&self, id: &EntityID) -> Result<Option<Entity>, DatabaseError>;
     fn update_entity(&self, id: &EntityID, n: Entity) -> Result<Entity, DatabaseError>;
-    fn remove_entity(&self, id: &EntityID) -> Result<Entity, DatabaseError>;
+    fn remove_entity(&self, id: &EntityID) -> Result<Option<Entity>, DatabaseError>;
     fn generate_id(&self) -> EntityID;
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum DatabaseError
 {
     DuplicateExistingID(Entity),
-    EntityNotFound(EntityID),
+    DuplicateInsert(EntityID),
+    NonExistantEntity(EntityID),
     EntityTypeMismatch,
     DatabaseNotFound(String),
     UnsupportedOperation(String),
     UnexpectedBehavior(String),
-    FileIO(io::Error),
+    InvalidEncoding,
+    SizeLimit,
+    Serialization(String),
+    FileIO(String),
     Corruption(String),
 }
 
@@ -39,22 +44,20 @@ impl From<DatabaseError> for Error
     }
 }
 
-pub trait DatabaseID
+pub trait DatabaseEntity<B>
 {
+    fn new() -> B;
     fn to_id(&self) -> &EntityID;
 }
 
-pub trait DatabaseEntity<D, B> where Self: std::marker::Sized + DatabaseID, D: Database, B: DatabaseEntityBuilder<D, Self>
+pub trait DatabaseMutator<D, B> where Self: std::marker::Sized + DatabaseEntity<B>, D: Database
 {
-    fn new() -> B;
-
     fn database_insert(db: &D, builder: B) -> Result<EntityID, Error>;
-    fn database_get(db: &D, id: EntityID) -> Result<Self, Error>;
+    fn database_get(db: &D, id: EntityID) -> Result<Option<Self>, Error>;
     fn database_update(db: &D, entity: &Self) -> Result<Self, Error>;
-    fn database_remove(db: &D, id: EntityID) -> Result<Self, Error>;
+    fn database_remove(db: &D, id: EntityID) -> Result<Option<Self>, Error>;
 }
 
-pub trait DatabaseEntityBuilder<D, E> where Self: std::marker::Sized, E: DatabaseEntity<D, Self>, D: Database {}
 
 /// This allows us to track information about the database itself.
 /// It counts as an entity in the Database, as all things are entities.

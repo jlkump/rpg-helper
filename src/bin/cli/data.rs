@@ -1,33 +1,52 @@
-use std::collections::HashMap;
-
-use model::model::{database::entity::EntityID, store::types::TypeStore};
+use rpg_helper::model::{core::Error, database::{entity::{Entity, EntityID, StoreComponent}, Database, DatabaseEntity}, storable::types::TypeBuilder, store::types::TypeStore};
 
 /// Global data that is in-memory for the execution of the program
 #[derive(Debug, Clone)]
-pub struct ProgramData
+pub struct ProgramData<D: Database>
 {
     pub context: Context,
-    pub type_stores: HashMap<EntityID, TypeStore>,
+    pub database: D,
 }
 
-impl ProgramData
+impl<D: Database> ProgramData<D>
 {
-    pub fn get_editor_type_for_entity(&self, id: &EntityID) -> Option<EditorType>
+    pub fn new(database: D) -> ProgramData<D>
     {
-        if self.type_stores.contains_key(id)
-        {
-            Some(EditorType::TypeStore(id.clone()))
-        }
-        else
-        {
-            None
-        }
+        ProgramData { context: Context::Default, database }
     }
 }
 
-pub struct MemoryDatabase
+impl<D: Database> ProgramData<D>
 {
-
+    pub fn get_editor_type_for_entity(&self, id: &EntityID) -> Result<Option<EditorType>, Error>
+    {
+        if let Some(e) = self.database.get_entity(id)?
+        {
+            match e
+            {
+                Entity::Database(database_record) => todo!(),
+                Entity::User(user) => todo!(),
+                Entity::Container(container_component) => todo!(),
+                Entity::Store(store_component) => 
+                {
+                    match store_component
+                    {
+                        StoreComponent::EquationStore() => todo!(),
+                        StoreComponent::EventStore() => todo!(),
+                        StoreComponent::LocationStore() => todo!(),
+                        StoreComponent::MapStore() => todo!(),
+                        StoreComponent::TypeStore(type_store) => Ok(Some(EditorType::TypeStore(type_store.to_id().clone()))),
+                        StoreComponent::ValueStore() => todo!(),
+                        StoreComponent::WikiStore() => todo!(),
+                    }
+                },
+            }
+        }
+        else
+        {
+            Ok(None)
+        }
+    }
 }
 
 /// A context is used to determine the response to commands
@@ -43,7 +62,8 @@ pub enum Context
 #[derive(Debug, Clone)]
 pub enum EditorType
 {
-    TypeStore(EntityID)
+    TypeStore(EntityID),
+    Type(EntityID, TypeBuilder)
 }
 
 impl EditorType
@@ -53,6 +73,7 @@ impl EditorType
         match &self
         {
             EditorType::TypeStore(_) => "TypeStore".to_owned(),
+            EditorType::Type(_, type_builder) => type_builder.name.to_owned(),
         }
     }
 }
@@ -64,14 +85,7 @@ impl std::fmt::Display for EditorType
         match self
         {
             EditorType::TypeStore(uuid) => write!(f, "TypeStore ({})", uuid),
+            EditorType::Type(id, type_builder) => write!(f, "Type ({}) for Typestore ({})", type_builder.name.to_owned(), id),
         }
-    }
-}
-
-impl ProgramData
-{
-    fn new() -> ProgramData
-    {
-        ProgramData { type_stores: HashMap::new(), context: Context::Default }
     }
 }
