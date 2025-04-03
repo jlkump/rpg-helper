@@ -58,7 +58,7 @@ struct TestDB
 
 impl Database for TestDB
 {
-    fn insert_entity(&mut self, e: model::model::database::entity::Entity) -> Result<(), model::model::database::DatabaseError> {
+    fn insert_entity(&self, e: model::model::database::entity::Entity) -> Result<(), model::model::database::DatabaseError> {
         todo!()
     }
 
@@ -66,11 +66,15 @@ impl Database for TestDB
         todo!()
     }
 
-    fn modify_entity(&mut self, id: &model::model::database::entity::EntityID, n: model::model::database::entity::Entity) -> Result<model::model::database::entity::Entity, model::model::database::DatabaseError> {
+    fn update_entity(&self, id: &model::model::database::entity::EntityID, n: model::model::database::entity::Entity) -> Result<model::model::database::entity::Entity, model::model::database::DatabaseError> {
         todo!()
     }
 
-    fn remove_entity(&mut self, id: &model::model::database::entity::EntityID) -> Result<model::model::database::entity::Entity, model::model::database::DatabaseError> {
+    fn remove_entity(&self, id: &model::model::database::entity::EntityID) -> Result<model::model::database::entity::Entity, model::model::database::DatabaseError> {
+        todo!()
+    }
+
+    fn generate_id(&self) -> model::model::database::entity::EntityID {
         todo!()
     }
 }

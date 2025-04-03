@@ -1,4 +1,4 @@
-use super::core::Reference;
+use super::{core::Reference, database::entity::EntityID};
 
 pub mod equation;
 pub mod event;
@@ -12,7 +12,12 @@ pub mod wiki;
 /// Any value stored in a store must be able to know how to reference itself
 pub trait Storable where Self: std::marker::Sized
 {
-    // type Ref: Reference<Self>;
+    fn to_ref(&self) -> Reference<Self>;
+}
 
-    fn to_ref(&self) -> Reference<Self>; //Self::Ref;
+pub trait StorableBuilder<T> where 
+    Self: std::marker::Sized,
+    T: Storable
+{
+    fn build(self, container_id: EntityID, path: String) -> T;
 }

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use user::User;
 
+use crate::model::store::types::TypeStore;
+
 use super::DatabaseRecord;
 
 pub mod ruleset;
@@ -40,7 +42,7 @@ pub enum StoreComponent
     EventStore(), // The timeline
     LocationStore(),
     MapStore(),
-    TypeStore(),
+    TypeStore(TypeStore),
     ValueStore(),
     WikiStore(),
 }

@@ -9,20 +9,21 @@ pub mod entity;
 
 pub trait Database
 {
-    fn insert_entity(&mut self, e: Entity) -> Result<(), DatabaseError>;
-    fn get_entity(&self, id: &EntityID) -> Result<Entity, DatabaseError>;
-    fn modify_entity(&mut self, id: &EntityID, n: Entity) -> Result<Entity, DatabaseError>;
-    fn remove_entity(&mut self, id: &EntityID) -> Result<Entity, DatabaseError>;
     // TODO: 
-    //      We want to have a more abstract interface to the Database.
-    //      In particular, we want to be able to say "create Ruleset"
-    //      or "add 'Type' to 'Ruleset'"
-    //      I'm thinking this will be added to the particular Containers or Stores (see ruleset.rs)
+    //      Logging and history updates for every
+    //      change made to entities in the database.
+    fn insert_entity(&self, e: Entity) -> Result<(), DatabaseError>;
+    fn get_entity(&self, id: &EntityID) -> Result<Entity, DatabaseError>;
+    fn update_entity(&self, id: &EntityID, n: Entity) -> Result<Entity, DatabaseError>;
+    fn remove_entity(&self, id: &EntityID) -> Result<Entity, DatabaseError>;
+    fn generate_id(&self) -> EntityID;
 }
 
 pub enum DatabaseError
 {
-    DuplicateExistingID(Entity)
+    DuplicateExistingID(Entity),
+    EntityNotFound(EntityID),
+    EntityTypeMismatch,
 }
 
 impl From<DatabaseError> for Error
@@ -31,6 +32,23 @@ impl From<DatabaseError> for Error
         Error::Database(value)
     }
 }
+
+pub trait DatabaseID
+{
+    fn to_id(&self) -> &EntityID;
+}
+
+pub trait DatabaseEntity<D, B> where Self: std::marker::Sized + DatabaseID, D: Database, B: DatabaseEntityBuilder<D, Self>
+{
+    fn new() -> B;
+
+    fn database_insert(db: &D, builder: B) -> Result<EntityID, Error>;
+    fn database_get(db: &D, id: EntityID) -> Result<Self, Error>;
+    fn database_update(db: &D, entity: &Self) -> Result<Self, Error>;
+    fn database_remove(db: &D, id: EntityID) -> Result<Self, Error>;
+}
+
+pub trait DatabaseEntityBuilder<D, E> where Self: std::marker::Sized, E: DatabaseEntity<D, Self>, D: Database {}
 
 /// This allows us to track information about the database itself.
 /// It counts as an entity in the Database, as all things are entities.
@@ -42,7 +60,7 @@ impl From<DatabaseError> for Error
 pub struct DatabaseRecord
 {
     // Assorted Database stuff
-    id: EntityID,
+    id: EntityID,                   // ID of the DatabaseRecord itself
     users: HashSet<UserID>,
     
     // Containers

@@ -1,7 +1,33 @@
-use model::model::database::Database;
+use std::collections::HashMap;
+
+use model::model::{database::{entity::EntityID, Database}, store::types::TypeStore};
 use rustyline::{error::ReadlineError, DefaultEditor};
 
 use crate::{commands::execute_command, Cli};
+
+/// Global data that is in-memory for the execution of the program
+pub struct ProgramData
+{
+    pub context: Context,
+    pub type_stores: HashMap<EntityID, TypeStore>,
+}
+
+/// A context is used to determine the response to commands
+/// For example, in the Editor context, an entity is the subject of
+/// the editor and can be added to, removed from, and updated.
+pub enum Context
+{
+    Default,
+    Editor(EntityID),
+}
+
+impl ProgramData
+{
+    fn new() -> ProgramData
+    {
+        ProgramData { type_stores: HashMap::new(), context: Context::Default }
+    }
+}
 
 pub fn start_repl<T>(cli: Cli, db: &mut T) -> std::io::Result<()>
     where T: Database
@@ -21,10 +47,16 @@ pub fn start_repl<T>(cli: Cli, db: &mut T) -> std::io::Result<()>
     info!("CLI session started");
 
     let mut rl = DefaultEditor::new().unwrap();
-    
+    let mut data = ProgramData::new();
+
     loop 
     {
-        let readline = rl.readline(">> ");
+        let prompt = match data.context
+        {
+            Context::Default => ">> ",
+            Context::Editor(uuid) => "[Editor] >> ",
+        };
+        let readline = rl.readline(prompt);
         match readline 
         {
             Ok(line) => 
@@ -40,7 +72,7 @@ pub fn start_repl<T>(cli: Cli, db: &mut T) -> std::io::Result<()>
                 }
                 
                 debug!("Attempting execution of command {}", line.as_str());
-                match execute_command(line.as_str(), db)
+                match execute_command(line.as_str(), &mut data, db)
                 {
                     Ok(output) => print!("{}", output),
                     Err(e) => println!("[Error]: {}", e),

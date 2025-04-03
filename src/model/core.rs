@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
-use super::{database::{entity::EntityID, DatabaseError}, storable::Storable};
+use super::{database::{entity::EntityID, DatabaseError}, storable::Storable, store::StoreError};
 
 pub enum Error
 {
-    Database(DatabaseError)
+    Database(DatabaseError),
+    Store(StoreError)
 }
 
 /// ===== A heirarchical reference =====
@@ -33,9 +34,9 @@ pub struct Reference<T>
 impl<T> Reference<T>
     where T: Storable
 {
-    pub fn new(storable: &T) -> Reference<T>
+    pub fn new(container_id: EntityID, path: String) -> Reference<T>
     {
-        storable.to_ref()
+        Reference { container_id, path, _phantom: PhantomData }
     }
 
     pub fn get_container_id(&self) -> &EntityID
