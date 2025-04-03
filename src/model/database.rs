@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, io};
 
 use entity::{user::UserID, Entity, EntityID};
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use super::core::Error;
 
 pub mod entity;
+pub mod imp; // Short for implementation
 
 pub trait Database
 {
@@ -24,6 +25,11 @@ pub enum DatabaseError
     DuplicateExistingID(Entity),
     EntityNotFound(EntityID),
     EntityTypeMismatch,
+    DatabaseNotFound(String),
+    UnsupportedOperation(String),
+    UnexpectedBehavior(String),
+    FileIO(io::Error),
+    Corruption(String),
 }
 
 impl From<DatabaseError> for Error

@@ -10,6 +10,7 @@ use repl::start_repl;
 use simplelog::{Config, WriteLogger};
 
 mod commands;
+mod data;
 mod repl;
 
 #[derive(Parser)]
