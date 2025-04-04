@@ -31,7 +31,7 @@ impl Type
             name: name.to_string(), 
             data: EType::Number, // Default to number, allow the type to change
             enum_list: Vec::new(),
-            struct_map: HashMap::new(),
+            struct_map: BTreeMap::new(),
         }
     }
 
@@ -53,7 +53,7 @@ impl Type
         }
         else
         {
-            struct_map = HashMap::new();
+            struct_map = BTreeMap::new();
         }
         TypeBuilder { name: self.name, data: self.data, enum_list, struct_map }
     }
@@ -78,18 +78,18 @@ impl Type
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Clone)]
 pub enum EType
 {
     Number,             // Simply a number value, such as Experience
     Boolean,            // Simply a boolean value, such as InAura
-    List(String),       // A list of another type
+    List(Box<EType>),   // A list of another type
     Enum(Vec<String>),  // A list of available types for a value to take, such as Technique or Form for a subtype of Art
-    Struct(HashMap<String, String>), // A collection of types addressable by field-name
+    Struct(BTreeMap<String, EType>), // A collection of types addressable by field-name
     DieRoll(),          // A number that requires input by the user to be calculated
     Modifier(),         // A number that is added to a referenced Value when the condition is true
     Equation(),         // A number or boolean that is calculated based on a given equation, which can reference other Values
-    Reference(String),  // A wrapper for the Reference<T>, specifically only targeting Values by a given Type
+    Reference(Reference),  // A wrapper for the Reference<T>, specifically only targeting Values by a given Type
                         //      For example, the "Spell" Struct type has "Range" as a field, which is a Reference type
                         //      that references specifically a "Range" Struct type.
                         //      All this type does is restrict the Value type's Reference
@@ -98,24 +98,31 @@ pub enum EType
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct DieRoll
 {
-    pub num_dice: u8,
-    pub num_sides: u16,
-    pub special_sides: BTreeMap<u16, DieRollEffect>,
+    pub num_dice: EType,        // We use a EType here because we want to be able to Reference other types for instances of the value
+    pub num_sides: EType,
+    pub special_sides: BTreeMap<EType, DieRollEffect>,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct DieRollEffect
 {
-
+    name_of_effect: String,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum DieRollSideAction
+{
+    RollAgain,
+    Exploding(EType),       // The multiplier per roll
+    RollOtherDice(EType)    // The dice to roll
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
 pub struct TypeBuilder
 {
     pub name: String,
     data: EType,
     enum_list: Vec<String>,
-    struct_map: HashMap<String, String>,
+    struct_map: BTreeMap<String, String>,
 }
 
 impl StorableBuilder<Type> for TypeBuilder

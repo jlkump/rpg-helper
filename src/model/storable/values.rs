@@ -1,6 +1,10 @@
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+use crate::model::core::Reference;
+
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize, Clone)]
 pub enum Value {
     // Num(Number),
     // Bool(Bool),
@@ -10,12 +14,12 @@ pub enum Value {
     // Equation(EquationRef),
     // DieRoll(DieRoll), 
     // MetaRef(MetaInstRef),
-    Num(),
-    Bool(),
-    List(),
-    Enum(),
-    Meta(),
-    Equation(),
+    Num(f32),
+    Bool(bool),
+    List(Vec<Value>),
+    Enum(String),
+    Struct(BTreeMap<String, Value>),
+    // Equation(), // Equation Compute?
     DieRoll(), 
-    MetaRef(),
+    Reference(Reference),                     // Points to a value matching the type of reference
 }

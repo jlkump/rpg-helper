@@ -24,6 +24,7 @@ pub enum Error
 /// For example, given a ValueTypeRef, we first look at the ContainerID.
 /// The ContainerID querry returns a Ruleset. We then use the returned
 /// Ruleset to resolve the path.
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Clone)]
 pub struct Reference
 {
     container_id: EntityID,
