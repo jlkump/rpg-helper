@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use entity::{user::UserID, Entity, EntityID};
+use entity::{user::UserID, Entity, EntityID, StoreComponent};
 use serde::{Deserialize, Serialize};
 
-use super::core::Error;
+use super::{core::Error, store::types::TypeStore};
 
 pub mod entity;
 pub mod imp; // Short for implementation
@@ -18,6 +18,25 @@ pub trait Database
     fn update_entity(&self, id: &EntityID, n: Entity) -> Result<Entity, DatabaseError>;
     fn remove_entity(&self, id: &EntityID) -> Result<Option<Entity>, DatabaseError>;
     fn generate_id(&self) -> EntityID;
+
+    fn get_entities_matching_condition<F: Fn(&Entity) -> bool>(&self, f: F) -> Result<Vec<Entity>, DatabaseError>;
+    fn map_entities_matching_condition<T, F: Fn(Entity) -> Option<T>>(&self, f: F) -> Result<Vec<T>, DatabaseError>;
+
+    fn get_all_typestores(&self) -> Result<Vec<TypeStore>, DatabaseError>
+    {
+        self.map_entities_matching_condition(|e| 
+            {
+                if let Entity::Store(StoreComponent::TypeStore(t)) = e
+                {
+                    Some(t)
+                }
+                else
+                {
+                    None
+                }
+            }
+        )
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]

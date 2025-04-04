@@ -34,6 +34,48 @@ impl Type
             struct_map: HashMap::new(),
         }
     }
+
+    pub fn into_builder(self) -> TypeBuilder
+    {
+        let enum_list;
+        if let EType::Enum(e) = &self.data
+        {
+            enum_list = e.clone();
+        }
+        else
+        {
+            enum_list = Vec::new();
+        }
+        let struct_map;
+        if let EType::Struct(s) = &self.data
+        {
+            struct_map = s.clone();
+        }
+        else
+        {
+            struct_map = HashMap::new();
+        }
+        TypeBuilder { name: self.name, data: self.data, enum_list, struct_map }
+    }
+
+    pub fn get_pretty_string(&self, space_prefix: u8) -> String
+    {
+        let s = match &self.data
+        {
+            EType::Number => "Number".to_owned(),
+            EType::Boolean => "Boolean".to_owned(),
+            EType::List(s) => format!("List<{}>", s),
+            EType::Enum(types) => format!("Enum {:?}", types),
+            EType::Struct(_) => "Struct".to_owned(),
+            EType::DieRoll() => "DieRoll".to_owned(),
+            EType::Modifier() => "Modifier".to_owned(),
+            EType::Equation() => "Equation".to_owned(),
+            EType::Reference(s) => format!("Ref<{}>", s),
+        };
+        let mut res = format!("{}: {}", self.name, s);
+        self.data.pretty_string(space_prefix, &mut res);
+        res
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -92,9 +134,14 @@ impl TypeBuilder
         self.data = EType::Boolean;
     }
 
-    pub fn as_list(&mut self, list_type: String)
+    pub fn as_list(&mut self)
     {
-        self.data = EType::List(list_type);
+        self.data = EType::List("".to_owned());
+    }
+
+    pub fn set_list_type(&mut self, s: String)
+    {
+        self.data = EType::List(s);
     }
 
     pub fn as_enum(&mut self)
@@ -134,18 +181,57 @@ impl TypeBuilder
     }
 
     /// Used for build()
-    /// Ensures that the daata of EType is what we actually configured
+    /// Ensures that the data of EType is what we actually configured
     pub fn get_data(&self) -> EType
     {
         match &self.data
         {
             EType::Number | EType::Boolean | EType::List(_) => self.data.clone(),
             EType::Enum(_) => EType::Enum(self.enum_list.clone()),
-            EType::Struct(hash_map) => todo!(),
+            EType::Struct(_) => EType::Struct(self.struct_map.clone()),
             EType::DieRoll() => todo!(),
             EType::Modifier() => todo!(),
             EType::Equation() => todo!(),
             EType::Reference(_) => todo!(),
+        }
+    }
+
+    pub fn get_pretty_string(&self, space_prefix: u8) -> String
+    {
+        let s = match &self.data
+        {
+            EType::Number => "Number".to_owned(),
+            EType::Boolean => "Boolean".to_owned(),
+            EType::List(s) => format!("List<{}>", s),
+            EType::Enum(types) => format!("Enum {:?}", types),
+            EType::Struct(_) => "Struct".to_owned(),
+            EType::DieRoll() => "DieRoll".to_owned(),
+            EType::Modifier() => "Modifier".to_owned(),
+            EType::Equation() => "Equation".to_owned(),
+            EType::Reference(s) => format!("Ref<{}>", s),
+        };
+        let mut res = format!("{}: {}", self.name, s);
+        self.data.pretty_string(space_prefix, &mut res);
+        res
+    }
+}
+
+impl EType
+{
+    fn pretty_string(&self, space_prefix: u8, res: &mut String)
+    {
+        let mut prefix = String::from('\n');
+        for _ in 0..space_prefix
+        {
+            prefix.push(' ');
+        }
+
+        if let EType::Struct(d) = &self
+        {
+            for (k, v) in d.iter()
+            {
+                res.push_str(&format!("{}{}: {}", prefix, k, v));
+            }
         }
     }
 }

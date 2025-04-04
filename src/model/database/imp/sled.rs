@@ -129,6 +129,40 @@ impl Database for SledDB
     {
         uuid::Uuid::new_v4()
     }
+    
+    fn get_entities_matching_condition<F: Fn(&Entity) -> bool>(&self, f: F) -> Result<Vec<Entity>, DatabaseError>
+    {
+        let mut res = vec![];
+        for i in self.entities.iter()
+        {
+            let (_, v) = i?;
+            let e: Entity = bincode::deserialize_from(v.reader())?;
+            if f(&e)
+            {
+                res.push(e);
+            }
+        }
+
+        Ok(res)
+    }
+    
+    fn map_entities_matching_condition<T, F: Fn(Entity) -> Option<T>>(&self, f: F) -> Result<Vec<T>, DatabaseError>
+    {
+        let mut res = vec![];
+        for i in self.entities.iter()
+        {
+            let (_, v) = i?;
+            let e: Entity = bincode::deserialize_from(v.reader())?;
+            if let Some(e) = f(e)
+            {
+                res.push(e);
+            }
+        }
+
+        Ok(res)
+    }
+
+    
 }
 
 

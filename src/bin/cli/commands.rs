@@ -1,5 +1,5 @@
 use editor::execute_editor;
-use rpg_helper::model::{database::{entity::{Entity, StoreComponent}, Database, DatabaseEntity, DatabaseMutator}, store::{types::TypeStore, Store}};
+use rpg_helper::model::{database::{entity::{Entity, StoreComponent}, Database, DatabaseEntity, DatabaseMutator}, storable::types::Type, store::{types::TypeStore, Store}};
 
 use crate::data::{Context, ProgramData};
 
@@ -22,7 +22,7 @@ pub fn execute_command<D: Database>(command: &str, data: &mut ProgramData<D>) ->
                 "help" => help(),
                 "create" => create(parts, data),
                 "edit" => edit(parts, data),
-                "delete" => todo!(),
+                "remove" => remove(parts, data),
                 "list" => list(parts, data),
                 _ => 
                 {
@@ -44,7 +44,7 @@ Available commands:
     create [ruleset|setting|character|game|        - Create a container (ruleset, setting, etc.) 
         typestore|valuestore|etc]                 or store (typestore, valuestore, etc.) in memory to edit
     edit <EntityID>                                - Opens a CLI editor for the given entity
-    delete <EntityID>                              - Deletes an entity
+    remove <EntityID>                              - Deletes an entity
     list [ruleset|setting|typestore|etc]           - Lists all the Entities of a given type
     list <EntityID>                                - Lists all the values contained inside an entity
     exit                                           - Exit the program
@@ -120,9 +120,49 @@ fn edit<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<Stri
 
 }
 
+fn remove<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<String, String>
+{
+    if parts.len() < 1
+    {
+        info!("[Default] Attempt to use \"remove\" command, missing target for command");
+        return Err("Command \"remove\" is missing a target.".to_string());
+    }
+
+    match uuid::Uuid::parse_str(parts[1])
+    {
+        Ok(id) =>
+        {
+            match TypeStore::database_remove(&data.database, id)
+            {
+                Ok(_) =>
+                {
+                    info!("[Default] Command Used: \"remove {}\"", parts[1]);
+                    info!("[Default] Removed Typestore with EntityID: {}", id);
+                    Ok(format!("Removed TypeStore {}", id))
+                },
+                Err(e) =>
+                {
+                    error!("[Default] Attempt to use \"remove\" command, encountered database error {:?}", e);
+                    Err(format!("A database error occured {:?}", e))
+                },
+            }
+        },
+        Err(_) =>
+        {
+            info!("[Default] Attempt to use \"remove\" command, poorly formatted ID '{}'", parts[1]);
+            Err(format!("ID '{}' for remove is not a UUID.", parts[1]))
+        },
+    }
+}
+
 
 fn list<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<String, String>
 {
+    if parts.len() <= 1
+    {
+        info!("[Default] Attempt to use \"list\" command, missing target for command");
+        return Err("Command \"list\" is missing a target. Supply the ID for the entity to list or the types to list.".to_string());
+    }
     match uuid::Uuid::parse_str(parts[1])
     {
         Ok(id) => 
@@ -133,6 +173,7 @@ fn list<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<Stri
                 {
                     if let Some(e) = e
                     {
+                        info!("[Default] Command Used: \"list {}\"", parts[1]);
                         info!("[Default] Data of entity with ID '{}' displayed", id);
                         Ok(pretty_display_entity(e))
                     }
@@ -154,7 +195,27 @@ fn list<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<Stri
             match parts[1]
             {
 
-                "typestore" | "Typestore" | "TypeStore" => todo!(),
+                "typestore" | "Typestore" | "TypeStore" => 
+                {
+                    match data.database.get_all_typestores()
+                    {
+                        Ok(l) =>
+                        {
+                            let mut res = String::new();
+                            for ts in l
+                            {
+                                res.push_str(&pretty_display_entity(ts.into()));
+                            }
+                            info!("[Default] Command Used: \"list {}\"", parts[1]);
+                            Ok(res)
+                        },
+                        Err(e) => 
+                        {
+                            error!("[Default] Database error on getting all typestores {:?}", e);
+                            Err(format!("Database error: {:?}", e))
+                        },
+                    }
+                },
                 _ => 
                 {
                     info!("[Default] Unknown \"list\" target: \"{}\"", parts[1]);
@@ -185,7 +246,7 @@ pub fn pretty_display_entity(e: Entity) -> String
                     let mut res = String::from(format!("Typestore {}\n", type_store.to_id()));
                     for t in type_store.get_all()
                     {
-                        res.push_str(&format!("   {}\n", t));
+                        res.push_str(&format!("   {}\n", t.get_pretty_string(6)));
                     }
                     res
                 },
