@@ -160,8 +160,27 @@ fn list<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<Stri
 {
     if parts.len() <= 1
     {
-        info!("[Default] Attempt to use \"list\" command, missing target for command");
-        return Err("Command \"list\" is missing a target. Supply the ID for the entity to list or the types to list.".to_string());
+        match data.database.get_entities_matching_condition(|_| true)
+        {
+            Ok(l) =>
+            {
+                let mut res = String::from("\nListing all Entities:\n==========================================\n");
+                for e in l
+                {
+                    res.push_str(&pretty_display_entity(e));
+                    res.push_str("==========================================\n");
+                }
+                info!("[Default] Command Used: \"list\"");
+                info!("[Default] Data of all entities displayed");
+                return Ok(res);
+            },
+            Err(e) =>
+            {
+                error!("[Default] Database error on reading all entities: {:?}", e);
+                return Err(format!("Database error: {:?}", e));
+            },
+        }
+
     }
     match uuid::Uuid::parse_str(parts[1])
     {

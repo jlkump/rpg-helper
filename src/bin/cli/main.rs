@@ -3,7 +3,7 @@ extern crate simplelog;
 
 use std::{fs::File, path::PathBuf};
 
-use clap::{command, Parser};
+use clap::{command, Parser, Subcommand};
 use log::LevelFilter;
 use rpg_helper::model::database::imp::sled::SledDB;
 use repl::start_repl;
@@ -27,8 +27,20 @@ struct Cli
     #[arg(long, value_name = "LOG_LEVEL")]
     log_level: Option<u8>,
     /// The database to use [sled]. Default to sled
-    #[arg(short, long, value_name = "DATABASE")]
-    database: Option<String>,
+    #[command(subcommand)]
+    database: Option<Database>,
+}
+
+#[derive(Subcommand, Clone)]
+enum Database
+{
+    /// Set the database config to be sled-db <PATH>
+    SledDB
+    {
+        /// The location of the database to be opened on disk
+        #[arg(short, long, value_name = "DATABASE_PATH")]
+        path: Option<String>,
+    },
 }
 
 const DEFAULT_LOG_LEVEL: u8 = 3;
@@ -49,14 +61,13 @@ fn main() -> std::io::Result<()>
     WriteLogger::init(log_level, Config::default(), File::create(file_name).unwrap()).unwrap();
     info!("Log initialized successfully with log level {}", cli.log_level.unwrap_or(DEFAULT_LOG_LEVEL));
 
-    let s = cli.database.clone().unwrap_or("sled".to_owned());
-    match s.as_str()
+
+    match cli.database.clone().unwrap_or(Database::SledDB { path: Some("./database/sled".to_string()) })
     {
-        "sled" => start_repl(cli, SledDB::open("./database/sled").unwrap()),
-        _ => 
+        Database::SledDB { path } => 
         {
-            error!("Uknown database option {}", s);
-            panic!("Unknown database option {}", s)
-        }
+            let path = path.unwrap_or("./database/sled".to_string());
+            start_repl(cli, SledDB::open(path).unwrap())
+        },
     }
 }

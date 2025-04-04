@@ -10,8 +10,8 @@ pub fn execute<D: Database>(id: EntityID, parts: Vec<&str>, data: &mut ProgramDa
         "back" => 
         {
             data.context = Context::Default;
-            info!("[Type] Command Used: \"back\"");
-            Ok("Returning to default".to_string())
+            info!("[TypeStore] Command Used: \"back\"");
+            Ok("Exiting type editor".to_string())
         }
         "list" => 
         {

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt};
+use std::{collections::{BTreeMap, HashMap}, fmt};
 
 use serde::{Deserialize, Serialize};
 
@@ -95,6 +95,20 @@ pub enum EType
                         //      All this type does is restrict the Value type's Reference
 }
 
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub struct DieRoll
+{
+    pub num_dice: u8,
+    pub num_sides: u16,
+    pub special_sides: BTreeMap<u16, DieRollEffect>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, Hash, Serialize, Clone)]
+pub struct DieRollEffect
+{
+
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct TypeBuilder
 {
@@ -180,6 +194,16 @@ impl TypeBuilder
         self.struct_map.remove(name);
     }
 
+    pub fn as_reference(&mut self)
+    {
+        self.data = EType::Reference("".to_string());
+    }
+
+    pub fn set_reference(&mut self, t: String)
+    {
+        self.data = EType::Reference(t);
+    }
+
     /// Used for build()
     /// Ensures that the data of EType is what we actually configured
     pub fn get_data(&self) -> EType
@@ -220,14 +244,14 @@ impl EType
 {
     fn pretty_string(&self, space_prefix: u8, res: &mut String)
     {
-        let mut prefix = String::from('\n');
-        for _ in 0..space_prefix
-        {
-            prefix.push(' ');
-        }
-
+        
         if let EType::Struct(d) = &self
         {
+            let mut prefix = String::from('\n');
+            for _ in 0..space_prefix
+            {
+                prefix.push(' ');
+            }
             for (k, v) in d.iter()
             {
                 res.push_str(&format!("{}{}: {}", prefix, k, v));
