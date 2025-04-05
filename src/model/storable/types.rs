@@ -64,13 +64,13 @@ impl Type
         {
             EType::Number => "Number".to_owned(),
             EType::Boolean => "Boolean".to_owned(),
-            EType::List(s) => format!("List<{}>", s),
+            EType::List(s) => format!("List<{:?}>", s),
             EType::Enum(types) => format!("Enum {:?}", types),
             EType::Struct(_) => "Struct".to_owned(),
             EType::DieRoll() => "DieRoll".to_owned(),
             EType::Modifier() => "Modifier".to_owned(),
             EType::Equation() => "Equation".to_owned(),
-            EType::Reference(s) => format!("Ref<{}>", s),
+            EType::Reference(s) => format!("Ref<{:?}>", s),
         };
         let mut res = format!("{}: {}", self.name, s);
         self.data.pretty_string(space_prefix, &mut res);
@@ -89,7 +89,7 @@ pub enum EType
     DieRoll(),          // A number that requires input by the user to be calculated
     Modifier(),         // A number that is added to a referenced Value when the condition is true
     Equation(),         // A number or boolean that is calculated based on a given equation, which can reference other Values
-    Reference(Reference),  // A wrapper for the Reference<T>, specifically only targeting Values by a given Type
+    Reference(String),  // A wrapper for the Reference<T>, specifically only targeting Values by a given Type
                         //      For example, the "Spell" Struct type has "Range" as a field, which is a Reference type
                         //      that references specifically a "Range" Struct type.
                         //      All this type does is restrict the Value type's Reference
@@ -122,7 +122,7 @@ pub struct TypeBuilder
     pub name: String,
     data: EType,
     enum_list: Vec<String>,
-    struct_map: BTreeMap<String, String>,
+    struct_map: BTreeMap<String, EType>,
 }
 
 impl StorableBuilder<Type> for TypeBuilder
@@ -157,12 +157,12 @@ impl TypeBuilder
 
     pub fn as_list(&mut self)
     {
-        self.data = EType::List("".to_owned());
+        self.data = EType::List(Box::new(EType::Number));
     }
 
-    pub fn set_list_type(&mut self, s: String)
+    pub fn set_list_type(&mut self, t: EType)
     {
-        self.data = EType::List(s);
+        self.data = EType::List(Box::new(t));
     }
 
     pub fn as_enum(&mut self)
@@ -191,9 +191,9 @@ impl TypeBuilder
         self.data = EType::Struct(self.struct_map.clone())
     }
 
-    pub fn set_struct_field(&mut self, name: String, value: String)
+    pub fn set_struct_field(&mut self, name: String, t: EType)
     {
-        self.struct_map.insert(name, value);
+        self.struct_map.insert(name, t);
     }
 
     pub fn remove_struct_field(&mut self, name: &str)
@@ -201,14 +201,10 @@ impl TypeBuilder
         self.struct_map.remove(name);
     }
 
-    pub fn as_reference(&mut self)
+    // Reference specifically targets a type defined in this same type store
+    pub fn as_reference(&mut self, r: String)
     {
-        self.data = EType::Reference("".to_string());
-    }
-
-    pub fn set_reference(&mut self, t: String)
-    {
-        self.data = EType::Reference(t);
+        self.data = EType::Reference(r);
     }
 
     /// Used for build()
@@ -233,13 +229,13 @@ impl TypeBuilder
         {
             EType::Number => "Number".to_owned(),
             EType::Boolean => "Boolean".to_owned(),
-            EType::List(s) => format!("List<{}>", s),
+            EType::List(s) => format!("List<{:?}>", s),
             EType::Enum(types) => format!("Enum {:?}", types),
             EType::Struct(_) => "Struct".to_owned(),
             EType::DieRoll() => "DieRoll".to_owned(),
             EType::Modifier() => "Modifier".to_owned(),
             EType::Equation() => "Equation".to_owned(),
-            EType::Reference(s) => format!("Ref<{}>", s),
+            EType::Reference(s) => format!("Ref<{:?}>", s),
         };
         let mut res = format!("{}: {}", self.name, s);
         self.data.pretty_string(space_prefix, &mut res);
@@ -261,7 +257,7 @@ impl EType
             }
             for (k, v) in d.iter()
             {
-                res.push_str(&format!("{}{}: {}", prefix, k, v));
+                res.push_str(&format!("{}{}: {:?}", prefix, k, v));
             }
         }
     }
@@ -275,7 +271,7 @@ impl fmt::Display for Type
         {
             EType::Number => "Number".to_owned(),
             EType::Boolean => "Boolean".to_owned(),
-            EType::List(s) => format!("List<{}>", s),
+            EType::List(s) => format!("List<{:?}>", s),
             EType::Enum(types) => format!("Enum {:?}", types),
             EType::Struct(_) => "Struct".to_owned(),
             EType::DieRoll() => "DieRoll".to_owned(),
@@ -295,7 +291,7 @@ impl fmt::Display for TypeBuilder
         {
             EType::Number => "Number".to_owned(),
             EType::Boolean => "Boolean".to_owned(),
-            EType::List(s) => format!("List<{}>", s),
+            EType::List(s) => format!("List<{:?}>", s),
             EType::Enum(types) => format!("Enum {:?}", types),
             EType::Struct(_) => "Struct".to_owned(),
             EType::DieRoll() => "DieRoll".to_owned(),

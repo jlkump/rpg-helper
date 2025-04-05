@@ -5,15 +5,16 @@ use serde::{Deserialize, Serialize};
 use crate::model::core::Reference;
 
 #[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize, Clone)]
-pub enum Value {
-    // Num(Number),
-    // Bool(Bool),
-    // List(List),
-    // Enum(Enumeration),
-    // Meta(MetaInst),
-    // Equation(EquationRef),
-    // DieRoll(DieRoll), 
-    // MetaRef(MetaInstRef),
+pub struct Value
+{
+    name: String,
+    parent: Option<Reference>,
+    data: EValue,
+}
+
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize, Clone)]
+pub enum EValue
+{
     Num(f32),
     Bool(bool),
     List(Vec<Value>),
