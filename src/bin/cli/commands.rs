@@ -160,7 +160,7 @@ fn list<D: Database>(parts: Vec<&str>, data: &mut ProgramData<D>) -> Result<Stri
 {
     if parts.len() <= 1
     {
-        match data.database.get_entities_matching_condition(|_| true)
+        match data.database.filter(|_| true)
         {
             Ok(l) =>
             {

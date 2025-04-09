@@ -1,6 +1,8 @@
+use std::future::Future;
+
 use serde::{Deserialize, Serialize};
 
-use super::{database::{entity::EntityID, DatabaseError}, store::StoreError};
+use super::{database::{entity::{Entity, EntityID}, DatabaseError}, storable::Storable, store::StoreError};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum Error
@@ -47,4 +49,30 @@ impl Reference
     {
         &self.path
     }
+}
+
+/// A DataHandle is used to resolve a Reference 
+/// and perform updates on Entities and Storables
+/// 
+/// It is essentially an async interface to a Database.
+/// Network logic is abstracted away underneath the
+/// implemnetation of the DataHandle trait.
+/// 
+/// The server must handle authentication and verification such
+/// that the reference does not try to access unauthorized data.
+pub trait DataHandle
+{
+    fn generate_id(&mut self) -> impl Future<Output = Result<EntityID, Error>> + Send;
+
+    fn insert_entity(&mut self, e: Entity) -> impl Future<Output = Result<(), Error>> + Send;
+    fn get_entity(&mut self, id: &EntityID) -> impl Future<Output = Result<Entity, Error>> + Send;
+    fn update_entity(&mut self, e: Entity) -> impl Future<Output = Result<Entity, Error>> + Send;
+    fn remove_entity(&mut self, id: &EntityID) -> impl Future<Output = Result<Entity, Error>> + Send;
+
+    fn filter<F>(&self, f: F) -> impl Future<Output = Result<Vec<Entity>, Error>>
+        where F: Fn(&Entity) -> bool;
+    fn filter_map<T, F>(&self, f: F) -> impl Future<Output = Result<Vec<T>, Error>>
+        where F: Fn(Entity) -> Option<T>;
+    
+    fn resolve_reference(&mut self, r: Reference) -> impl Future<Output = Result<Storable, Error>>;
 }

@@ -99,16 +99,16 @@ impl Database for SledDB
         self.get_data(id)
     }
 
-    fn update_entity(&self, id: &EntityID, e: Entity) -> Result<Entity, DatabaseError>
+    fn update_entity(&self, e: Entity) -> Result<Entity, DatabaseError>
     {
         if let Some(d) = self.get_data(e.to_id())?
         {
-            self.entities.insert(id, bincode::serialize(&e)?)?;
+            self.entities.insert(e.to_id(), bincode::serialize(&e)?)?;
             Ok(d)
         }
         else
         {
-            Err(DatabaseError::NonExistantEntity(id.clone()))
+            Err(DatabaseError::NonExistantEntity(e.to_id().clone()))
         }
     }
 
@@ -130,7 +130,7 @@ impl Database for SledDB
         uuid::Uuid::new_v4()
     }
     
-    fn get_entities_matching_condition<F: Fn(&Entity) -> bool>(&self, f: F) -> Result<Vec<Entity>, DatabaseError>
+    fn filter<F: Fn(&Entity) -> bool>(&self, f: F) -> Result<Vec<Entity>, DatabaseError>
     {
         let mut res = vec![];
         for i in self.entities.iter()
@@ -146,7 +146,7 @@ impl Database for SledDB
         Ok(res)
     }
     
-    fn map_entities_matching_condition<T, F: Fn(Entity) -> Option<T>>(&self, f: F) -> Result<Vec<T>, DatabaseError>
+    fn filter_map<T, F: Fn(Entity) -> Option<T>>(&self, f: F) -> Result<Vec<T>, DatabaseError>
     {
         let mut res = vec![];
         for i in self.entities.iter()

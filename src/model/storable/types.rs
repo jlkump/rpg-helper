@@ -4,21 +4,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::model::{core::Reference, database::entity::EntityID};
 
-use super::{Storable, StorableBuilder};
+use super::{Referenceable, StorableBuilder};
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize, Clone)]
 pub struct Type
 {
-    container: EntityID,
+    container_id: EntityID,
     name: String,
     data: EType,
 }
 
-impl Storable for Type 
+impl Referenceable for Type 
 {
     fn to_ref(&self) -> crate::model::core::Reference
     {
-        Reference::new(self.container.clone(), self.name.clone())
+        Reference::new(self.container_id.clone(), self.name.clone())
     }
 }
 
@@ -131,7 +131,7 @@ impl StorableBuilder<Type> for TypeBuilder
     {
         Type
         {
-            container: container_id,
+            container_id,
             name: path,
             data: self.get_data()
         }

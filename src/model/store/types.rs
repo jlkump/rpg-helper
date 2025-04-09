@@ -60,6 +60,12 @@ impl Store<Type, TypeBuilder> for TypeStore
     {
         self.types.clone().into_values().collect()
     }
+    
+    fn filter<F: Fn(&Type) -> bool>(&self, f: F) -> Result<Vec<&Type>, Error>
+    {
+        Ok(self.types.values().filter(|t| f(*t) ).collect())
+    }
+    
 }
 
 pub struct TypeStoreBuilder
@@ -129,7 +135,7 @@ impl<D: Database> DatabaseMutator<D, TypeStoreBuilder> for TypeStore
         // If it does, then replace the value in the database
         if let Some(old) =  Self::database_get(db, entity.id)?
         {
-            db.update_entity(&entity.id, Entity::Store(StoreComponent::TypeStore(entity.clone())))?;
+            db.update_entity(Entity::Store(StoreComponent::TypeStore(entity.clone())))?;
             Ok(old)
         }
         else

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use user::User;
 
-use crate::model::store::types::TypeStore;
+use crate::model::store::{types::TypeStore, values::ValueStore};
 
 use super::{DatabaseEntity, DatabaseRecord};
 
@@ -68,7 +68,7 @@ pub enum StoreComponent
     LocationStore(),
     MapStore(),
     TypeStore(TypeStore),
-    ValueStore(),
+    ValueStore(ValueStore),
     WikiStore(),
 }
 
@@ -83,7 +83,7 @@ impl StoreComponent
             StoreComponent::LocationStore() => todo!(),
             StoreComponent::MapStore() => todo!(),
             StoreComponent::TypeStore(type_store) => type_store.to_id(),
-            StoreComponent::ValueStore() => todo!(),
+            StoreComponent::ValueStore(_) => todo!(),
             StoreComponent::WikiStore() => todo!(),
         }
     }

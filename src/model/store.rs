@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{core::{Error, Reference}, database::entity::EntityID, storable::{Storable, StorableBuilder}};
+use super::{core::{Error, Reference}, database::entity::EntityID, storable::{Referenceable, StorableBuilder}};
 
 pub mod equation;
 pub mod event;
@@ -12,7 +12,7 @@ pub mod wiki;
 
 pub trait Store<T, B>
 where
-    T: Storable,
+    T: Referenceable,
     B: StorableBuilder<T>
 {
     // Every Store is able to be Queried for the storables it contains.
@@ -25,10 +25,14 @@ where
     fn set(&mut self, r: B) -> Result<Option<T>, Error>;
     fn remove(&mut self, r: &Reference) -> Result<Option<T>, Error>;
     fn get_all(&self) -> Vec<T>;
+
+    // Useful for searching purposes
+    fn filter<F: Fn(&T) -> bool>(&self, f: F) -> Result<Vec<&T>, Error>;
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum StoreError
 {
-    ContainerIDMismatch(EntityID, EntityID) // ContainerID, ReferenceID
+    ContainerIDMismatch(EntityID, EntityID), // ContainerID, ReferenceID
+    CircularReference(String)
 }
