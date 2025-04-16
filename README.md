@@ -1,4 +1,6 @@
 # RPG Helper
+![Showcase Image](./github/imgs/Showcase.png)
+
 ## Overview
 This a project meant to help organize the complexity of various tabletop RPGs into a wiki-like, note-taking format, similar to Obsidian, while also managing the complex changing stats of characters throughout gameplay. This project was initially built for the Ars Magica TTRPG, but in building for the complexity of that game, I found that the tool could be used in just about any TTRPG.
 
@@ -30,6 +32,8 @@ If you would like to contribute to this project, clone this repo and download th
 The project's front-end uses Trunk, a Rust package that runs the Yew web client locally. Other than that, the Cargo.toml file should handle all dependencies.
 
 ### Project Structure
+`assets` contains art and other assets for the front-end display. These will need to be shipped with the web client build for proper display.
+
 `github` contains files specific just to GitHub and nothing important to the code of the project.
 
 `old-client-code` contains the old client code that was used before the swap to a unified project structure. It remains as a reference for future implementation of the client code and will be removed once the web client is fully implemented.
@@ -52,5 +56,3 @@ See the [TODO](./TODO.md) file to see what is actively being worked on.
 
 ## Authors
 Landon Kump - Programming, Design, and Art
-
-![Example Wiki Image](./github/imgs/Creature%20Screen%20Wiki.png)
