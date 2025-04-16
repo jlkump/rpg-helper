@@ -25,7 +25,25 @@ Entities can be the following:
 
 *TODO: Define a permissions system design for the database*
 
-The `User` type ...
+The `User` type holds the data we care about for the user, which is currently:
+
+```
+                 ┌─────────────┐              
+       ┌─────────►  User Data  ◄───────┐      
+       │         └──────▲──────┘       │      
+┌──────┼───────┐ ┌──────┼──────┐ ┌─────┼─────┐
+│Secure Data   │ │Private Data │ │Public Data│
+│--------------│ │-------------│ │-----------│
+│Username      │ │StorageUsed  │ │ProfileData│
+│Email         │ │Friends      │ └───────────┘
+│Password      │ │Blocked      │              
+│Admin         │ │Owned:       │              
+│Verified      │ │- Games      │              
+│DonationAmount│ │- Rulesets   │              
+│MonthlyDonor  │ │- Settings   │              
+└──────────────┘ │- Characters │              
+                 └─────────────┘              
+```
 
 
 The `Container` type is used to facilitate the global addressability of the `Reference` type.
@@ -51,6 +69,7 @@ The `Store` type ...
 
 
 The client-server model for `Reference` resolution
+```
                         ┌───────────┐                        
            Client       │Network API│     Server             
            ──────       └─────┬─────┘     ──────             
@@ -62,3 +81,4 @@ The client-server model for `Reference` resolution
             └─────────────┘   │  │ Permission │              
                               │  │ DBReference│              
                               │  └────────────┘              
+```

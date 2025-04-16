@@ -2,9 +2,10 @@ use sled::{Db, Tree};
 use actix_web::web::Buf;
 
 use crate::model::{core::Error, database::{entity::{Entity, EntityID}, Database, DatabaseError, DatabaseEntity}};
-
-/// The handle to the Sled Database
-/// What the server has control over
+/// This is the implementation of the interface for a Database as
+/// outlined in database.rs.
+/// 
+/// This is a handle to the SledDB and is what the server has control over.
 pub struct SledDB
 {
     db: Db,
