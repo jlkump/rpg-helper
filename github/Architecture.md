@@ -4,7 +4,7 @@ This file is used to extensively describe the architectural design of the projec
 ## Database and Data Model
 At the core of the architectural design is the Database design and the Data Model.
 
-To make things abstract and easy to manage on the Database side, all the data we care about is stored as the all-encapsulating type of `Entity`. An `Entity` is accessed in the `Database` by an `EntityID`, which facilitates all CRUD operations.
+To make things abstract and easy to manage on the Database side, all the data we care about is stored as the all-encapsulating type of `Entity`. An `Entity` is accessed in the `Database` by an `EntityID`, which facilitates all CRUD operations. All entities share the same ID space (currently using the UUID system).
 ```
 ┌────────┐             ┌──────┐    
 │Database◄──EntityID───┼Entity│    
@@ -25,6 +25,10 @@ Entities can be the following:
 
 *TODO: Define a permissions system design for the database*
 
+The `User` type ...
+
+
+The `Container` type is used to facilitate the global addressability of the `Reference` type.
 ```
                                        ┌────────────────┐                    
 ┌────────────────┐ ┌────────────────┐  │Game            │  ┌────────────────┐
@@ -42,3 +46,19 @@ Entities can be the following:
                                       │└────────────────┘  └──▲─────────────┘
                                       └───────────────────────┘              
 ```
+
+The `Store` type ...
+
+
+The client-server model for `Reference` resolution
+                        ┌───────────┐                        
+           Client       │Network API│     Server             
+           ──────       └─────┬─────┘     ──────             
+                              │                              
+┌─────────┐ ┌─────────────┐   │  ┌────────────┐  ┌──────────┐
+│Reference┼─► Data Handle ┼───┼──►API Handler ┼──► Database │
+└─────────┘ │-------------│   │  │------------│  └──────────┘
+            │  Cache      │   │  │ Validation │              
+            └─────────────┘   │  │ Permission │              
+                              │  │ DBReference│              
+                              │  └────────────┘              
