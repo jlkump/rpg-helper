@@ -22,12 +22,11 @@ The Game Master can create changes to the rules, add new *Locations*, and create
 The *Wiki* of a *Ruleset*, *Setting*, and *Game* provide note-taking functionality similar to that of Obsidian, where the user writes down notes in the Markdown format with some extended functionality for displaying things aesthetically in a *Wiki* format. All notes are simply stored as Markdown and parsed to provide extended functionality, such as hyper-links between notes, image display, and stat display.
 
 ## Architecture
-
-### Data Model
+The core architecture is discussed in extensive detail in the [Architecture](./github/Architecture.md) file. At a high level ...
 
 ## Contribution
 ### Getting Started
-If you would like to contribute to this project, clone this repo and download the Rust toolchain.
+If you would like to contribute to this project, clone this repo and download the Rust toolchain. Contributors will have access to the GitHub project to pick up larger tasks in particular while those not given contributor access can provide bug fixes and assorted improvements.
 
 The project's front-end uses Trunk, a Rust package that runs the Yew web client locally. Other than that, the Cargo.toml file should handle all dependencies.
 
@@ -44,7 +43,28 @@ The project's front-end uses Trunk, a Rust package that runs the Yew web client 
 `src/model`: Code for the [Data Model](). Essentially all the library code to define the API used in the project.
 
 ### Coding Standards
+Rust has [standard formatting and style guide recommendations](https://doc.rust-lang.org/beta/style-guide/index.html) which are followed in this repo. The only major concern not covered in the standard style guide is that, in this project, we use new lines for braces rather than same-line for braces.
 
+Example:
+
+```rust
+// Use this
+fn some_function() -> Result<(), Err>
+{
+    if bool_value
+    {
+
+    }
+    // ...
+}
+
+// Instead of this
+fn some_function() -> Result<(), Err> {
+    if bool_value {
+
+    }
+}
+```
 
 ### Roadmap
 See the [Roadmap](./github/Roadmap.md) file to see a detailed outline of each planned feature.
