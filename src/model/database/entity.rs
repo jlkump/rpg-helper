@@ -5,7 +5,6 @@ use crate::model::store::{types::TypeStore, values::ValueStore};
 
 use super::{DatabaseEntity, DatabaseRecord};
 
-pub mod ruleset;
 pub mod user;
 
 

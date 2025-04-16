@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::model::{core::Error, database::{Database, DatabaseMutator, DatabaseEntity}};
-
-use super::EntityID;
+use crate::model::{core::Error, database::{entity::EntityID, Database, DatabaseEntity, DatabaseMutator}};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Ruleset
