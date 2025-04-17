@@ -22,7 +22,7 @@ The Game Master can create changes to the rules, add new *Locations*, and create
 The *Wiki* of a *Ruleset*, *Setting*, and *Game* provide note-taking functionality similar to that of Obsidian, where the user writes down notes in the Markdown format with some extended functionality for displaying things aesthetically in a *Wiki* format. All notes are simply stored as Markdown and parsed to provide extended functionality, such as hyper-links between notes, image display, and stat display.
 
 ## Architecture
-The core architecture is discussed in extensive detail in the [Architecture](./github/Architecture.md) file. At a high level ...
+The core architecture is discussed in extensive detail in the [Architecture](./github/Architecture.md) file.
 
 ## Contribution
 ### Getting Started
