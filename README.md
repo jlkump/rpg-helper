@@ -40,6 +40,7 @@ The project's front-end uses Trunk, a Rust package that runs the Yew web client 
 `src` contains all the code of the project detailed in the tree below.
 
 `src/bin`: Code for the specific binaries which are the implementations that use the library api defined in `src/lib.rs`
+
 `src/model`: Code for the [Data Model](). Essentially all the library code to define the API used in the project.
 
 ### Coding Standards
