@@ -41,7 +41,7 @@ The project's front-end uses Trunk, a Rust package that runs the Yew web client 
 
 `src/bin`: Code for the specific binaries which are the implementations that use the library api defined in `src/lib.rs`
 
-`src/model`: Code for the [Data Model](). Essentially all the library code to define the API used in the project.
+`src/model`: Code for the [Data Model](./github/Architecture.md). Essentially all the library code to define the API used in the project.
 
 ### Coding Standards
 Rust has [standard formatting and style guide recommendations](https://doc.rust-lang.org/beta/style-guide/index.html) which are followed in this repo. The only major concern not covered in the standard style guide is that, in this project, we use new lines for braces rather than same-line for braces.
