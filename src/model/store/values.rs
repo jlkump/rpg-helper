@@ -90,8 +90,9 @@ impl Store<Value, ValueBuilder> for ValueStore {
         }
     }
 
-    fn get_all(&self) -> Vec<Value> {
-        self.values.clone().into_values().collect()
+    fn get_all(&self) -> Vec<&Value>
+    {
+        self.values.values().collect()
     }
     
     fn filter<F: Fn(&Value) -> bool>(&self, f: F) -> Result<Vec<&Value>, Error>

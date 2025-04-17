@@ -1,14 +1,21 @@
 use std::collections::HashSet;
 
-use entity::{user::UserID, Entity, EntityID, StoreComponent};
+use entity::{user::UserID, Entity, EntityID};
 use serde::{Deserialize, Serialize};
 
-use super::{core::Error, store::types::TypeStore};
+use super::core::Error;
 
 pub mod entity;
 pub mod imp; // Short for implementation
 
-pub trait Database
+/// The abstract interface implementation requirements for a database.
+/// 
+/// Under our model, a `Database` facilitates CRUD operations on Entities,
+/// can generate a new EntityID, and can be queried using filters for the data of entities.
+/// 
+/// Future requirements can be added here as needed, but this should be all 
+/// that is required for the basics.
+pub(crate) trait Database
 {
     fn generate_id(&self) -> EntityID;
 
@@ -16,9 +23,6 @@ pub trait Database
     fn get_entity(&self, id: &EntityID) -> Result<Option<Entity>, DatabaseError>;
     fn update_entity(&self, n: Entity) -> Result<Entity, DatabaseError>;
     fn remove_entity(&self, id: &EntityID) -> Result<Option<Entity>, DatabaseError>;
-
-    fn filter<F: Fn(&Entity) -> bool>(&self, f: F) -> Result<Vec<Entity>, DatabaseError>;
-    fn filter_map<T, F: Fn(Entity) -> Option<T>>(&self, f: F) -> Result<Vec<T>, DatabaseError>;
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -38,20 +42,30 @@ pub enum DatabaseError
     Corruption(String),
 }
 
+/// This simply makes it easier to propigate `DatabaseErrors` to the library `Error` type using the `?` operator
 impl From<DatabaseError> for Error
 {
-    fn from(value: DatabaseError) -> Self {
+    fn from(value: DatabaseError) -> Self
+    {
         Error::Database(value)
     }
 }
 
+/// This trait is required to be implemented on any `Entity` instance type. It essentially just states
+/// that a database entity needs to be able to refer to itself by an ID and that it has a `new()` method
+/// that returns a builder `B`. There are no restrictions placed on the builder type, only that it exists.
 pub trait DatabaseEntity<B>
 {
     fn new() -> B;
     fn to_id(&self) -> &EntityID;
 }
 
-pub trait DatabaseMutator<D, B> where Self: std::marker::Sized + DatabaseEntity<B>, D: Database
+/// This trait is implemented on containers and stores to mark that they know how
+/// to modify their own data given a database reference.
+/// 
+/// In inserting into the Database, the DatabaseMutator trait states that
+/// the builder defined in `DatabaseEntity<B>` is used.
+pub(crate) trait DatabaseMutator<D, B> where Self: std::marker::Sized + DatabaseEntity<B>, D: Database
 {
     fn database_insert(db: &D, builder: B) -> Result<EntityID, Error>;
     fn database_get(db: &D, id: EntityID) -> Result<Option<Self>, Error>;

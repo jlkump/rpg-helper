@@ -1,7 +1,7 @@
 use sled::{Db, Tree};
 use actix_web::web::Buf;
 
-use crate::model::{core::Error, database::{entity::{Entity, EntityID}, Database, DatabaseError, DatabaseEntity}};
+use crate::model::{core::{Error, Filterable}, database::{entity::{Entity, EntityID}, Database, DatabaseEntity, DatabaseError}};
 /// This is the implementation of the interface for a Database as
 /// outlined in database.rs.
 /// 
@@ -14,7 +14,8 @@ pub struct SledDB
 
 impl From<sled::Error> for DatabaseError
 {
-    fn from(value: sled::Error) -> Self {
+    fn from(value: sled::Error) -> Self
+    {
         match value
         {
             sled::Error::CollectionNotFound(ivec) => DatabaseError::DatabaseNotFound(format!("{:?}", ivec)),
@@ -28,7 +29,8 @@ impl From<sled::Error> for DatabaseError
 
 impl From<sled::Error> for Error
 {
-    fn from(value: sled::Error) -> Self {
+    fn from(value: sled::Error) -> Self
+    {
         Error::Database(value.into())
     }
 }
@@ -49,6 +51,14 @@ impl From<bincode::Error> for DatabaseError
             bincode::ErrorKind::SequenceMustHaveLength => DatabaseError::InvalidEncoding,
             bincode::ErrorKind::Custom(s) => DatabaseError::Serialization(s),
         }
+    }
+}
+
+impl From<bincode::Error> for Error
+{
+    fn from(value: bincode::Error) -> Self
+    {
+        Error::Database(value.into())
     }
 }
 
@@ -130,8 +140,11 @@ impl Database for SledDB
     {
         uuid::Uuid::new_v4()
     }
-    
-    fn filter<F: Fn(&Entity) -> bool>(&self, f: F) -> Result<Vec<Entity>, DatabaseError>
+}
+
+impl Filterable<Entity> for SledDB
+{
+    fn filter<F: Fn(&Entity) -> bool>(&self, f: F) -> Result<Vec<Entity>, Error>
     {
         let mut res = vec![];
         for i in self.entities.iter()
@@ -147,7 +160,7 @@ impl Database for SledDB
         Ok(res)
     }
     
-    fn filter_map<T, F: Fn(Entity) -> Option<T>>(&self, f: F) -> Result<Vec<T>, DatabaseError>
+    fn filter_map<T, F: Fn(Entity) -> Option<T>>(&self, f: F) -> Result<Vec<T>, Error>
     {
         let mut res = vec![];
         for i in self.entities.iter()
@@ -162,8 +175,6 @@ impl Database for SledDB
 
         Ok(res)
     }
-
-    
 }
 
 

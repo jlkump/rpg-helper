@@ -50,7 +50,7 @@ pub struct UserSecureData {
     pub password: String,                   // The Password hash and salt
     pub is_admin: bool,                     // User or admin
     pub verified: bool,                     // Email Verification. We delete old users that aren't active for 2 years and have not been verified
-    pub donated: i64,                       // Number of cents donated in USD
+    pub donated: u64,                       // Number of cents donated in USD
     pub monthly_donor: bool,                // If the user is currently an active monthly donor
 }
 
@@ -111,8 +111,8 @@ impl User
         let pu = UserPublicData
         {
             profile_name: username,
-            profile_text: "Default Text".to_owned(),
-            profile_catchphrase: "Default Catchphrase".to_owned(),
+            profile_text: "".to_owned(),
+            profile_catchphrase: "".to_owned(),
             showcase: None,
         };
 

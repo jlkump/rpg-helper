@@ -56,9 +56,9 @@ impl Store<Type, TypeBuilder> for TypeStore
         }
     }
 
-    fn get_all(&self) -> Vec<Type>
+    fn get_all(&self) -> Vec<&Type>
     {
-        self.types.clone().into_values().collect()
+        self.types.values().collect()
     }
     
     fn filter<F: Fn(&Type) -> bool>(&self, f: F) -> Result<Vec<&Type>, Error>
