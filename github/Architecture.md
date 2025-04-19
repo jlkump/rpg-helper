@@ -5,6 +5,7 @@ This file is used to extensively describe the architectural design of the projec
 At the core of the architectural design is the Database design and the Data Model.
 
 To make things abstract and easy to manage on the Database side, all the data we care about is stored as the all-encapsulating type of `Entity`. An `Entity` is accessed in the `Database` by an `EntityID`, which facilitates all CRUD operations. All entities share the same ID space (currently using the UUID system).
+
 ```
 ┌────────┐             ┌──────┐    
 │Database◄──EntityID───┼Entity│    
@@ -146,15 +147,91 @@ An added benefit of creating this abstraction layer with the `DataHandle` type i
 ```
 
 ## Stores in Detail
+Something important to note for all stores is that each have a permission system on a scale of `NoAccess`, `ReadAccess`, and `ReadWriteAccess`. This is different from the permission system for getting the data of important stuff, like user private data or modifying entities. This is instead used to keep things private from the players in a game as the Game Master.
 
 ### Event Store
+The event store will store all the events on the timeline of events for a game.
+
+What is required for an event?
+- A time-stamp for the event based on the in-setting defined calendar
+      - This then requires that a ruleset define a date type
+      - A date type requires only that there be a way to evaluate it into a int value to compare and order
+- An id to identify it uniquely
+- The modification(s) it has on character(s)
+
+A base event type is required to be defined for a ruleset in addition to a base date type. The event type for Ars Magica might be defined as the following:
+
+```
+Event:
+{
+      Date,
+      ID,
+      Effect,
+}
+```
+
+Activities can then be defined in a Ruleset as pre-sets to events. Activities can be tied to locations or can be globably available. They can also be restricted based on the Values of a character.
+
+I.E, the `DataHandle` takes in a `Character` and returns the available list of `Activities` for that `Character`.
+
+By using a activity, an event is created from that activity to have affect on the designated character.
+
+Once an event is added to the timeline, the character it affects is updated accordingly. This is the ONLY way to modify a character past character creation (aside from debugging tools). Likewise, if an event is edited or removed, the character it affects is updated accordingly. For events that are edited or removed, the character's values may have been referenced by other characters and used in their own events (for example, think of the Teaching score in Ars Magica, which gives another player character's Exp based on the abilities of original player character's communication score). Thus, a dependency graph is used and tracked in each event to know what `Value`s from a `Character` used the value and how it changed. This is used to propigate the change to older events up the chain.
+
+The available activities for a `Character` is determined by their location field. The field may be empty / unknown in which case the available locations default to just the global locations.
+
+**Data Handle interface for Event Store**
+This is a general outline for the interface methods on a `DataHandle` which is performs the functionality described above. This outline does not define all the complexity of the actual implementation (such as error type returns or all the required parameters) but is instead to give the idea of the interface to be designed.
+
+
+```rust
+// This assumes a given Game context for a DataHandle
+// Thus, how to handle a Game context is yet to be decided.
+// I think it should probably be through a `pub fn set_game_context(&mut self, GameID)`
+
+pub fn get_available_activities(&self, c: &Character) -> Vec<Activtiy>; // Get the activities available for a character to perform
+
+pub fn get_all_activities(&self) -> Vec<Activity>; // Get all the types a given player can see. A player's view context is defined by the DataHandle
+
+pub fn get_timeline(&self) -> Timeline; // Timeline. Timeline should be filterable to show certain player events or global events.
+
+pub fn get_current_date(&self) -> Date; // The current date that the players are at in the timeline.
+
+pub fn get_date_limit(&self) -> Date; // The date up to which the player can create events for.
+
+pub fn set_display_date(&self, d: Date); // Sets the date for the player locally for them to see their character at different points in the timeline.
+
+pub fn get_display_date(&self) -> Date;
+
+pub fn insert_event(&self, event: EventBuilder);
+
+pub fn update_event(&self, event_id: EventID, event: EventBuilder);
+
+pub fn remove_event(&self, event_id: EventID);
+```
 
 ### Location Store
+A location can be defined by the user. The required fields for a location are the following:
+- Name
+- Optional Wiki Note link (The displayed description)
+- List of available Activities
+
+Locations come in a Heirarchy defined as the following:
+- Region
+- Sector
+- Locale
+- Landmark
+
+A Landmark can be contained by a Locale can be contained by a Sector can be contained by a Region. A player character's location is defined at any level of specificity along this scale.
 
 ### Map Store
+A map can be added to any Ruleset, Setting, or Game. A map is simply a 2D image with a name and ID. It also can contain a list of pins and a list of regions. Regions are defined by a set of points defining a polygon on the map in which a location or locations is defined. A pin is a single point on the map that defines a location or locations.
 
 ### Type Store
+Types define what types exist to be used to define Values in a character. They define the required fields and the ways in which values can be computed to a numeric or boolean value for execution and display.
 
 ### Value Store
+Values exist only for Characters and are used for evaluation in equations and display computation.
 
 ### Wiki Store
+A Wiki store contains Wiki Notes, which are simply Markdown documents displayed in a nice wiki style format to the client. Wiki Notes can link to other Wiki Notes (like in Obsidian) or can display the Values of a Character.
