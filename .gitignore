@@ -1,1 +1,11 @@
 /target
+/dist
+/Config.toml
+/database
+/database_test
+/files
+/uploads
+*.log
+/*_database
+/database
+rustfmt.toml

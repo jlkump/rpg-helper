@@ -8,7 +8,6 @@ use log::info;
 mod api;
 mod config;
 mod database;
-mod model;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
