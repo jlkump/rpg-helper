@@ -72,16 +72,16 @@ impl Tag
 /// 
 /// The presence of Ability.Magic Theory 
 #[derive()]
-pub struct TagContainer
+pub struct TagSet
 {
     tags: HashMap<String, i32>,
 }
 
-impl TagContainer
+impl TagSet
 {
-    pub fn new() -> TagContainer
+    pub fn new() -> TagSet
     {
-        TagContainer { tags: HashMap::new() }
+        TagSet { tags: HashMap::new() }
     }
 
     pub fn count_tag(&self, t: &Tag) -> i32
@@ -119,7 +119,7 @@ impl TagContainer
     }
 }
 
-impl Index<&str> for TagContainer
+impl Index<&str> for TagSet
 {
     type Output = i32;
  
