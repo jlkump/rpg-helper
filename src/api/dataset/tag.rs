@@ -71,7 +71,7 @@ impl Tag
 /// Ability as the first sub-tag and Magic Theory as the second.
 /// 
 /// The presence of Ability.Magic Theory 
-#[derive()]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct TagSet
 {
     tags: HashMap<String, i32>,

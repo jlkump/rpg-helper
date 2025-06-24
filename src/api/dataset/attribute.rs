@@ -1,14 +1,8 @@
+use crate::api::dataset::tag::Tag;
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-
-use super::tags::Tag;
-
-// #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
-// pub struct Attribute
-// {
-//     path: Tag,
-// }
 
 #[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize, Clone)]
 pub struct Attribute
@@ -45,6 +39,7 @@ impl Attribute
     }
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct AttributeSet
 {
     attributes: HashMap<Tag, Attribute>
@@ -52,6 +47,11 @@ pub struct AttributeSet
 
 impl AttributeSet
 {
+    pub fn new() -> AttributeSet
+    {
+        AttributeSet { attributes: HashMap::new() }
+    }
+
     pub fn get(&self, t : &Tag) -> Attribute
     {
         if let Some(a) = self.attributes.get(t)
