@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
@@ -61,6 +61,13 @@ impl Tag
     fn split_to_subtags(&self) -> Vec<String>
     {
         todo!()
+    }
+}
+
+impl Display for Tag
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 
