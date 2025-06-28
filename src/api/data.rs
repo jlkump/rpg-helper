@@ -6,6 +6,7 @@ pub mod attribute;
 pub mod conditional;
 pub mod effect;
 pub mod error;
+pub mod evaltree;
 pub mod equation;
 pub mod modifier;
 pub mod tag;
