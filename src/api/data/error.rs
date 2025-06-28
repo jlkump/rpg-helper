@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{tag::Tag};
+use crate::api::data::{evaltree::EvalError, tag::Tag};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum DataError
@@ -8,6 +8,7 @@ pub enum DataError
     DoesNotExist(DoesNotExistError),
     ConflictingExpectedType(ConflictError),
     InvalidState(String),
+    Evaluation(EvalError),
 }
 
 impl DataError

@@ -202,14 +202,7 @@ impl Context
     pub fn eval_conditional(&self, t: &Tag) -> Result<bool, DataError>
     {
         self.ensure_target_conditional(t)?;
-        if self.has_conditional(t)
-        {
-            Ok(self.conditionals.eval(t, self))
-        }
-        else
-        {
-            Err(DataError::condition_dne(t.clone()))
-        }
+        self.conditionals.eval(t, self)
     }
 
     pub fn remove_conditional(&mut self, t: &Tag) -> Result<Option<Conditional>, DataError>
