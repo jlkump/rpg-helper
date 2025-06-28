@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use std::ops::Index;
 
+use crate::api::data::error::{ParseError, ParseErrorType, TagParseError};
+
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 pub struct Tag
 {
@@ -26,31 +28,117 @@ impl Tag
     /// Ability.0 -> OK
     /// 0.Ability -> NOT OK
     /// Ability.Magic Theory!.Speciality -> NOT OK
-    pub fn from_str(s: &str) -> Tag
+    pub fn from_str(s: &str) -> Result<Tag, ParseError>
     {
-        // TODO:
-        // Properly parse the string to convert it to a tag.
-        // Return error accordingly
+        // Initial error check to ensure not empty
+        if s.is_empty() || s.chars().all(char::is_whitespace)
+        {
+            return Err(ParseError::new(s.to_string(), s.len(), ParseErrorType::Tag(TagParseError::TagEmpty)));
+        }
 
-        // Parsing tag procedure:
         // Check that the string only contains alpha-numeric values or '.'s
-        // Split by '.'
+        if !s.chars().all(|c| Self::is_valid_tag_char(c))
+        {
+            return Err(ParseError::new(s.to_string(), s.find(|c| !Self::is_valid_tag_char(c)).unwrap(), ParseErrorType::Tag(TagParseError::InvalidCharacter)));
+        }
+
         // Ensure first sub-string is not just a number
+        let first_str = if s.contains('.')
+        {
+            s.split('.').next().unwrap()
+        }
+        else
+        {
+            s
+        };
+
+        if first_str.chars().all(|c| c.is_numeric() || c.is_whitespace())
+        {
+            return Err(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::FirstTagNumeric)));
+        }
+
         // Initialize empty result string
         // Loop through each substring s
         //      Trim the outer white-space
         //      Add to result string
         //      Add '.' (if we are not the last value)
-        Tag
+        let mut name = String::new();
+        let mut it = s.split('.').peekable();
+        while let Some(sub) = it.next()
         {
-            name: s.to_string(),
+            if sub.chars().all(char::is_whitespace)
+            {
+                return Err(ParseError::new(s.to_string(), s.find(sub).unwrap(), ParseErrorType::Tag(TagParseError::SubTagEmpty)))
+            }
+            name.push_str(sub.trim());
+            if it.peek().is_some()
+            {
+                name.push('.');
+            }
         }
+
+        Ok(Tag { name })
     }
 
     pub fn to_str(&self) -> &str
     {
         &self.name
     }
+
+    fn find_all_parse_errors(s: &str) -> Result<(), Vec<ParseError>>
+    {
+        let mut res = vec![];
+        if s.is_empty() || s.chars().all(char::is_whitespace)
+        {
+            res.push(ParseError::new(s.to_string(), s.len(), ParseErrorType::Tag(TagParseError::TagEmpty)));
+            return Err(res);
+        }
+
+        let first_str = if s.contains('.')
+        {
+            s.split('.').next().unwrap()
+        }
+        else
+        {
+            s
+        };
+
+        if first_str.chars().all(char::is_numeric)
+        {
+            res.push(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::FirstTagNumeric)));
+        }
+
+        for (i, c) in s.chars().enumerate()
+        {
+            if !Self::is_valid_tag_char(c)
+            {
+                res.push(ParseError::new(s.to_string(), i, ParseErrorType::Tag(TagParseError::InvalidCharacter)));
+            }
+        }
+
+        for sub in s.split('.')
+        {
+            if sub.chars().all(char::is_whitespace)
+            {
+                res.push(ParseError::new(s.to_string(), s.find(sub).unwrap(), ParseErrorType::Tag(TagParseError::SubTagEmpty)));
+            }
+        }
+
+        if res.is_empty()
+        {
+            Ok(())
+        }
+        else
+        {
+            Err(res)
+        }
+    }
+
+    fn is_valid_tag_char(c: char) -> bool
+    {
+        c.is_alphanumeric() || c == '.' || c.is_whitespace()
+    }
+
 
     /// Given a tag, splits the literals into 
     /// the sub-tag array. This is a help method
@@ -60,7 +148,27 @@ impl Tag
     /// Ability.Magic Theory.Speciality -> ["Ability", "Ability.Magic Theory", "Ability.Magic Theory.Speciality"]
     fn split_to_subtags(&self) -> Vec<String>
     {
-        todo!()
+        let mut res = vec![];
+        if self.name.contains('.')
+        {
+            let mut cur = String::new();
+
+            let mut it = self.name.split('.').peekable();
+            while let Some(sub) = it.next()
+            {
+                cur.push_str(sub);
+                res.push(cur.to_string());
+                if it.peek().is_some()
+                {
+                    cur.push('.');
+                }
+            }
+        }
+        else
+        {
+            res.push(self.name.to_string());
+        }
+        res
     }
 }
 
@@ -134,4 +242,494 @@ impl Index<&str> for TagSet
     fn index(&self, index: &str) -> &Self::Output {
         self.tags.get(index).unwrap_or(&0)
     }
+}
+
+#[cfg(test)]
+mod unit_tests 
+{
+    use super::*;
+
+    /// Tests the creation of a single word tag.
+    /// Expected to succeed in creation.
+    #[test]
+    fn parse_test_1()
+    {
+        match Tag::from_str("First")
+        {
+            Ok(t) => assert_eq!(t.name, "First"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the creation  of a multi-word tag with spaces.
+    /// Expected to succeed in creation.
+    #[test]
+    fn parse_test_2()
+    {
+        match Tag::from_str("First Tag")
+        {
+            Ok(t) => assert_eq!(t.name, "First Tag"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the creation a single word tag with leading and trailing spaces.
+    /// Expected to succeed in creation and match result.
+    #[test]
+    fn parse_test_3()
+    {
+        match Tag::from_str(" First ")
+        {
+            Ok(t) => assert_eq!(t.name, "First"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the creation a multi-word tag with leading and trailing spaces.
+    /// Expected to succeed in creation and match result.
+    #[test]
+    fn parse_test_4()
+    {
+        match Tag::from_str(" First Tag ")
+        {
+            Ok(t) => assert_eq!(t.name, "First Tag"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the creation of subtags that are single words.
+    /// Expected to succeed in creation and match result.
+    #[test]
+    fn parse_test_5()
+    {
+        match Tag::from_str("One.Two")
+        {
+            Ok(t) => assert_eq!(t.name, "One.Two"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the creation of subtags that are single words with leading and trailing spaces.
+    /// Expected to succeed in creation and match result.
+    #[test]
+    fn parse_test_6()
+    {
+        match Tag::from_str(" One . Two ")
+        {
+            Ok(t) => assert_eq!(t.name, "One.Two"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the creation of subtags that are multiple words.
+    /// Expected to succeed in creation and match result.
+    #[test]
+    fn parse_test_7()
+    {
+        match Tag::from_str("Multi Worded.Tag Test")
+        {
+            Ok(t) => assert_eq!(t.name, "Multi Worded.Tag Test"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the creation of subtags that are multiple words with leading and trailing whitespace.
+    /// Expected to succeed in creation and match result.
+    #[test]
+    fn parse_test_8()
+    {
+        match Tag::from_str(" Multi Worded . Tag Test ")
+        {
+            Ok(t) => assert_eq!(t.name, "Multi Worded.Tag Test"),
+            Err(e) => panic!("Tag failed with error {:?}", e),
+        }
+    }
+
+    /// Tests the parsing of tags with an empty string.
+    /// Expected to fail with an "Empty Tag" error
+    #[test]
+    fn parse_test_9()
+    {
+        match Tag::from_str("")
+        {
+            Ok(t) => panic!("Succeeded in creating empty tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::TagEmpty);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with an only-space string.
+    /// Expected to fail with an "Empty Tag" error
+    #[test]
+    fn parse_test_10()
+    {
+        match Tag::from_str("  ")
+        {
+            Ok(t) => panic!("Succeeded in creating empty tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::TagEmpty);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with an empty subtag 
+    /// Expected to fail with an "Empty Sub Tag" error
+    #[test]
+    fn parse_test_11()
+    {
+        match Tag::from_str("Empty..Tag")
+        {
+            Ok(t) => panic!("Succeeded in creating empty sub tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::SubTagEmpty);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with an empty spaced subtag 
+    /// Expected to fail with an "Empty Sub Tag" error
+    #[test]
+    fn parse_test_12()
+    {
+        match Tag::from_str("Empty.   .Tag")
+        {
+            Ok(t) => panic!("Succeeded in creating empty sub tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::SubTagEmpty);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with a only numeric first tag.
+    /// Expected to fail with a "Only Numeric" first tag error
+    #[test]
+    fn parse_test_13()
+    {
+        match Tag::from_str("10.tag")
+        {
+            Ok(t) => panic!("Succeeded in creating numeric first tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::FirstTagNumeric);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with a only numeric first tag with leading and trailing whitespace.
+    /// Expected to fail with a "Only Numeric" first tag error
+    #[test]
+    fn parse_test_14()
+    {
+        match Tag::from_str(" 10 .tag")
+        {
+            Ok(t) => panic!("Succeeded in creating numeric first tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::FirstTagNumeric);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with invalid character '&'
+    /// Expected to fail with invalid character error
+    #[test]
+    fn parse_test_15()
+    {
+        match Tag::from_str("Death&Taxes")
+        {
+            Ok(t) => panic!("Succeeded in creating invalid character tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::InvalidCharacter);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with invalid character '#'
+    /// Expected to fail with invalid character error
+    #[test]
+    fn parse_test_16()
+    {
+        match Tag::from_str("#TagStyle")
+        {
+            Ok(t) => panic!("Succeeded in creating invalid character tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::InvalidCharacter);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests the parsing of tags with invalid character '-'
+    /// Expected to fail with invalid character error
+    #[test]
+    fn parse_test_17()
+    {
+        match Tag::from_str("Tag-Style")
+        {
+            Ok(t) => panic!("Succeeded in creating invalid character tag: \'{}\'", t.name),
+            Err(e) => 
+            {
+                if let ParseErrorType::Tag(t) = e.error_type
+                {
+                    assert_eq!(t, TagParseError::InvalidCharacter);
+                }
+                else
+                {
+                    panic!("Parse error is not a tag error: {:?}", e);
+                }
+            },
+        }
+    }
+
+    /// Tests parsing for all errors.
+    /// Expected to not find any errors.
+    #[test]
+    fn parse_test_18()
+    {
+        match Tag::find_all_parse_errors(" Is an ok tag. With Many. Words")
+        {
+            Ok(_) => (),
+            Err(e) => 
+            {
+                panic!("Found parse errors in valid tag: {:?}", e)
+            },
+        }
+    }
+
+    /// Tests parsing for all errors.
+    /// Expected to find all invalid characters and leading numeric subtag error.
+    #[test]
+    fn parse_test_19()
+    {
+        match Tag::find_all_parse_errors("90.This-Tag.Contains@Many.)()Invalid.%100,.Wrong;:chars[][\\")
+        {
+            Ok(_) => (),
+            Err(e) => 
+            {
+                assert_eq!(e.len(), 14);
+            },
+        }
+    }
+
+    /// Tests parsing for all errors.
+    /// Expected to find all invalid empty string.
+    #[test]
+    fn parse_test_20()
+    {
+        match Tag::find_all_parse_errors(" \t  ")
+        {
+            Ok(_) => (),
+            Err(e) => 
+            {
+                assert_eq!(e.len(), 1);
+                assert_eq!(e[0].error_type, ParseErrorType::Tag(TagParseError::TagEmpty));
+            },
+        }
+    }
+
+    /// Tests adding a simple tag to a tag set.
+    /// Expected to succeed with a single count of the simple tag.
+    #[test]
+    fn tagset_test_1()
+    {
+        let mut tag_set = TagSet::new();
+        let tag = Tag::from_str("Simple").unwrap();
+        tag_set.add_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+    }
+
+    /// Tests adding a multi-word tag to a tag set.
+    /// Expected to succeed with a single count of the multi-word tag and of leading sub-tags.
+    #[test]
+    fn tagset_test_2()
+    {
+        let mut tag_set = TagSet::new();
+        let tag = Tag::from_str("Simple.Subtag").unwrap();
+        tag_set.add_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+
+        let leading = Tag::from_str("Simple").unwrap();
+        assert!(tag_set.has_tag(&leading));
+        assert_eq!(tag_set.count_tag(&leading), 1);
+    }
+
+    /// Tests adding multiple different tags
+    /// Expected to succeed
+    #[test]
+    fn tagset_test_3()
+    {
+        let mut tag_set = TagSet::new();
+        let tag = Tag::from_str("Simple").unwrap();
+        tag_set.add_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+
+        let other = Tag::from_str("Other").unwrap();
+        tag_set.add_tag(&other);
+        assert!(tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&other), 1);
+    }
+
+    /// Tests adding multiple of the same tags
+    /// Expected to succeed
+    #[test]
+    fn tagset_test_4()
+    {
+        let mut tag_set = TagSet::new();
+        let tag = Tag::from_str("Simple").unwrap();
+        tag_set.add_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+
+        let other = Tag::from_str(" Simple ").unwrap();
+        tag_set.add_tag(&other);
+        assert!(tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&other), 2);
+    }
+
+    /// Tests adding multiple tags
+    /// Expected to succeed
+    #[test]
+    fn tagset_test_5()
+    {
+        let mut tag_set = TagSet::new();
+        let tag = Tag::from_str("Simple").unwrap();
+        tag_set.add_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+
+        let other = Tag::from_str(" Simple .Subtag").unwrap();
+        tag_set.add_tag(&other);
+        assert!(tag_set.has_tag(&tag));
+        assert!(tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&tag), 2);
+        assert_eq!(tag_set.count_tag(&other), 1);
+    }
+
+    /// Tests adding and removing multiple tags
+    /// Expected to succeed
+    #[test]
+    fn tagset_test_6()
+    {
+        let mut tag_set = TagSet::new();
+        let tag = Tag::from_str("Simple").unwrap();
+        tag_set.add_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+
+        let other = Tag::from_str(" Simple .Subtag").unwrap();
+        tag_set.add_tag(&other);
+        assert!(tag_set.has_tag(&tag));
+        assert!(tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&tag), 2);
+        assert_eq!(tag_set.count_tag(&other), 1);
+
+        tag_set.remove_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert!(tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.count_tag(&other), 1);
+
+        tag_set.remove_tag(&other);
+        assert!(!tag_set.has_tag(&tag));
+        assert!(!tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&tag), 0);
+        assert_eq!(tag_set.count_tag(&other), 0);
+    }
+
+    /// Tests adding and removing multiple tags
+    /// Expected to succeed
+    #[test]
+    fn tagset_test_7()
+    {
+        let mut tag_set = TagSet::new();
+        let tag = Tag::from_str("Simple").unwrap();
+        tag_set.add_tag(&tag);
+        assert!(tag_set.has_tag(&tag));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+
+        let other = Tag::from_str(" Simple .Subtag").unwrap();
+        tag_set.add_tag(&other);
+        assert!(tag_set.has_tag(&tag));
+        assert!(tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&tag), 2);
+        assert_eq!(tag_set.count_tag(&other), 1);
+
+        tag_set.remove_tag(&other);
+        assert!(tag_set.has_tag(&tag));
+        assert!(!tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.count_tag(&other), 0);
+
+        tag_set.remove_tag(&tag);
+        assert!(!tag_set.has_tag(&tag));
+        assert!(!tag_set.has_tag(&other));
+        assert_eq!(tag_set.count_tag(&tag), 0);
+        assert_eq!(tag_set.count_tag(&other), 0);
+    }
+    
 }

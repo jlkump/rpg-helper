@@ -9,6 +9,7 @@ pub enum DataError
     ConflictingExpectedType(ConflictError),
     InvalidState(String),
     Evaluation(EvalError),
+    Parsing(),
 }
 
 impl DataError
@@ -79,4 +80,37 @@ pub enum DataType
     Condition,
     Modifier,
     Equation,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct ParseError
+{
+    pub string: String,
+    pub index_of_error: usize,
+    pub error_type: ParseErrorType,
+}
+
+impl ParseError
+{
+    pub fn new(string: String, index_of_error: usize, error_type: ParseErrorType) -> ParseError
+    {
+        ParseError { string, index_of_error, error_type }
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum ParseErrorType
+{
+    Tag(TagParseError),
+    Equation,
+    Conditional,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum TagParseError
+{
+    TagEmpty,
+    SubTagEmpty,
+    InvalidCharacter,
+    FirstTagNumeric,
 }
