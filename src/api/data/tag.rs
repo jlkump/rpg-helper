@@ -70,6 +70,8 @@ impl Tag
             {
                 return Err(ParseError::new(s.to_string(), s.find(sub).unwrap(), ParseErrorType::Tag(TagParseError::SubTagEmpty)))
             }
+            // TODO trim non-spaces ' ' white-space
+
             name.push_str(sub.trim());
             if it.peek().is_some()
             {

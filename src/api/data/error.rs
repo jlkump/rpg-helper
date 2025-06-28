@@ -102,8 +102,7 @@ impl ParseError
 pub enum ParseErrorType
 {
     Tag(TagParseError),
-    Equation,
-    Conditional,
+    Evaluation(EvalParseError),
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -113,4 +112,10 @@ pub enum TagParseError
     SubTagEmpty,
     InvalidCharacter,
     FirstTagNumeric,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum EvalParseError
+{
+    TokenInvalid
 }
