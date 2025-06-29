@@ -117,5 +117,6 @@ pub enum TagParseError
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum EvalParseError
 {
-    TokenInvalid
+    TokenInvalid,
+    NumberMultipleDecimals,
 }

@@ -296,8 +296,11 @@ enum OperationNode
 
 pub(super) mod tokenize
 {
+    use serde::{Deserialize, Serialize};
+
     use crate::api::data::{error::{EvalParseError, ParseError, ParseErrorType}, tag::Tag};
 
+    #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
     pub(super) enum Token
     {
         Tag(Tag),
@@ -315,38 +318,139 @@ pub(super) mod tokenize
     pub(super) fn tokenize_expression(s: &str) -> Result<Vec<Token>, ParseError>
     {
         let mut res = vec![];
-        let mut s = remove_unneeded_whitespace(s);
-        while let Some((remaining, token)) = get_next_token(s)?
-        {
-            s = remaining;
-            if let Some(token) = token
-            {
-                res.push(token);
-            }
-        }
-        Ok(res)
-    }
+        let s = remove_unneeded_whitespace(s);
+        let chars: Vec<char> = s.chars().collect();
+        let mut i = 0;
 
-    fn get_next_token(mut s: String) -> Result<Option<(String, Option<Token>)>, ParseError>
-    {
-        if s.is_empty() || s.chars().all(char::is_whitespace)
+        while i < chars.len()
         {
-            Ok(None)
-        }
-        else
-        {
-            let last_ind = s.find(|c: char| !c.is_alphanumeric() && c != '.').unwrap_or(s.len() - 1);
-            let remaining = s.split_off(last_ind);
-            if s.is_empty() || s.chars().all(char::is_whitespace)
+            let c = chars[i];
+            match c
             {
-                Ok(Some((remaining, None)))
-            }
-            else
-            {
-                let token = str_to_token(&s)?;
-                Ok(Some((remaining, Some(token))))
+                '(' | ')' | '+' | '-' | '*' | '/' | '^' | '?' | ':' => 
+                {
+                    res.push(str_to_token(&c.to_string())?);
+                    i += 1;
+                },
+                '=' =>
+                {
+                    if i + 1 < chars.len() && chars[i + 1] == '=' {
+                        res.push(str_to_token("==")?);
+                        i += 2;
+                    } else {
+                        // Single = is not a valid token
+                        return Err(ParseError::new(c.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                    }
+                },
+                '!' =>
+                {
+                    if i + 1 < chars.len() && chars[i + 1] == '=' {
+                        res.push(str_to_token("!=")?);
+                        i += 2;
+                    } else {
+                        res.push(str_to_token("!")?);
+                        i += 1;
+                    }
+                },
+                '>' =>
+                {
+                    if i + 1 < chars.len() && chars[i + 1] == '=' {
+                        res.push(str_to_token(">=")?);
+                        i += 2;
+                    } else {
+                        res.push(str_to_token(">")?);
+                        i += 1;
+                    }
+                },
+                '<' =>
+                {
+                    if i + 1 < chars.len() && chars[i + 1] == '=' {
+                        res.push(str_to_token("<=")?);
+                        i += 2;
+                    } else {
+                        res.push(str_to_token("<")?);
+                        i += 1;
+                    }
+                },
+                _ if c.is_digit(10) || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_digit(10)) => 
+                {
+                    // Parse number
+                    let mut j = i;
+                    let mut has_dot = c == '.';
+                    
+                    while j < chars.len() && (chars[j].is_digit(10) || (chars[j] == '.' && !has_dot))
+                    {
+                        if chars[j] == '.'
+                        {
+                            if has_dot
+                            {
+                                return Err(ParseError::new(s.to_string(), j, ParseErrorType::Evaluation(EvalParseError::NumberMultipleDecimals)))
+                            }
+                            else
+                            {
+                                has_dot = true;
+                            }
+                        }
+                        j += 1;
+                    }
+                    
+                    let num_str = &s[i..j];
+                    res.push(str_to_token(num_str)?);
+                    i = j;
+                },
+                _ if c.is_alphabetic() =>
+                {
+                    // Parse identifier (could be bool, method, or tag)
+                    let mut j = i;
+                    
+                    // Continue until we hit something that can't be part of an identifier
+                    while j < chars.len()
+                    {
+                        let ch = chars[j];
+                        if ch.is_alphanumeric() || ch == '.' || ch == ' '
+                        {
+                            // Check if space is part of a tag
+                            if ch == ' ' {
+                                // Look ahead to see if next non-space is '.' or alphanumeric
+                                let mut k = j + 1;
+                                while k < chars.len() && chars[k] == ' '
+                                {
+                                    k += 1;
+                                }
+
+                                if k < chars.len() && (chars[k].is_alphanumeric() || chars[k] == '.')
+                                {
+                                    j = k; // Skip to next non-space
+                                }
+                                else
+                                {
+                                    break; // Space is not part of identifier
+                                }
+                            }
+                            else
+                            {
+                                j += 1;
+                            }
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    
+                    let ident_str = &s[i..j];
+                    res.push(str_to_token(ident_str)?);
+                    i = j;
+                },
+                _ =>
+                {
+                    // Unknown character
+                    return Err(ParseError::new(c.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                }
             }
         }
+
+        Ok(res)
     }
     
     fn str_to_token(ts: &str) -> Result<Token, ParseError>
@@ -360,21 +464,21 @@ pub(super) mod tokenize
         {
             Ok(Token::Bool(b))
         }
-        else if ts.chars().nth(0) == Some('(')
+        else if ts.len() == 1 && ts.chars().nth(0) == Some('(')
         {
             Ok(Token::OpenParen)
         }
-        else if ts.chars().nth(0) == Some(')')
+        else if ts.len() == 1 && ts.chars().nth(0) == Some(')')
         {
             Ok(Token::ClosedParen)
         }
-        else if ts == "+"|| ts == "-" || ts == "==" 
+        else if is_operation_str(ts)
         {
             Ok(Token::Operation(ts.to_string()))
         }
-        else if ts == "rounddown"
+        else if is_method_str(ts)
         {
-            Ok(Token::Operation(ts.to_string()))
+            Ok(Token::Method(ts.to_string()))
         }
         else if let Ok(tag) = Tag::from_str(ts)
         {
@@ -383,6 +487,24 @@ pub(super) mod tokenize
         else
         {
             Err(ParseError::new(ts.to_string(), 0, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)))
+        }
+    }
+
+    fn is_operation_str(s: &str) -> bool
+    {
+        match s
+        {
+            "+" | "-" | "*" | "/" | "^" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "!" | "||" | "&&" | "?" | ":" => true,
+            _ => false,
+        }
+    }
+
+    fn is_method_str(s: &str) -> bool
+    {
+        match s
+        {
+            "round" | "rounddown" | "roundup" | "sqrt" | "pow" | "range" => true,
+            _ => false,
         }
     }
 
@@ -422,7 +544,7 @@ pub(super) mod tokenize
     #[cfg(test)]
     mod unit_tests
     {
-        use crate::api::data::evaltree::tokenize::remove_unneeded_whitespace;
+        use crate::api::data::evaltree::tokenize::{remove_unneeded_whitespace, str_to_token, tokenize_expression, Token};
 
         #[test]
         fn whitespace_test_1()
@@ -440,6 +562,39 @@ pub(super) mod tokenize
         fn whitespace_test_3()
         {
             assert_eq!(remove_unneeded_whitespace(" round down ( test . tag ) "), "round down(test . tag)")
+        }
+
+        #[test]
+        fn token_test_1()
+        {
+            assert!(str_to_token("rounddown").is_ok_and(|t: Token| t == Token::Method("rounddown".to_string())));
+        }
+
+        /// Tests a simple expression calling a method (no syntax checks, just ensures tokenization)
+        #[test]
+        fn tokenize_test_1()
+        {
+            assert_eq!(tokenize_expression("rounddown()").unwrap(), vec!["rounddown", "(", ")"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
+        }
+
+        /// Tests a simple expression with a tag interior
+        #[test]
+        fn tokenize_test_2()
+        {
+            assert_eq!(tokenize_expression("rounddown( test . tag)").unwrap(), vec!["rounddown", "(", "test.tag", ")"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
+        }
+
+        /// Tests a large expression
+        #[test]
+        fn tokenize_test_3()
+        {
+            assert_eq!(tokenize_expression("rounddown((sqrt(8 * Ability.Magic Theory.Exp + 1)-1)/2)").unwrap(), vec!["rounddown", "(", "(", "sqrt", "(", "8", "*", "Ability.Magic Theory.Exp", "+", "1", ")", "-", "1", ")", "/","2", ")"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
+        }
+
+        #[test]
+        fn tokenize_test_4()
+        {
+            assert_eq!(tokenize_expression("Conditional.Tag == true").unwrap(), vec!["Conditional.Tag", "==", "true"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
         }
     }
 }
