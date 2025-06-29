@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{error::{DataError, ParseError}, tag::Tag, Context};
+use crate::api::data::{error::{DataError, ParseError, TokenizationError}, evaltree::tokenize::Token, tag::Tag, Context};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -74,9 +74,12 @@ impl EvalTree
     /// The syntax for an equation is as follows:
     ///     "3 + 4 * 10 / 5"
     ///     "rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)"
-    pub fn from_str(s: &str) -> Result<Self, ParseError>
+    pub fn from_str(s: &str) -> Result<Self, DataError>
     {
-        todo!()
+        Ok(EvalTree
+        {
+            root: EvalNode::from_token_list(tokenize::tokenize_expression(s)?)?,
+        })
     }
 
     /// Using the constructed AST, reverses back to the equation form.
@@ -98,6 +101,19 @@ enum EvalNode
 
 impl EvalNode
 {
+    fn from_token_list(token: Vec<Token>) -> Result<EvalNode, TokenizationError>
+    {
+        todo!()
+        // If list is only one token, ensure that it is an operand token.
+        // If it is, then return the according eval node
+        // If not, return a tokenization error.
+
+        // If list is multiple tokens
+        // 1. Find highest precedence operation
+        // 2. Split the vec of tokens into the number of parameters for the highest precedence operation
+        // 3. Recursively call from_token_list (trim parentheses accordingly)
+    }
+
     fn recursive_eval(&self, ctx: &Context) -> Result<EvalResult, DataError>
     {
         match &self

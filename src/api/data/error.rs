@@ -9,7 +9,8 @@ pub enum DataError
     ConflictingExpectedType(ConflictError),
     InvalidState(String),
     Evaluation(EvalError),
-    Parsing(),
+    Parsing(ParseError),
+    Tokenization(TokenizationError),
 }
 
 impl DataError
@@ -98,6 +99,14 @@ impl ParseError
     }
 }
 
+impl From<ParseError> for DataError
+{
+    fn from(value: ParseError) -> Self
+    {
+        DataError::Parsing(value)
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum ParseErrorType
 {
@@ -119,4 +128,19 @@ pub enum EvalParseError
 {
     TokenInvalid,
     NumberMultipleDecimals,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum TokenizationError
+{
+    ParenthesesPassedAsToken,
+    MethodDoesNotExist,
+}
+
+impl From<TokenizationError> for DataError
+{
+    fn from(value: TokenizationError) -> Self
+    {
+        DataError::Tokenization(value)
+    }
 }
