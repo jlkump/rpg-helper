@@ -1,4 +1,4 @@
-use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError, DataType}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}};
+use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, equation::{Equation, EquationSet}, error::{ConflictError, DataError, DataType}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}};
 
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +69,7 @@ impl Context
 
     pub fn has_equation(&self, attribute_alias: &Tag) -> bool
     {
-        self.equations.can_eval(attribute_alias)
+        self.equations.has_equation(attribute_alias)
     }
 
     /// Creates a new context that combines this context plus another context.
@@ -90,7 +90,7 @@ impl Context
         { 
             Ok(Some(self.modifiers.apply_modifiers(self, t, a.get_value())?))
         }
-        else if self.equations.can_eval(t)
+        else if self.equations.has_equation(t)
         {
             Ok(Some(self.modifiers.apply_modifiers(self, t, self.equations.eval(t, self)?)?))
         }
@@ -178,36 +178,36 @@ impl Context
         }
     }
 
-    pub fn set_equation(&self, t: &Tag, e: Equation) -> Result<Option<Equation>, DataError>
+    pub fn set_equation(&mut self, e: Equation) -> Option<Equation>
     {
-        todo!()
+        self.equations.set_equation(e)
     }
 
-    pub fn eval_equation(&self, t: &Tag) -> Result<f32, DataError>
+    pub fn eval_equation(&self, equation_name: &Tag) -> Result<f32, DataError>
     {
-        self.ensure_target_equation(t)?;
-        self.equations.eval(t, self)
+        self.ensure_target_equation(equation_name)?;
+        self.equations.eval(equation_name, self)
     }
 
-    pub fn remove_equation(&mut self, t: &Tag) -> Result<Option<Equation>, DataError>
+    pub fn remove_equation(&mut self, equation_name: &Tag) -> Option<Equation>
     {
-        todo!()
+        self.equations.remove_equation(equation_name)
     }
 
-    pub fn set_conditional(&self, t: &Tag, c: Conditional) -> Result<Option<Conditional>, DataError>
+    pub fn set_conditional(&mut self, c: Conditional) -> Option<Conditional>
     {
-        todo!()
+        self.conditionals.set_conditional(c)
     }
 
-    pub fn eval_conditional(&self, t: &Tag) -> Result<bool, DataError>
+    pub fn eval_conditional(&self, conditional_name: &Tag) -> Result<bool, DataError>
     {
-        self.ensure_target_conditional(t)?;
-        self.conditionals.eval(t, self)
+        self.ensure_target_conditional(conditional_name)?;
+        self.conditionals.eval(conditional_name, self)
     }
 
-    pub fn remove_conditional(&mut self, t: &Tag) -> Result<Option<Conditional>, DataError>
+    pub fn remove_conditional(&mut self, conditional_name: &Tag) -> Option<Conditional>
     {
-        todo!()
+        self.conditionals.remove_conditional(conditional_name)
     }
 
     fn ensure_target_attribute(&self, t: &Tag) -> Result<(), DataError>

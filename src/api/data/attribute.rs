@@ -49,14 +49,7 @@ impl AttributeSet
 
     pub fn get(&self, attribute_name: &Tag) -> Option<&Attribute>
     {
-        if let Some(a) = self.attributes.get(attribute_name)
-        {
-            Some(a)
-        }
-        else
-        {
-            None
-        }
+        self.attributes.get(attribute_name)
     }
 
     pub fn get_mut(&mut self, attribute_name: &Tag) -> Option<&mut Attribute>
@@ -69,9 +62,9 @@ impl AttributeSet
         self.attributes.contains_key(attribute_name)
     }
 
-    pub fn set_attribute(&mut self, attribute_name: &Tag, value: f32)
+    pub fn set_attribute(&mut self, attribute_name: &Tag, value: f32) -> Option<Attribute>
     {
-        self.attributes.insert(attribute_name.clone(), Attribute::new(attribute_name.clone(), value));
+        self.attributes.insert(attribute_name.clone(), Attribute::new(attribute_name.clone(), value))
     }
 
     pub fn remove_attribute(&mut self, attribute_name: &Tag) -> Option<Attribute>
