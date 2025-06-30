@@ -11,6 +11,7 @@ pub enum DataError
     Evaluation(EvalError),
     Parsing(ParseError),
     Tokenization(TokenizationError),
+    SyntaxError
 }
 
 impl DataError
@@ -128,6 +129,9 @@ pub enum EvalParseError
 {
     TokenInvalid,
     NumberMultipleDecimals,
+    UnbalancedParentheses,
+    MissingParentheses,
+    OperationTypeMismatch,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -135,6 +139,9 @@ pub enum TokenizationError
 {
     ParenthesesPassedAsToken,
     MethodDoesNotExist,
+    OperandNotFound,
+    OperationNotFound,
+    MultipleOperandsFound,
 }
 
 impl From<TokenizationError> for DataError

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{error::{DataError, ParseError, TokenizationError}, evaltree::tokenize::Token, tag::Tag, Context};
+use crate::api::data::{error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::Tag, Context};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -9,6 +9,7 @@ pub enum EvalError
     ValueNotFound,
     ExpectedValueMismatch,
     EvaluationMismatch,
+    UnsupportedOperation,
 }
 
 impl From<EvalError> for DataError
@@ -76,6 +77,8 @@ impl EvalTree
     ///     "rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)"
     pub fn from_str(s: &str) -> Result<Self, DataError>
     {
+        parse::brackets_are_balanced(s)?;
+
         Ok(EvalTree
         {
             root: EvalNode::from_token_list(tokenize::tokenize_expression(s)?)?,
@@ -93,6 +96,79 @@ impl EvalTree
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+enum OperandNode
+{
+    ExplicitNumber(f32),
+    ExplicitBool(bool),
+    // The type of tag reference is determined by the expected value requested.
+    // If the value can not be determined, we fallback to ReferencedTag
+    ReferencedValue(Tag),
+    ReferencedCondition(Tag),
+    ReferencedTag(Tag),
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+// Operation Nodes act on their children, which may be either an operand node or a operation node
+enum OperationNode
+{
+    // Expects numeric result
+    Add(Box<EvalNode>, Box<EvalNode>),
+    Subtract(Box<EvalNode>, Box<EvalNode>),
+    Multiply(Box<EvalNode>, Box<EvalNode>),
+    Divide(Box<EvalNode>, Box<EvalNode>),
+    Negate(Box<EvalNode>),
+    Pow(Box<EvalNode>, Box<EvalNode>),
+    Sqrt(Box<EvalNode>),
+    Round(Box<EvalNode>),
+    RoundDown(Box<EvalNode>),
+    RoundUp(Box<EvalNode>),
+    Range(Box<EvalNode>, Box<EvalNode>, Box<EvalNode>),
+    Ternary(Box<EvalNode>, Box<EvalNode>, Box<EvalNode>),
+    // Expects boolean result
+    Equal(Box<EvalNode>, Box<EvalNode>),
+    NotEqual(Box<EvalNode>, Box<EvalNode>),
+    LessThan(Box<EvalNode>, Box<EvalNode>),
+    LessThanEq(Box<EvalNode>, Box<EvalNode>),
+    GreaterThan(Box<EvalNode>, Box<EvalNode>),
+    GreaterThanEq(Box<EvalNode>, Box<EvalNode>),
+    Not(Box<EvalNode>),
+    Or(Box<EvalNode>, Box<EvalNode>),
+    And(Box<EvalNode>, Box<EvalNode>),
+}
+
+impl OperationNode
+{
+    fn new(op: Operation, mut children: Vec<EvalNode>) -> OperationNode
+    {
+        match op
+        {
+            Operation::Add => OperationNode::Add(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Subtract => OperationNode::Subtract(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Multiply => OperationNode::Multiply(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Divide => OperationNode::Divide(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Negate => OperationNode::Negate(Box::new(children.remove(0))),
+            Operation::PowSymbol => OperationNode::Pow(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::PowMethod => OperationNode::Pow(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Sqrt => OperationNode::Sqrt(Box::new(children.remove(0))),
+            Operation::Round => OperationNode::Round(Box::new(children.remove(0))),
+            Operation::RoundDown => OperationNode::RoundDown(Box::new(children.remove(0))),
+            Operation::RoundUp => OperationNode::RoundUp(Box::new(children.remove(0))),
+            Operation::Range => OperationNode::Range(Box::new(children.remove(0)), Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Ternary => OperationNode::Ternary(Box::new(children.remove(0)), Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Equal => OperationNode::Equal(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::NotEqual => OperationNode::NotEqual(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::LessThan => OperationNode::LessThan(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::LessThanEq => OperationNode::LessThanEq(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::GreaterThan => OperationNode::GreaterThan(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::GreaterThanEq => OperationNode::GreaterThanEq(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::Not => OperationNode::Not(Box::new(children.remove(0))),
+            Operation::Or => OperationNode::Or(Box::new(children.remove(0)), Box::new(children.remove(0))),
+            Operation::And => OperationNode::And(Box::new(children.remove(0)), Box::new(children.remove(0))),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 enum EvalNode
 {
     Operand(OperandNode),
@@ -101,17 +177,246 @@ enum EvalNode
 
 impl EvalNode
 {
-    fn from_token_list(token: Vec<Token>) -> Result<EvalNode, TokenizationError>
+    fn from_token_list(tokens: Vec<Token>) -> Result<EvalNode, DataError>
     {
-        todo!()
-        // If list is only one token, ensure that it is an operand token.
-        // If it is, then return the according eval node
-        // If not, return a tokenization error.
+        Self::build_node(tokens, ExpectedResult::Unknown)
+    }
 
-        // If list is multiple tokens
-        // 1. Find highest precedence operation
-        // 2. Split the vec of tokens into the number of parameters for the highest precedence operation
-        // 3. Recursively call from_token_list (trim parentheses accordingly)
+    fn build_node(tokens: Vec<Token>, value_hint: ExpectedResult) -> Result<EvalNode, DataError>
+    {
+        if let Some(root_index) = Self::index_of_root_operation(&tokens)
+        {
+            let tok = tokens[root_index].clone();
+            if let Token::Operation(op) = tok
+            {
+                let num_op =  op.get_number_of_operands();
+                if op.is_method()
+                {
+                    Self::parse_method(tokens, op, root_index)
+                }
+                else if num_op == 1
+                {
+                    Self::parse_unary(tokens, op, root_index)
+                }
+                else if num_op == 2
+                {
+                    Self::parse_binary(tokens, op, root_index)
+                }
+                else if op == Operation::Ternary
+                {
+                    Self::parse_ternary(tokens, op, root_index)
+                }
+                else
+                {
+                    return Err(DataError::Evaluation(EvalError::UnsupportedOperation))
+                }
+            }
+            else
+            {
+                return Err(DataError::Tokenization(TokenizationError::OperationNotFound));
+            }
+        }
+        else
+        {
+            // This is the base case of the recursive build, there should be
+            // a operand node (and only one) in the list of expression tokens given.
+            let mut result = None;
+            for token in tokens
+            {
+                let found = match token
+                {
+                    Token::Tag(tag) =>
+                            Some(match value_hint
+                            {
+                                ExpectedResult::Boolean => OperandNode::ReferencedCondition(tag),
+                                ExpectedResult::Number => OperandNode::ReferencedValue(tag),
+                                ExpectedResult::Unknown => OperandNode::ReferencedTag(tag),
+                            }),
+                    Token::OpenParen | Token::ClosedParen | Token::Comma | Token::Colon => None,
+                    Token::Operation(o) => panic!("Found an operation token {:?} when expected none from not finding root index.", o),
+                    Token::Number(n) => Some(OperandNode::ExplicitNumber(n)),
+                    Token::Bool(b) => Some(OperandNode::ExplicitBool(b)),
+                };
+
+                if result.is_none() && found.is_some()
+                {
+                    result = found;
+                }
+                else if found.is_some()
+                {
+                    return Err(DataError::Tokenization(TokenizationError::MultipleOperandsFound));
+                }
+            }
+
+            if let Some(result) = result
+            {
+                Ok(EvalNode::Operand(result))
+            }
+            else
+            {
+                Err(DataError::Tokenization(TokenizationError::OperandNotFound))
+            }
+        }
+    }
+
+    // Returns none if there is no operation found. This means there is only
+    // an operand present.
+    fn index_of_root_operation(tokens: &Vec<Token>) -> Option<usize>
+    {
+        let mut min_precedence = i32::MAX;
+        let mut root_ind: Option<usize> = None;
+        let mut brace_count = 0;
+
+        let mut it = tokens.iter().enumerate();
+        while let Some((i, t)) = it.next() {
+            match t
+            {
+                Token::Bool(_) | Token::Number(_) | Token::Tag(_) | Token::Colon | Token::Comma => (),
+                Token::OpenParen => brace_count = brace_count + 1,
+                Token::ClosedParen => brace_count = brace_count - 1,
+                Token::Operation(operation) => 
+                {
+                    let precedence = operation.get_precedence() + brace_count * 10;
+                    if precedence < min_precedence
+                    {
+                        min_precedence = precedence;
+                        root_ind = Some(i);
+                    }
+                },
+            }
+        }
+        root_ind
+    }
+
+    fn parse_unary(tokens: Vec<Token>, op: Operation, root_index: usize) -> Result<EvalNode, DataError>
+    {
+        if tokens.iter().position(|t| !t.eq(&Token::OpenParen)).is_some_and(|i| i != root_index) || root_index != 0
+        {
+            return Err(DataError::SyntaxError);
+        }
+
+        let child = match op.get_input_type(0)
+        {
+            Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[1..].to_vec()), value_hint)?,
+            None => return Err(DataError::SyntaxError),
+        };
+        Ok(EvalNode::Operation(OperationNode::new(op, vec![child])))
+    }
+
+    fn parse_binary(tokens: Vec<Token>, op: Operation, root_index: usize) -> Result<EvalNode, DataError>
+    {
+        if tokens.iter().position(|t| !t.eq(&Token::OpenParen)).is_some_and(|i| i != root_index) || root_index == 0
+        {
+            return Err(DataError::SyntaxError)
+        }
+
+        let left = match op.get_input_type(0)
+        {
+            Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[..root_index].to_vec()), value_hint)?,
+            None => return Err(DataError::SyntaxError),
+        };
+
+        let right = match op.get_input_type(1)
+        {
+            Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[root_index + 1..].to_vec()), value_hint)?,
+            None => return Err(DataError::SyntaxError),
+        };
+
+        Ok(EvalNode::Operation(OperationNode::new(op, vec![left, right])))
+    }
+
+    fn parse_ternary(tokens: Vec<Token>, op: Operation, root_index: usize) -> Result<EvalNode, DataError>
+    {
+        let mut child_tokens = vec![];
+        let mut num_paren = 0;
+        for t in tokens.iter()
+        {
+            match t
+            {
+                Token::Comma | Token::Colon | Token::Tag(_) | Token::Number(_) | Token::Bool(_) => (),
+                Token::OpenParen => num_paren += 1,
+                Token::ClosedParen => num_paren -= 1,
+                Token::Operation(o) =>
+                {
+                    if o.eq(&Operation::Ternary)
+                    {
+                        break;
+                    }
+                },
+            }
+        }
+
+        child_tokens.push(Vec::from_iter(tokens[num_paren..root_index].iter().cloned()));
+
+        num_paren = 0;
+
+        for (i, t) in tokens.iter().enumerate()
+        {
+            match t
+            {
+                Token::OpenParen => (),
+                Token::ClosedParen => num_paren += 1,
+                Token::Colon => {
+                    child_tokens.push(Vec::from_iter(tokens[root_index + 1..i].iter().cloned()));
+                    child_tokens.push(Vec::from_iter(tokens[i + 1..tokens.len() - num_paren].iter().cloned()));
+                    break;
+                },
+                Token::Comma | Token::Tag(_) | Token::Number(_) | Token::Bool(_) | Token::Operation(_) => (),
+            }
+        }
+        
+        if child_tokens.len() != 3
+        {
+            Err(DataError::SyntaxError)
+        }
+        else
+        {
+            let mut children = vec![];
+            
+            for (i, v) in child_tokens.into_iter().enumerate()
+            {
+                children.push(Self::build_node(v, op.get_input_type(i).unwrap())?);
+            }
+
+            Ok(EvalNode::Operation(OperationNode::new(op, children)))
+        }
+    }
+
+    fn parse_method(tokens: Vec<Token>, op: Operation, root_index: usize) -> Result<EvalNode, DataError>
+    {
+        if root_index + 1 >= tokens.len() || tokens.iter().nth(root_index + 1).unwrap().ne(&Token::OpenParen)
+        {
+            return Err(DataError::SyntaxError) // The method call is empty
+        }
+
+        let mut child_tokens = vec![];
+        let mut sub_tokens = vec![];
+
+        let mut iter = tokens[root_index + 2..].iter().peekable();
+        while let Some(token) = iter.next()
+        {
+            if token.eq(&Token::Comma) || iter.peek().is_some()
+            {
+                child_tokens.push(sub_tokens.clone());
+                sub_tokens = vec![];
+            }
+            else
+            {
+                sub_tokens.push(token.to_owned());
+            }
+        }
+
+        if child_tokens.len() != op.get_number_of_operands()
+        {
+            return Err(DataError::SyntaxError)
+        }
+
+        let mut children = vec![];
+        for (i, v) in child_tokens.into_iter().enumerate()
+        {
+            children.push(Self::build_node(remove_parentheses(v), op.get_input_type(i).unwrap())?);
+        }
+        Ok(EvalNode::Operation(OperationNode::new(op, children)))
     }
 
     fn recursive_eval(&self, ctx: &Context) -> Result<EvalResult, DataError>
@@ -269,63 +574,354 @@ impl EvalResult
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-enum OperandNode
-{
-    ExplicitNumber(f32),
-    ExplicitBool(bool),
-    // The type of tag reference is determined by the expected value requested.
-    // If the value can not be determined, we fallback to ReferencedTag
-    ReferencedValue(Tag),
-    ReferencedCondition(Tag),
-    ReferencedTag(Tag),
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-// Operation Nodes act on their children, which may be either an operand node or a operation node
-enum OperationNode
+#[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
+enum Operation
 {
     // Expects numeric result
-    Add(Box<EvalNode>, Box<EvalNode>),
-    Subtract(Box<EvalNode>, Box<EvalNode>),
-    Multiply(Box<EvalNode>, Box<EvalNode>),
-    Divide(Box<EvalNode>, Box<EvalNode>),
-    Negate(Box<EvalNode>),
-    Pow(Box<EvalNode>, Box<EvalNode>),
-    Sqrt(Box<EvalNode>),
-    Round(Box<EvalNode>),
-    RoundDown(Box<EvalNode>),
-    RoundUp(Box<EvalNode>),
-    Range(Box<EvalNode>, Box<EvalNode>, Box<EvalNode>),
-    Ternary(Box<EvalNode>, Box<EvalNode>, Box<EvalNode>),
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Negate,
+    PowSymbol,
+    PowMethod,
+    Sqrt,
+    Round,
+    RoundDown,
+    RoundUp,
+    Range,
+    Ternary,
     // Expects boolean result
-    Equal(Box<EvalNode>, Box<EvalNode>),
-    NotEqual(Box<EvalNode>, Box<EvalNode>),
-    LessThan(Box<EvalNode>, Box<EvalNode>),
-    LessThanEq(Box<EvalNode>, Box<EvalNode>),
-    GreaterThan(Box<EvalNode>, Box<EvalNode>),
-    GreaterThanEq(Box<EvalNode>, Box<EvalNode>),
-    Not(Box<EvalNode>),
-    Or(Box<EvalNode>, Box<EvalNode>),
-    And(Box<EvalNode>, Box<EvalNode>),
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanEq,
+    GreaterThan,
+    GreaterThanEq,
+    Not,
+    Or,
+    And,
 }
 
-pub(super) mod tokenize
+impl Operation
+{
+    fn get_number_of_operands(&self) -> usize
+    {
+        match self
+        {
+            Operation::Add | Operation::Subtract | Operation::Multiply | Operation::Divide | Operation::PowSymbol | Operation::PowMethod => 2,
+            Operation::Negate | Operation::Sqrt => 1,
+            Operation::Round | Operation::RoundDown | Operation::RoundUp => 1,
+            Operation::Range | Operation::Ternary => 3,
+            Operation::Equal | Operation::NotEqual | Operation::LessThan | Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq => 2,
+            Operation::Not => 1,
+            Operation::Or | Operation::And => 2,
+        }
+    }
+
+    fn is_method(&self) -> bool
+    {
+        match self
+        {
+            Operation::Add | Operation::Subtract | Operation::Multiply | Operation::Divide | Operation::Negate | Operation::PowSymbol => false,
+            Operation::PowMethod | Operation::Sqrt | Operation::Round | Operation::RoundDown | Operation::RoundUp | Operation::Range => true,
+            Operation::Ternary | Operation::Equal | Operation::NotEqual | Operation::LessThan | Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq | Operation::Not | Operation::Or | Operation::And => false,
+        }
+    }
+
+    fn get_precedence(&self) -> i32
+    {
+        match self
+        {
+            Operation::Add | Operation::Subtract => 1,
+            Operation::Multiply | Operation::Divide => 2,
+            Operation::Negate | Operation::PowSymbol | Operation::PowMethod => 3,
+            Operation::Sqrt | Operation::Round | Operation::RoundDown | Operation::RoundUp | Operation::Range => 3,
+            Operation::Ternary => 0,
+            Operation::Equal | Operation::NotEqual | Operation::LessThan | Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq => 2,
+            Operation::Not | Operation::Or | Operation::And => 1,
+        }
+    }
+
+    fn get_output_type(&self) -> ExpectedResult
+    {
+        match self
+        {
+            Operation::Add | Operation::Subtract | Operation::Multiply | Operation::Divide | Operation::Negate | Operation::PowSymbol | Operation::PowMethod | Operation::Sqrt | Operation::Round | Operation::RoundDown | Operation::RoundUp | Operation::Range | Operation::Ternary => ExpectedResult::Number,
+
+            Operation::Equal | Operation::NotEqual | Operation::LessThan | Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq | Operation::Not | Operation::Or | Operation::And => ExpectedResult::Boolean,
+        }
+    }
+
+    // Returns NONE if outside the range
+    fn get_input_type(&self, input_index: usize) -> Option<ExpectedResult>
+    {
+        match self
+        {
+            Operation::Add | Operation::Subtract | Operation::Multiply | Operation::Divide | Operation::Negate | Operation::PowMethod | Operation::PowSymbol | Operation::Sqrt | Operation::Round | Operation::RoundDown | Operation::RoundUp | Operation::Range => 
+                                if input_index < 2 
+                                {
+                                    Some(ExpectedResult::Number)
+                                }
+                                else 
+                                {
+                                    None
+                                },
+            Operation::Ternary => 
+                                if input_index == 0
+                                {
+                                    Some(ExpectedResult::Boolean)
+                                }
+                                else if input_index == 1 || input_index == 2
+                                {
+                                    Some(ExpectedResult::Number)
+                                }
+                                else
+                                {
+                                    None
+                                },
+            Operation::Equal | Operation::NotEqual => Some(ExpectedResult::Unknown),
+            Operation::LessThan | Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq => 
+                                if input_index < 2
+                                {
+                                    Some(ExpectedResult::Number)
+                                }
+                                else
+                                {
+                                    None
+                                },
+            Operation::Not => if input_index < 1
+                                {
+                                    Some(ExpectedResult::Boolean)
+                                }
+                                else
+                                {
+                                    None
+                                },
+            Operation::Or | Operation::And => if input_index < 2
+                                {
+                                    Some(ExpectedResult::Boolean)
+                                }
+                                else
+                                {
+                                    None
+                                },
+        }
+    }
+}
+
+pub(super) mod parse
+{
+    use crate::api::data::{error::{EvalParseError, ParseError, ParseErrorType}, evaltree::{tokenize::Token, Operation}};
+
+    /// Matching bracket implementation comes from StackOverflow:
+    /// https://codereview.stackexchange.com/questions/253279/matching-brackets-in-rust
+    enum Bracket {
+        Open(char),
+        Close(char),
+    }
+
+    impl Bracket {
+        pub fn from_char(c: char) -> Option<Bracket> {
+            match c {
+                '{' | '[' | '(' => Some(Bracket::Open(c)),
+                '}' => Some(Bracket::Close('{')),
+                ']' => Some(Bracket::Close('[')),
+                ')' => Some(Bracket::Close('(')),
+                _ => None,
+            }
+        }
+    }
+
+    /// Check if the input `string` has balanced brackets.
+    pub fn brackets_are_balanced(string: &str) -> Result<(), ParseError> {
+        let mut brackets: Vec<char> = vec![];
+        for (i, c) in string.chars().enumerate() {
+            match Bracket::from_char(c) {
+                Some(Bracket::Open(char_bracket)) => {
+                    brackets.push(char_bracket);
+                }
+                Some(Bracket::Close(char_close_bracket)) => {
+                    if brackets.pop() != Some(char_close_bracket) {
+                        return Err(ParseError::new(string.to_string(), i, ParseErrorType::Evaluation(EvalParseError::MissingParentheses)));
+                    }
+                }
+                _ => {}
+            }
+        }
+        if brackets.is_empty()
+        {
+            Ok(())
+        }
+        else
+        {
+            Err(ParseError::new(string.to_string(), string.len(), ParseErrorType::Evaluation(EvalParseError::UnbalancedParentheses)))
+        }
+    }
+
+    #[derive(Debug, Default, Clone)]
+    struct ParenPair {
+        left_pa: Option<usize>,
+        min_op: Option<i32>,
+        left_op: Option<i32>,
+        is_method: bool,
+    }
+
+    impl ParenPair {
+        fn new(left_pa: Option<usize>, is_method: bool) -> ParenPair {
+            ParenPair {
+                left_pa,
+                is_method,
+                min_op: None,
+                left_op: None,
+            }
+        }
+        fn new_empty() -> ParenPair {
+            ParenPair {
+                left_pa: None,
+                min_op: None,
+                left_op: None,
+                is_method: false,
+            }
+        }
+    }
+
+    pub(super) fn remove_parentheses(tokens: Vec<Token>) -> Vec<Token>
+    {
+        let mut stack = vec![ParenPair::new_empty()];
+        let mut unneeded = Vec::<usize>::new();
+        let mut prev : Option<Operation> = None;
+
+        for (i, token) in tokens.iter().enumerate()
+        {
+            let prev_is_method = prev.as_ref().is_some_and(|s| s.is_method());
+
+            match token
+            {
+                Token::Comma | Token::Colon | Token::Number(_) | Token::Bool(_) | Token::Tag(_) => (),
+                Token::OpenParen =>
+                {
+                    stack.push(ParenPair::new(Some(i), prev_is_method));
+                },
+                Token::ClosedParen => 
+                {
+                    if let Some(top) = stack.pop()
+                    {
+                        let mut needed = top.is_method;
+                        if let Some(min_prec) = top.min_op
+                        {
+                            // Look to next right operation (if it exists)
+                            let right: Option<&Operation> = tokens.iter().filter_map(|t| t.as_operation()).next();
+
+                            // Check right precedence and keep parentheses if needed
+                            if let Some(r_op) = right
+                            {
+                                if min_prec < r_op.get_precedence()
+                                {
+                                    needed = true;
+                                }
+                            }
+                            else
+                            {
+                                if top.left_op.is_none() && stack.last().is_some()
+                                {
+                                    stack.iter_mut().last().map(|last| if !last.is_method { last.min_op = top.min_op });
+                                }
+                            }
+                            // Check all previous left operations and keep parentheses if needed
+                            for pair in stack.iter()
+                            {
+                                if let Some(left) = pair.left_op
+                                {
+                                    if left > min_prec
+                                    {
+                                        needed = true;
+                                    }
+                                }
+                            }
+
+                            if let Some(left) = top.left_op
+                            {
+                                if left > min_prec
+                                {
+                                    needed = true;
+                                }
+                            }
+                        }
+
+                        if !needed
+                        {
+                            unneeded.push(top.left_pa.unwrap());
+                            unneeded.push(i);
+                        }
+                    }
+                    else
+                    {
+                        panic!(); // Unbalanced paren
+                    }
+                },
+                Token::Operation(op) =>
+                {
+                    let default = &mut ParenPair::new_empty();
+                    let paren_pair: &mut ParenPair = stack.last_mut().unwrap_or(default);
+
+                    if paren_pair.min_op.is_none() || paren_pair.min_op.iter().any(|min| *min > op.get_precedence())
+                    {
+                        paren_pair.min_op = Some(op.get_precedence());
+                    }
+
+                    if !op.is_method()
+                    {
+                        paren_pair.left_op = Some(op.get_precedence());
+                    }
+                    prev = Some(op.clone());
+                },
+            }
+            // Skip any operands
+        }
+
+        let mut result = vec![];
+        for (i, s) in tokens.iter().enumerate() {
+            if !unneeded.contains(&i) {
+                result.push(s.clone());
+            }
+        }
+        result
+    }
+}
+
+pub mod tokenize
 {
     use serde::{Deserialize, Serialize};
 
-    use crate::api::data::{error::{EvalParseError, ParseError, ParseErrorType}, tag::Tag};
+    use crate::api::data::{error::{EvalParseError, ParseError, ParseErrorType}, evaltree::Operation, tag::Tag};
 
     #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-    pub(super) enum Token
+    pub enum Token
     {
         Tag(Tag),
         OpenParen,
         ClosedParen,
-        Operation(String),
-        Method(String),
+        Comma,
+        Colon,
+        Operation(Operation),
         Number(f32),
         Bool(bool),
+    }
+
+    impl Token
+    {
+        pub fn as_operation(&self) -> Option<&Operation>
+        {
+            if let Token::Operation(o) = self
+            {
+                Some(o)
+            }
+            else
+            {
+                None
+            }
+        }
     }
 
     /// Splits a given string into tokens
@@ -343,15 +939,78 @@ pub(super) mod tokenize
             let c = chars[i];
             match c
             {
-                '(' | ')' | '+' | '-' | '*' | '/' | '^' | '?' | ':' => 
+                '(' =>
                 {
-                    res.push(str_to_token(&c.to_string())?);
+                    res.push(Token::OpenParen);
+                    i += 1;
+                },
+                ')' =>
+                {
+                    res.push(Token::ClosedParen);
+                    i += 1;
+                },
+                ',' =>
+                {
+                    res.push(Token::Comma);
+                    i += 1;
+                },
+                '+' =>
+                {
+                    res.push(Token::Operation(Operation::Add));
+                    i += 1;
+                },
+                '*' =>
+                {
+                    res.push(Token::Operation(Operation::Multiply));
+                    i += 1;
+                },
+                '/' =>
+                {
+                    res.push(Token::Operation(Operation::Divide));
+                    i += 1;
+                },
+                '^' =>
+                {
+                    res.push(Token::Operation(Operation::PowSymbol));
+                    i += 1;
+                },
+                '?' =>
+                {
+                    res.push(Token::Operation(Operation::Ternary));
+                    i += 1;
+                },
+                ':' => 
+                {
+                    res.push(Token::Colon);
+                    i += 1;
+                },
+                '-' =>
+                {
+                    if let Some(l) = res.last()
+                    {
+                        let v = match l
+                        {
+                            Token::Tag(_) => Token::Operation(Operation::Subtract),
+                            Token::OpenParen => Token::Operation(Operation::Negate),
+                            Token::ClosedParen => Token::Operation(Operation::Subtract),
+                            Token::Comma => Token::Operation(Operation::Negate),
+                            Token::Colon => Token::Operation(Operation::Negate),
+                            Token::Operation(_) => Token::Operation(Operation::Negate),
+                            Token::Number(_) => Token::Operation(Operation::Negate),
+                            Token::Bool(_) => return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::OperationTypeMismatch))),
+                        };
+                        res.push(v)
+                    }
+                    else
+                    {
+                        res.push(Token::Operation(Operation::Negate));
+                    }
                     i += 1;
                 },
                 '=' =>
                 {
                     if i + 1 < chars.len() && chars[i + 1] == '=' {
-                        res.push(str_to_token("==")?);
+                        res.push(Token::Operation(Operation::Equal));
                         i += 2;
                     } else {
                         // Single = is not a valid token
@@ -361,31 +1020,51 @@ pub(super) mod tokenize
                 '!' =>
                 {
                     if i + 1 < chars.len() && chars[i + 1] == '=' {
-                        res.push(str_to_token("!=")?);
+                        res.push(Token::Operation(Operation::NotEqual));
                         i += 2;
                     } else {
-                        res.push(str_to_token("!")?);
+                        res.push(Token::Operation(Operation::Not));
                         i += 1;
                     }
                 },
                 '>' =>
                 {
                     if i + 1 < chars.len() && chars[i + 1] == '=' {
-                        res.push(str_to_token(">=")?);
+                        res.push(Token::Operation(Operation::GreaterThanEq));
                         i += 2;
                     } else {
-                        res.push(str_to_token(">")?);
+                        res.push(Token::Operation(Operation::GreaterThan));
                         i += 1;
                     }
                 },
                 '<' =>
                 {
                     if i + 1 < chars.len() && chars[i + 1] == '=' {
-                        res.push(str_to_token("<=")?);
+                        res.push(Token::Operation(Operation::LessThanEq));
                         i += 2;
                     } else {
-                        res.push(str_to_token("<")?);
+                        res.push(Token::Operation(Operation::LessThan));
                         i += 1;
+                    }
+                },
+                '|' =>
+                {
+                    if i + 1 < chars.len() && chars[i + 1] == '|' {
+                        res.push(Token::Operation(Operation::Or));
+                        i += 2;
+                    } else {
+                        // Single = is not a valid token
+                        return Err(ParseError::new(c.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                    }
+                },
+                '&' =>
+                {
+                    if i + 1 < chars.len() && chars[i + 1] == '&' {
+                        res.push(Token::Operation(Operation::And));
+                        i += 2;
+                    } else {
+                        // Single = is not a valid token
+                        return Err(ParseError::new(c.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
                     }
                 },
                 _ if c.is_digit(10) || (c == '.' && i + 1 < chars.len() && chars[i + 1].is_digit(10)) => 
@@ -411,7 +1090,15 @@ pub(super) mod tokenize
                     }
                     
                     let num_str = &s[i..j];
-                    res.push(str_to_token(num_str)?);
+
+                    if let Ok(num) = num_str.parse()
+                    {
+                        res.push(Token::Number(num));
+                    }
+                    else
+                    {
+                        return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                    }
                     i = j;
                 },
                 _ if c.is_alphabetic() =>
@@ -455,7 +1142,36 @@ pub(super) mod tokenize
                     }
                     
                     let ident_str = &s[i..j];
-                    res.push(str_to_token(ident_str)?);
+
+                    let v;
+                    if let Ok(b) = ident_str.parse()
+                    {
+                        v = Token::Bool(b);
+                    }
+                    else
+                    {
+                        v = match ident_str
+                        {
+                            "range" => Token::Operation(Operation::Range),
+                            "round" => Token::Operation(Operation::Round),
+                            "roundup" => Token::Operation(Operation::RoundUp),
+                            "rounddown" => Token::Operation(Operation::RoundDown),
+                            "pow" => Token::Operation(Operation::PowMethod),
+                            "sqrt" => Token::Operation(Operation::Sqrt),
+                            _ => 
+                            {
+                                if let Ok(tag) = Tag::from_str(ident_str)
+                                {
+                                    Token::Tag(tag)
+                                }
+                                else
+                                {
+                                    return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)))
+                                }
+                            },
+                        }
+                    }
+                    res.push(v);
                     i = j;
                 },
                 _ =>
@@ -467,61 +1183,6 @@ pub(super) mod tokenize
         }
 
         Ok(res)
-    }
-    
-    fn str_to_token(ts: &str) -> Result<Token, ParseError>
-    {
-        let ts = ts.trim();
-        if let Ok(num) = ts.parse()
-        {
-            Ok(Token::Number(num))
-        }
-        else if let Ok(b) = ts.parse()
-        {
-            Ok(Token::Bool(b))
-        }
-        else if ts.len() == 1 && ts.chars().nth(0) == Some('(')
-        {
-            Ok(Token::OpenParen)
-        }
-        else if ts.len() == 1 && ts.chars().nth(0) == Some(')')
-        {
-            Ok(Token::ClosedParen)
-        }
-        else if is_operation_str(ts)
-        {
-            Ok(Token::Operation(ts.to_string()))
-        }
-        else if is_method_str(ts)
-        {
-            Ok(Token::Method(ts.to_string()))
-        }
-        else if let Ok(tag) = Tag::from_str(ts)
-        {
-            Ok(Token::Tag(tag))
-        }
-        else
-        {
-            Err(ParseError::new(ts.to_string(), 0, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)))
-        }
-    }
-
-    fn is_operation_str(s: &str) -> bool
-    {
-        match s
-        {
-            "+" | "-" | "*" | "/" | "^" | "==" | "!=" | "<" | "<=" | ">" | ">=" | "!" | "||" | "&&" | "?" | ":" => true,
-            _ => false,
-        }
-    }
-
-    fn is_method_str(s: &str) -> bool
-    {
-        match s
-        {
-            "round" | "rounddown" | "roundup" | "sqrt" | "pow" | "range" => true,
-            _ => false,
-        }
     }
 
     /// All whitespace that is not part of a tag
@@ -560,7 +1221,7 @@ pub(super) mod tokenize
     #[cfg(test)]
     mod unit_tests
     {
-        use crate::api::data::evaltree::tokenize::{remove_unneeded_whitespace, str_to_token, tokenize_expression, Token};
+        use crate::api::data::{evaltree::{tokenize::{remove_unneeded_whitespace, tokenize_expression, Token}, EvalTree, Operation}, tag::Tag, Context};
 
         #[test]
         fn whitespace_test_1()
@@ -580,37 +1241,39 @@ pub(super) mod tokenize
             assert_eq!(remove_unneeded_whitespace(" round down ( test . tag ) "), "round down(test . tag)")
         }
 
-        #[test]
-        fn token_test_1()
-        {
-            assert!(str_to_token("rounddown").is_ok_and(|t: Token| t == Token::Method("rounddown".to_string())));
-        }
-
         /// Tests a simple expression calling a method (no syntax checks, just ensures tokenization)
         #[test]
         fn tokenize_test_1()
         {
-            assert_eq!(tokenize_expression("rounddown()").unwrap(), vec!["rounddown", "(", ")"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
+            assert_eq!(tokenize_expression("rounddown()").unwrap(), vec![Token::Operation(Operation::RoundDown), Token::OpenParen, Token::ClosedParen]);
         }
 
         /// Tests a simple expression with a tag interior
         #[test]
         fn tokenize_test_2()
         {
-            assert_eq!(tokenize_expression("rounddown( test . tag)").unwrap(), vec!["rounddown", "(", "test.tag", ")"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
+            assert_eq!(tokenize_expression("rounddown( test . tag)").unwrap(), vec![Token::Operation(Operation::RoundDown), Token::OpenParen, Token::Tag(Tag::from_str("test.tag").unwrap()), Token::ClosedParen]);
         }
 
         /// Tests a large expression
         #[test]
         fn tokenize_test_3()
         {
-            assert_eq!(tokenize_expression("rounddown((sqrt(8 * Ability.Magic Theory.Exp + 1)-1)/2)").unwrap(), vec!["rounddown", "(", "(", "sqrt", "(", "8", "*", "Ability.Magic Theory.Exp", "+", "1", ")", "-", "1", ")", "/","2", ")"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
+            assert_eq!(tokenize_expression("rounddown((sqrt(8 * Ability.Magic Theory.Exp + 1)-1)/2)").unwrap(), vec![Token::Operation(Operation::RoundDown), Token::OpenParen, Token::OpenParen, Token::Operation(Operation::Sqrt), Token::OpenParen, Token::Number(8.0), Token::Operation(Operation::Multiply), Token::Tag(Tag::from_str("Ability.Magic Theory.Exp").unwrap()), Token::Operation(Operation::Add), Token::Number(1.0), Token::ClosedParen, Token::Operation(Operation::Subtract), Token::Number(1.0), Token::ClosedParen, Token::Operation(Operation::Divide), Token::Number(2.0), Token::ClosedParen]);
         }
 
         #[test]
         fn tokenize_test_4()
         {
-            assert_eq!(tokenize_expression("Conditional.Tag == true").unwrap(), vec!["Conditional.Tag", "==", "true"].iter().map(|s| str_to_token(s).unwrap()).collect::<Vec<Token>>());
+            assert_eq!(tokenize_expression("Conditional.Tag == true").unwrap(), vec![Token::Tag(Tag::from_str("Conditional.Tag").unwrap()), Token::Operation(Operation::Equal), Token::Bool(true)]);
+        }
+
+        #[test]
+        fn equation_test_1()
+        {
+            let ctx = &Context::new();
+            assert_eq!(EvalTree::from_str("rounddown(1.054)").unwrap().eval_as_num(ctx).unwrap(), 1.0);
+
         }
     }
 }
