@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{evaltree::EvalError, tag::Tag};
+use crate::api::data::{evaltree::{tokenize::Token, EvalError}, tag::Tag};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum DataError
@@ -11,7 +11,7 @@ pub enum DataError
     Evaluation(EvalError),
     Parsing(ParseError),
     Tokenization(TokenizationError),
-    SyntaxError
+    SyntaxError(Token)
 }
 
 impl DataError

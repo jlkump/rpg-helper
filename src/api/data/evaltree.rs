@@ -29,7 +29,7 @@ impl EvalTree
 {
     pub fn eval_as_num(&self, ctx: &Context) -> Result<f32, DataError>
     {
-        if self.can_eval_as_number()
+        if !self.can_eval_as_number()
         {
             return Err(EvalError::ExpectedValueMismatch.into());
         }
@@ -46,7 +46,7 @@ impl EvalTree
 
     pub fn eval_as_bool(&self, ctx: &Context) -> Result<bool, DataError>
     {
-        if self.can_eval_as_bool()
+        if !self.can_eval_as_bool()
         {
             return Err(EvalError::ExpectedValueMismatch.into());
         }
@@ -89,9 +89,45 @@ impl EvalTree
     /// The resultant equation uses the minimum required parentheses
     /// with some perfered syntax formatting for some operations 
     /// (such as power of using pow() over #^#).
-    pub fn to_string(&self) -> String
+    pub fn to_expression_str(&self) -> String
     {
         todo!()
+    }
+}
+
+impl std::fmt::Display for EvalTree
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) ->  std::fmt::Result
+    {
+        let mut result = String::new();
+        tree_recursive_display_helper(&mut result, &"".to_owned(), &self.root, true);
+        write!(f, "{}", result)
+    }
+}
+
+fn tree_recursive_display_helper(result: &mut String, prefix: &String, node: &EvalNode, end: bool) {
+    result.push_str(prefix);
+    result.push_str("|__");
+    result.push_str(&node.to_string());
+    result.push_str("\n");
+
+    match node {
+        EvalNode::Operation(node) => {
+            let last = node.get_operation().get_number_of_operands() - 1;
+            for (i, n) in node.get_children().iter().enumerate() {
+                let mut new_prefix = prefix.clone();
+                if end
+                {
+                    new_prefix.push_str("   ");
+                }
+                else
+                {
+                    new_prefix.push_str("|  ");
+                }
+                tree_recursive_display_helper(result, &new_prefix, n, i == last);
+            }
+        },
+        EvalNode::Operand(_) => (),
     }
 }
 
@@ -164,6 +200,45 @@ impl OperationNode
             Operation::Not => OperationNode::Not(Box::new(children.remove(0))),
             Operation::Or => OperationNode::Or(Box::new(children.remove(0)), Box::new(children.remove(0))),
             Operation::And => OperationNode::And(Box::new(children.remove(0)), Box::new(children.remove(0))),
+        }
+    }
+
+    fn get_operation(&self) -> Operation
+    {
+        match self
+        {
+            OperationNode::Add(_, _) => Operation::Add,
+            OperationNode::Subtract(_, _) => Operation::Subtract,
+            OperationNode::Multiply(_, _) => Operation::Multiply,
+            OperationNode::Divide(_, _) => Operation::Divide,
+            OperationNode::Negate(_) => Operation::Negate,
+            OperationNode::Pow(_, _) => Operation::PowMethod,
+            OperationNode::Sqrt(_) => Operation::Sqrt,
+            OperationNode::Round(_) => Operation::Round,
+            OperationNode::RoundDown(_) => Operation::RoundDown,
+            OperationNode::RoundUp(_) => Operation::RoundUp,
+            OperationNode::Range(_, _, _) => Operation::Range,
+            OperationNode::Ternary(_, _, _) => Operation::Ternary,
+            OperationNode::Equal(_, _) => Operation::Equal,
+            OperationNode::NotEqual(_, _) => Operation::NotEqual,
+            OperationNode::LessThan(_, _) => Operation::LessThan,
+            OperationNode::LessThanEq(_, _) => Operation::LessThanEq,
+            OperationNode::GreaterThan(_, _) => Operation::GreaterThan,
+            OperationNode::GreaterThanEq(_, _) => Operation::GreaterThanEq,
+            OperationNode::Not(_) => Operation::Not,
+            OperationNode::Or(_, _) => Operation::Or,
+            OperationNode::And(_, _) => Operation::And,
+        }
+    }
+
+    fn get_children(&self) -> Vec<&Box<EvalNode>>
+    {
+        match self
+        {
+            OperationNode::Add(n, n1) | OperationNode::Subtract(n, n1) | OperationNode::Multiply(n, n1) | OperationNode::Divide(n, n1) | OperationNode::Pow(n, n1) |
+            OperationNode::Equal(n, n1) | OperationNode::NotEqual(n, n1) | OperationNode::LessThan(n, n1) | OperationNode::LessThanEq(n, n1) | OperationNode::GreaterThan(n, n1) | OperationNode::GreaterThanEq(n, n1) | OperationNode::Or(n, n1) | OperationNode::And(n, n1) => vec![n, n1],
+            OperationNode::Negate(n) | OperationNode::Sqrt(n) | OperationNode::Round(n) | OperationNode::RoundDown(n) | OperationNode::RoundUp(n) | OperationNode::Not(n) => vec![n],
+            OperationNode::Range(n, n1, n2) | OperationNode::Ternary(n, n1, n2) => vec![n, n1, n2],
         }
     }
 }
@@ -292,34 +367,34 @@ impl EvalNode
     {
         if tokens.iter().position(|t| !t.eq(&Token::OpenParen)).is_some_and(|i| i != root_index) || root_index != 0
         {
-            return Err(DataError::SyntaxError);
+            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()));
         }
 
         let child = match op.get_input_type(0)
         {
             Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[1..].to_vec()), value_hint)?,
-            None => return Err(DataError::SyntaxError),
+            None => return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())),
         };
         Ok(EvalNode::Operation(OperationNode::new(op, vec![child])))
     }
 
     fn parse_binary(tokens: Vec<Token>, op: Operation, root_index: usize) -> Result<EvalNode, DataError>
     {
-        if tokens.iter().position(|t| !t.eq(&Token::OpenParen)).is_some_and(|i| i != root_index) || root_index == 0
+        if tokens.iter().position(|t| !t.eq(&Token::OpenParen)).is_some_and(|i| i == root_index) || root_index == 0
         {
-            return Err(DataError::SyntaxError)
+            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()))
         }
 
         let left = match op.get_input_type(0)
         {
             Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[..root_index].to_vec()), value_hint)?,
-            None => return Err(DataError::SyntaxError),
+            None => return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())),
         };
 
         let right = match op.get_input_type(1)
         {
             Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[root_index + 1..].to_vec()), value_hint)?,
-            None => return Err(DataError::SyntaxError),
+            None => return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())),
         };
 
         Ok(EvalNode::Operation(OperationNode::new(op, vec![left, right])))
@@ -367,7 +442,7 @@ impl EvalNode
         
         if child_tokens.len() != 3
         {
-            Err(DataError::SyntaxError)
+            Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()))
         }
         else
         {
@@ -386,29 +461,26 @@ impl EvalNode
     {
         if root_index + 1 >= tokens.len() || tokens.iter().nth(root_index + 1).unwrap().ne(&Token::OpenParen)
         {
-            return Err(DataError::SyntaxError) // The method call is empty
+            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())) // The method call is empty
         }
 
         let mut child_tokens = vec![];
         let mut sub_tokens = vec![];
 
-        let mut iter = tokens[root_index + 2..].iter().peekable();
+        let mut iter = tokens[root_index + 2..tokens.len() - 1].iter().peekable();
         while let Some(token) = iter.next()
         {
-            if token.eq(&Token::Comma) || iter.peek().is_some()
+            sub_tokens.push(token.to_owned());
+            if token.eq(&Token::Comma) || iter.peek().is_none()
             {
                 child_tokens.push(sub_tokens.clone());
                 sub_tokens = vec![];
-            }
-            else
-            {
-                sub_tokens.push(token.to_owned());
             }
         }
 
         if child_tokens.len() != op.get_number_of_operands()
         {
-            return Err(DataError::SyntaxError)
+            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()))
         }
 
         let mut children = vec![];
@@ -520,6 +592,49 @@ impl EvalNode
     }
 }
 
+impl std::fmt::Display for EvalNode
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        let s = match self
+        {
+            EvalNode::Operand(operand_node) =>
+            match operand_node {
+                OperandNode::ExplicitNumber(n) => format!("{}", n),
+                OperandNode::ExplicitBool(b) => format!("{}", b),
+                OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) => format!("{}", tag.to_str()),
+            },
+            EvalNode::Operation(operation_node) => 
+            match operation_node.get_operation()
+            {
+                Operation::Add => "+",
+                Operation::Subtract => "-",
+                Operation::Multiply => "*",
+                Operation::Divide => "/",
+                Operation::Negate => "-",
+                Operation::PowSymbol => "^",
+                Operation::PowMethod => "pow",
+                Operation::Sqrt => "sqrt",
+                Operation::Round => "round",
+                Operation::RoundDown => "rounddown",
+                Operation::RoundUp => "roundup",
+                Operation::Range => "range",
+                Operation::Ternary => "?",
+                Operation::Equal => "==",
+                Operation::NotEqual => "!=",
+                Operation::LessThan => "<",
+                Operation::LessThanEq => "<=",
+                Operation::GreaterThan => ">",
+                Operation::GreaterThanEq => ">=",
+                Operation::Not => "!",
+                Operation::Or => "||",
+                Operation::And => "&&",
+            }.to_string(),
+        };
+        write!(f, "{}", s)
+    }
+}
+
 fn number_op<F>(v1: &Box<EvalNode>, v2: &Box<EvalNode>, ctx: &Context, f: F) -> Result<EvalResult, DataError>
 where
     F: Fn(f32, f32) -> f32
@@ -575,7 +690,7 @@ impl EvalResult
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
-enum Operation
+pub enum Operation
 {
     // Expects numeric result
     Add,
@@ -640,16 +755,6 @@ impl Operation
             Operation::Ternary => 0,
             Operation::Equal | Operation::NotEqual | Operation::LessThan | Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq => 2,
             Operation::Not | Operation::Or | Operation::And => 1,
-        }
-    }
-
-    fn get_output_type(&self) -> ExpectedResult
-    {
-        match self
-        {
-            Operation::Add | Operation::Subtract | Operation::Multiply | Operation::Divide | Operation::Negate | Operation::PowSymbol | Operation::PowMethod | Operation::Sqrt | Operation::Round | Operation::RoundDown | Operation::RoundUp | Operation::Range | Operation::Ternary => ExpectedResult::Number,
-
-            Operation::Equal | Operation::NotEqual | Operation::LessThan | Operation::LessThanEq | Operation::GreaterThan | Operation::GreaterThanEq | Operation::Not | Operation::Or | Operation::And => ExpectedResult::Boolean,
         }
     }
 
@@ -851,8 +956,11 @@ pub(super) mod parse
 
                         if !needed
                         {
-                            unneeded.push(top.left_pa.unwrap());
-                            unneeded.push(i);
+                            if let Some(pa) = top.left_pa
+                            {
+                                unneeded.push(pa);
+                                unneeded.push(i);
+                            }
                         }
                     }
                     else
@@ -1273,7 +1381,41 @@ pub mod tokenize
         {
             let ctx = &Context::new();
             assert_eq!(EvalTree::from_str("rounddown(1.054)").unwrap().eval_as_num(ctx).unwrap(), 1.0);
+        }
 
+        #[test]
+        fn equation_test_2()
+        {
+            let ctx = &mut Context::new();
+            let tree = EvalTree::from_str("8 * 2").unwrap();
+            println!("{}", tree);
+            assert_eq!(tree.eval_as_num(ctx).unwrap(), 16.0);
+        }
+
+        #[test]
+        fn equation_test_3()
+        {
+            let tree = EvalTree::from_str("rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)").unwrap();
+
+            let ctx = &mut Context::new();
+            ctx.set_attribute(&Tag::from_str("Ability.Magic Theory.Exp").unwrap(), 5.0).unwrap();
+            assert_eq!(tree.eval_as_num(ctx).unwrap(), 1.0);
+
+            ctx.set_attribute(&Tag::from_str("Ability.Magic Theory.Exp").unwrap(), 15.0).unwrap();
+            assert_eq!(tree.eval_as_num(ctx).unwrap(), 2.0);
+        }
+
+        #[test]
+        fn equation_test_4()
+        {
+            let tree = EvalTree::from_str("1.0 == Test").unwrap();
+
+            let ctx = &mut Context::new();
+            ctx.set_attribute(&Tag::from_str("Test").unwrap(), 1.0).unwrap();
+            assert!(tree.eval_as_bool(ctx).unwrap());
+
+            ctx.set_attribute(&Tag::from_str("Test").unwrap(), 3.0).unwrap();
+            assert!(!tree.eval_as_bool(ctx).unwrap());
         }
     }
 }
