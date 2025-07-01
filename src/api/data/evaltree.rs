@@ -511,7 +511,17 @@ impl EvalNode
                                     Err(EvalError::ValueNotFound.into())
                                 }
                             },
-                OperandNode::ReferencedCondition(tag) => Ok(EvalResult::Boolean(ctx.eval_conditional(tag)?)),
+                OperandNode::ReferencedCondition(tag) =>
+                            {
+                                if ctx.has_conditional(tag)
+                                {
+                                    Ok(EvalResult::Boolean(ctx.eval_conditional(tag)?))
+                                }
+                                else
+                                {
+                                    Ok(EvalResult::Boolean(ctx.has_tag(tag)))
+                                }
+                            },
                 OperandNode::ReferencedTag(tag) => 
                             {
                                 if ctx.has_conditional(tag)
@@ -524,7 +534,7 @@ impl EvalNode
                                 }
                                 else
                                 {
-                                    Err(EvalError::ValueNotFound.into())
+                                    Ok(EvalResult::Boolean(ctx.has_tag(tag)))
                                 }
 
                             },
@@ -1012,6 +1022,7 @@ pub mod tokenize
         ClosedParen,
         Comma,
         Colon,
+        // Placeholder(String),    // Defined using [placeholder_name], meant to be replaced with a tag
         Operation(Operation),
         Number(f32),
         Bool(bool),
@@ -1099,6 +1110,7 @@ pub mod tokenize
                         let v = match l
                         {
                             Token::Tag(_) => Token::Operation(Operation::Subtract),
+                            // Token::Placeholder(_) => Token::Operation(Operation::Subtract),
                             Token::OpenParen => Token::Operation(Operation::Negate),
                             Token::ClosedParen => Token::Operation(Operation::Subtract),
                             Token::Comma => Token::Operation(Operation::Negate),
@@ -1329,7 +1341,7 @@ pub mod tokenize
     #[cfg(test)]
     mod unit_tests
     {
-        use crate::api::data::{evaltree::{tokenize::{remove_unneeded_whitespace, tokenize_expression, Token}, EvalTree, Operation}, tag::Tag, Context};
+        use crate::api::data::{evaltree::{tokenize::{remove_unneeded_whitespace, tokenize_expression, Token}, Operation}, tag::Tag};
 
         #[test]
         fn whitespace_test_1()
@@ -1375,47 +1387,53 @@ pub mod tokenize
         {
             assert_eq!(tokenize_expression("Conditional.Tag == true").unwrap(), vec![Token::Tag(Tag::from_str("Conditional.Tag").unwrap()), Token::Operation(Operation::Equal), Token::Bool(true)]);
         }
+    }
+}
 
-        #[test]
-        fn equation_test_1()
-        {
-            let ctx = &Context::new();
-            assert_eq!(EvalTree::from_str("rounddown(1.054)").unwrap().eval_as_num(ctx).unwrap(), 1.0);
-        }
+#[cfg(test)]
+mod unit_tests
+{
+    use crate::api::data::{evaltree::EvalTree, tag::Tag, Context};
 
-        #[test]
-        fn equation_test_2()
-        {
-            let ctx = &mut Context::new();
-            let tree = EvalTree::from_str("8 * 2").unwrap();
-            println!("{}", tree);
-            assert_eq!(tree.eval_as_num(ctx).unwrap(), 16.0);
-        }
+    #[test]
+    fn equation_test_1()
+    {
+        let ctx = &Context::new();
+        assert_eq!(EvalTree::from_str("rounddown(1.054)").unwrap().eval_as_num(ctx).unwrap(), 1.0);
+    }
 
-        #[test]
-        fn equation_test_3()
-        {
-            let tree = EvalTree::from_str("rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)").unwrap();
+    #[test]
+    fn equation_test_2()
+    {
+        let ctx = &mut Context::new();
+        let tree = EvalTree::from_str("8 * 2").unwrap();
+        println!("{}", tree);
+        assert_eq!(tree.eval_as_num(ctx).unwrap(), 16.0);
+    }
 
-            let ctx = &mut Context::new();
-            ctx.set_attribute(&Tag::from_str("Ability.Magic Theory.Exp").unwrap(), 5.0).unwrap();
-            assert_eq!(tree.eval_as_num(ctx).unwrap(), 1.0);
+    #[test]
+    fn equation_test_3()
+    {
+        let tree = EvalTree::from_str("rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)").unwrap();
 
-            ctx.set_attribute(&Tag::from_str("Ability.Magic Theory.Exp").unwrap(), 15.0).unwrap();
-            assert_eq!(tree.eval_as_num(ctx).unwrap(), 2.0);
-        }
+        let ctx = &mut Context::new();
+        ctx.set_attribute(&Tag::from_str("Ability.Magic Theory.Exp").unwrap(), 5.0).unwrap();
+        assert_eq!(tree.eval_as_num(ctx).unwrap(), 1.0);
 
-        #[test]
-        fn equation_test_4()
-        {
-            let tree = EvalTree::from_str("1.0 == Test").unwrap();
+        ctx.set_attribute(&Tag::from_str("Ability.Magic Theory.Exp").unwrap(), 15.0).unwrap();
+        assert_eq!(tree.eval_as_num(ctx).unwrap(), 2.0);
+    }
 
-            let ctx = &mut Context::new();
-            ctx.set_attribute(&Tag::from_str("Test").unwrap(), 1.0).unwrap();
-            assert!(tree.eval_as_bool(ctx).unwrap());
+    #[test]
+    fn equation_test_4()
+    {
+        let tree = EvalTree::from_str("1.0 == Test").unwrap();
 
-            ctx.set_attribute(&Tag::from_str("Test").unwrap(), 3.0).unwrap();
-            assert!(!tree.eval_as_bool(ctx).unwrap());
-        }
+        let ctx = &mut Context::new();
+        ctx.set_attribute(&Tag::from_str("Test").unwrap(), 1.0).unwrap();
+        assert!(tree.eval_as_bool(ctx).unwrap());
+
+        ctx.set_attribute(&Tag::from_str("Test").unwrap(), 3.0).unwrap();
+        assert!(!tree.eval_as_bool(ctx).unwrap());
     }
 }

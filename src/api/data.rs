@@ -27,7 +27,8 @@ pub mod tag;
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Context
 {
-    tags: TagSet,
+    general_tags: TagSet,
+    state_tags: TagSet,
     atrs: AttributeSet,
     modifiers: ModifierSet,
     equations: EquationSet,
@@ -39,7 +40,8 @@ impl Context
     pub fn new() -> Context
     {
         Context { 
-            tags: TagSet::new(), 
+            general_tags: TagSet::new(), 
+            state_tags: TagSet::new(),          // State tags are only modified by effects (or changed by a context layer)
             atrs: AttributeSet::new(), 
             modifiers: ModifierSet::new(),
             equations: EquationSet::new(),
@@ -49,7 +51,8 @@ impl Context
 
     pub fn has_tag(&self, t: &Tag) -> bool
     {
-        self.tags.has_tag(t)
+        // TODO: Check modifiers and return appropriately
+        self.general_tags.has_tag(t) || self.state_tags.has_tag(t)
     }
 
     pub fn has_attribute(&self, attribute_name: &Tag) -> bool
@@ -57,27 +60,60 @@ impl Context
         self.atrs.has_attribute(attribute_name)
     }
 
-    pub fn has_conditional(&self, conditional_name: &Tag) -> bool
-    {
-        self.conditionals.has_conditional(conditional_name)
-    }
-
     pub fn has_modifier(&self, modifier_name: &Tag) -> bool
     {
         self.modifiers.has_modifier(modifier_name)
     }
 
-    pub fn has_equation(&self, attribute_alias: &Tag) -> bool
+    pub fn has_equation(&self, equation_name: &Tag) -> bool
     {
-        self.equations.has_equation(attribute_alias)
+        self.equations.has_equation(equation_name)
+    }
+    
+    pub fn has_conditional(&self, conditional_name: &Tag) -> bool
+    {
+        self.conditionals.has_conditional(conditional_name)
+    }
+
+    pub fn has_value(&self, value_name: &Tag) -> bool
+    {
+        self.has_attribute(value_name) || self.has_equation(value_name)
     }
 
     /// Creates a new context that combines this context plus another context.
     /// If there are conflicting keys, the values of "other" are perfered
     /// over self
-    pub fn layer_context(&self, other: &Self) -> Self
+    pub fn layer_context(&self, other: &Self) -> Result<Self, DataError>
     {
-        todo!()
+        let mut res = Context::new();
+
+        // Insert all lhs attributes, then override with rhs attributes
+        for (tag, atr) in self.atrs.iter().chain(other.atrs.iter())
+        {
+            res.set_attribute(tag, atr.get_value())?;
+        }
+
+        // Insert all lhs modifiers, then override with rhs modifiers
+        for  (_, modifier) in self.modifiers.iter().chain(other.modifiers.iter())
+        {
+            res.set_modifier(modifier.clone())?;
+        }
+
+        // Insert all lhs equations, then override with rhs equations
+        for  (_, equation) in self.equations.iter().chain(other.equations.iter())
+        {
+            res.set_equation(equation.clone())?;
+        }
+
+        // Insert all lhs conditionals, then override with rhs conditionals
+        for  (_, conditional) in self.conditionals.iter().chain(other.conditionals.iter())
+        {
+            res.set_conditional(conditional.clone())?;
+        }
+
+        res.state_tags = self.state_tags.layer(&other.state_tags);
+
+        Ok(res)
     }
 
     /// Gets the value of an attribute (including equation aliases) 
@@ -111,7 +147,6 @@ impl Context
     pub fn set_attribute(&mut self, t: &Tag, nv: f32) -> Result<Option<f32>, DataError>
     {
         self.ensure_target_attribute(t)?;
-
         if let Some(a) = self.atrs.get_mut(t)
         {
             let old = a.get_value();
@@ -120,7 +155,7 @@ impl Context
         }
         else
         {
-            self.tags.add_tag(t);
+            self.general_tags.add_tag(t);
             self.atrs.set_attribute(t, nv);
             Ok(None)
         }
@@ -137,7 +172,7 @@ impl Context
         self.ensure_target_attribute(t)?;
         if self.atrs.has_attribute(t)
         {
-            self.tags.remove_tag(t);
+            self.general_tags.remove_tag(t);
             Ok(self.atrs.remove_attribute(t).map(|a| a.get_value()))
         }
         else
@@ -158,7 +193,7 @@ impl Context
         }
         else
         {
-            self.tags.add_tag(&m.name);
+            self.general_tags.add_tag(&m.name);
         }
         self.modifiers.add_modifier(m);
         Ok(old)
@@ -169,7 +204,7 @@ impl Context
         self.ensure_target_modifier(&t)?;
         if self.has_modifier(t)
         {
-            self.tags.remove_tag(t);
+            self.general_tags.remove_tag(t);
             Ok(self.modifiers.remove_modifier(t))
         }
         else
@@ -178,9 +213,21 @@ impl Context
         }
     }
 
-    pub fn set_equation(&mut self, e: Equation) -> Option<Equation>
+    pub fn set_equation(&mut self, nv: Equation) -> Result<Option<Equation>, DataError>
     {
-        self.equations.set_equation(e)
+        self.ensure_target_equation(&nv.name)?;
+        if let Some(e) = self.equations.get_mut(&nv.name)
+        {
+            let old = e.clone();
+            *e = nv;
+            Ok(Some(old))
+        }
+        else
+        {
+            self.general_tags.add_tag(&nv.name);
+            self.equations.set_equation(nv);
+            Ok(None)
+        }
     }
 
     pub fn eval_equation(&self, equation_name: &Tag) -> Result<f32, DataError>
@@ -189,14 +236,35 @@ impl Context
         self.equations.eval(equation_name, self)
     }
 
-    pub fn remove_equation(&mut self, equation_name: &Tag) -> Option<Equation>
+    pub fn remove_equation(&mut self, equation_name: &Tag) -> Result<Option<Equation>, DataError>
     {
-        self.equations.remove_equation(equation_name)
+        self.ensure_target_equation(equation_name)?;
+        if self.has_equation(equation_name)
+        {
+            self.general_tags.remove_tag(equation_name);
+            Ok(self.equations.remove_equation(equation_name))
+        }
+        else
+        {
+            Ok(None)
+        }
     }
 
-    pub fn set_conditional(&mut self, c: Conditional) -> Option<Conditional>
+    pub fn set_conditional(&mut self, nv: Conditional) -> Result<Option<Conditional>, DataError>
     {
-        self.conditionals.set_conditional(c)
+        self.ensure_target_conditional(&nv.name)?;
+        if let Some(c) = self.conditionals.get_mut(&nv.name)
+        {
+            let old = c.clone();
+            *c = nv;
+            Ok(Some(old))
+        }
+        else
+        {
+            self.general_tags.add_tag(&nv.name);
+            self.conditionals.set_conditional(nv);
+            Ok(None)
+        }
     }
 
     pub fn eval_conditional(&self, conditional_name: &Tag) -> Result<bool, DataError>
@@ -205,9 +273,18 @@ impl Context
         self.conditionals.eval(conditional_name, self)
     }
 
-    pub fn remove_conditional(&mut self, conditional_name: &Tag) -> Option<Conditional>
+    pub fn remove_conditional(&mut self, conditional_name: &Tag) -> Result<Option<Conditional>, DataError>
     {
-        self.conditionals.remove_conditional(conditional_name)
+        self.ensure_target_conditional(conditional_name)?;
+        if self.has_conditional(conditional_name)
+        {
+            self.general_tags.remove_tag(conditional_name);
+            Ok(self.conditionals.remove_conditional(conditional_name))
+        }
+        else
+        {
+            Ok(None)
+        }
     }
 
     fn ensure_target_attribute(&self, t: &Tag) -> Result<(), DataError>

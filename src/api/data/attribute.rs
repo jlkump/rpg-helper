@@ -71,4 +71,9 @@ impl AttributeSet
     {
         self.attributes.remove(attribute_name)
     }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Tag, Attribute>
+    {
+        self.attributes.iter()
+    }
 }

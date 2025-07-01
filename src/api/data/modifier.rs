@@ -115,4 +115,9 @@ impl ModifierSet
     {
         self.modifiers.contains_key(modifier_name)
     }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Tag, Modifier>
+    {
+        self.modifiers.iter()
+    }
 }

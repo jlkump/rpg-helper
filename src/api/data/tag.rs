@@ -87,7 +87,7 @@ impl Tag
         &self.name
     }
 
-    fn find_all_parse_errors(s: &str) -> Result<(), Vec<ParseError>>
+    pub fn find_all_parse_errors(s: &str) -> Result<(), Vec<ParseError>>
     {
         let mut res = vec![];
         if s.is_empty() || s.chars().all(char::is_whitespace)
@@ -191,6 +191,7 @@ impl Display for Tag
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct TagSet
 {
+    primary_tags: HashMap<Tag, i32>,
     tags: HashMap<String, i32>,
 }
 
@@ -198,7 +199,7 @@ impl TagSet
 {
     pub fn new() -> TagSet
     {
-        TagSet { tags: HashMap::new() }
+        TagSet { primary_tags: HashMap::new(), tags: HashMap::new() }
     }
 
     pub fn count_tag(&self, t: &Tag) -> i32
@@ -213,6 +214,7 @@ impl TagSet
             let v = self[&st];
             self.tags.insert(st.clone(), v + c);
         }
+        self.primary_tags.insert(t.clone(), c + self.primary_tags.get(t).unwrap_or(&0));
     }
 
     pub fn remove_tag_count(&mut self, t: &Tag, c: i32)
@@ -229,10 +231,27 @@ impl TagSet
     {
         self.add_tag_count(t, 1);
     }
-
+    
     pub fn remove_tag(&mut self, t: &Tag)
     {
         self.remove_tag_count(t, 1);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Tag> + '_
+    {
+        self.tags.keys().map(| s| Tag::from_str(s).unwrap()).into_iter()
+    }
+
+    /// Current implementation is to just add the tag counts to the resulting
+    /// final tag set.
+    pub fn layer(&self, other: &Self) -> Self
+    {
+        let mut res = Self::new();
+        for (tag, count) in self.primary_tags.iter().chain(other.primary_tags.iter())
+        {
+            res.add_tag_count(tag, *count);
+        }
+        res
     }
 }
 

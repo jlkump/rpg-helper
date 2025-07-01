@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Conditional
 {
-    name: Tag,
+    pub name: Tag,
     equation_string: String,
     ast: EvalTree,
 }
@@ -68,5 +68,10 @@ impl ConditionalSet
     pub fn remove_conditional(&mut self, conditional_name: &Tag) -> Option<Conditional>
     {
         self.conditionals.remove(conditional_name)
+    }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Tag, Conditional>
+    {
+        self.conditionals.iter()
     }
 }

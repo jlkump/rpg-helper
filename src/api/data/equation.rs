@@ -7,7 +7,7 @@ use crate::api::data::{error::{DataError, DoesNotExistError}, evaltree::EvalTree
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Equation
 {
-    name: Tag,
+    pub name: Tag,
     equation_string: String,
     ast: EvalTree,
 }
@@ -68,5 +68,10 @@ impl EquationSet
     pub fn remove_equation(&mut self, equation_name: &Tag) -> Option<Equation>
     {
         self.equations.remove(equation_name)
+    }
+
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Tag, Equation>
+    {
+        self.equations.iter()
     }
 }
