@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{error::{DataError, DoesNotExistError}, evaltree::EvalTree, tag::Tag, Context};
+use crate::api::data::{error::{DataError, DoesNotExistError}, evaltree::EvalTree, tag::Tag, context::Context};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Equation

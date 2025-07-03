@@ -1,0 +1,386 @@
+use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}, DataType};
+
+use serde::{Deserialize, Serialize};
+
+/// A Context is the abstraction layer for interaction with the data-layer
+/// of the application. It handles the evaluation of numeric values based
+/// on modifiers, conditionals, and equations.
+/// 
+/// A modifier applies a change to an attribute or equation in the dataset
+/// by addiing another value conditionally.
+///
+/// A conditional evaluates an AST using the tags and attribute values
+/// of the dataset. It will return either true or false.
+/// 
+/// An equation acts like an attribute but depends upon the value of
+/// other attributes in the dataset. For example, in Ars Magica, the
+/// value of "Ability.Magic Theory" depends on the value of "Ability.Magic Theory.Exp"
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct Context
+{
+    general_tags: TagSet,
+    state_tags: TagSet,
+    atrs: AttributeSet,
+    modifiers: ModifierSet,
+    equations: EquationSet,
+    conditionals: ConditionalSet,
+}
+
+impl Context
+{
+    pub fn new() -> Context
+    {
+        Context { 
+            general_tags: TagSet::new(), 
+            state_tags: TagSet::new(),          // State tags are only modified by effects (or changed by a context layer)
+            atrs: AttributeSet::new(), 
+            modifiers: ModifierSet::new(),
+            equations: EquationSet::new(),
+            conditionals: ConditionalSet::new(), 
+        }
+    }
+
+    pub fn has_tag(&self, t: &Tag) -> bool
+    {
+        self.general_tags.has_tag(t) || self.state_tags.has_tag(t)
+    }
+
+    pub fn has_attribute(&self, attribute_name: &Tag) -> bool
+    {
+        self.atrs.has_attribute(attribute_name)
+    }
+
+    pub fn has_modifier(&self, modifier_name: &Tag) -> bool
+    {
+        self.modifiers.has_modifier(modifier_name)
+    }
+
+    pub fn has_equation(&self, equation_name: &Tag) -> bool
+    {
+        self.equations.has_equation(equation_name)
+    }
+    
+    pub fn has_conditional(&self, conditional_name: &Tag) -> bool
+    {
+        self.conditionals.has_conditional(conditional_name)
+    }
+
+    pub fn has_value(&self, value_name: &Tag) -> bool
+    {
+        self.has_attribute(value_name) || self.has_equation(value_name)
+    }
+
+    /// Creates a new context that combines this context plus another context.
+    /// If there are conflicting keys, the values of "other" are perfered
+    /// over self
+    pub fn layer_context(&self, other: &Self) -> Result<Self, DataError>
+    {
+        let mut res = Context::new();
+
+        // Insert all lhs attributes, then override with rhs attributes
+        for (tag, atr) in self.atrs.iter().chain(other.atrs.iter())
+        {
+            res.set_attribute(tag, atr.get_value())?;
+        }
+
+        // Insert all lhs modifiers, then override with rhs modifiers
+        for  (_, modifier) in self.modifiers.iter().chain(other.modifiers.iter())
+        {
+            res.set_modifier(modifier.clone())?;
+        }
+
+        // Insert all lhs equations, then override with rhs equations
+        for  (_, equation) in self.equations.iter().chain(other.equations.iter())
+        {
+            res.set_equation(equation.clone())?;
+        }
+
+        // Insert all lhs conditionals, then override with rhs conditionals
+        for  (_, conditional) in self.conditionals.iter().chain(other.conditionals.iter())
+        {
+            res.set_conditional(conditional.clone())?;
+        }
+
+        res.state_tags = self.state_tags.layer(&other.state_tags);
+
+        Ok(res)
+    }
+
+    /// Modifies a given dataset according to the effect.
+    /// Returns the modified dataset or an error if the modification failed.
+    pub fn apply_effect(mut self, e: &Effect) -> Result<Self, DataError>
+    {
+        match e
+        {
+            Effect::AddStateTag(tag) => self.state_tags.add_tag(tag),
+            Effect::RemoveStateTag(tag) => self.state_tags.remove_tag(tag),
+            Effect::SetAttribute(tag, nv) => { self.set_attribute(tag, *nv)?; },
+            Effect::SetEquation(tag, equation) => { self.set_equation(Equation::new(tag.clone(), &equation)?)?; },
+            Effect::SetConditional(tag, conditional) => { self.set_conditional(Conditional::new(tag.clone(), &conditional)?)?; },
+        }
+        Ok(self)
+    }
+
+    /// Gets the value of an attribute (including equation aliases) 
+    /// accounting for all modifiers applied.
+    /// 
+    /// Can error from modifier or equation evaluation failures
+    pub fn get_value(&self, t: &Tag) -> Result<Option<f32>, DataError>
+    {
+        if let Some(a) = self.atrs.get(t)
+        { 
+            Ok(Some(self.modifiers.apply_modifiers(self, t, a.get_value())?))
+        }
+        else if self.equations.has_equation(t)
+        {
+            Ok(Some(self.modifiers.apply_modifiers(self, t, self.equations.eval(t, self)?)?))
+        }
+        else
+        {
+            Ok(None)
+        }
+    }
+
+    /// Sets the value of an attribute directly. This should ONLY be
+    /// used for initialization, as this circumvents the effect and modifier
+    /// system.
+    /// 
+    /// This can fail if the given tag targets an existing value which is
+    /// not an attribute or the attribute does not exist.
+    /// 
+    /// Returns the previous value if it existed
+    pub fn set_attribute(&mut self, t: &Tag, nv: f32) -> Result<Option<f32>, DataError>
+    {
+        self.ensure_target_attribute(t)?;
+        if let Some(a) = self.atrs.get_mut(t)
+        {
+            let old = a.get_value();
+            a.set_value(nv);
+            Ok(Some(old))
+        }
+        else
+        {
+            self.general_tags.add_tag(t);
+            self.atrs.set_attribute(t, nv);
+            Ok(None)
+        }
+    }
+
+    /// Removes an attribute entirely from this dataset. Returns the value it used to be.
+    /// 
+    /// This should be used sparingly, as it completely removes an attribute
+    /// from a dataset, so equations or conditionals that rely on this attribute
+    /// value will no longer work and the dataset will error when attempting
+    /// to evaluate those values.
+    pub fn remove_attribute(&mut self, t: &Tag) -> Result<Option<f32>, DataError>
+    {
+        self.ensure_target_attribute(t)?;
+        if self.atrs.has_attribute(t)
+        {
+            self.general_tags.remove_tag(t);
+            Ok(self.atrs.remove_attribute(t).map(|a| a.get_value()))
+        }
+        else
+        {
+            Ok(None)
+        }
+    }
+
+    /// If the given modifier is not already applied to this context,
+    /// applies it. The old modifier is returned if the modifier was replaced
+    pub fn set_modifier(&mut self, m: Modifier) -> Result<Option<Modifier>, DataError>
+    {
+        self.ensure_target_modifier(&m.name)?;
+        let old = self.modifiers.get_modifier(&m.name).cloned();
+        if old.is_some() 
+        {
+            self.modifiers.remove_modifier(&m.name);
+        }
+        else
+        {
+            self.general_tags.add_tag(&m.name);
+        }
+        self.modifiers.add_modifier(m);
+        Ok(old)
+    }
+
+    pub fn remove_modifier(&mut self, t: &Tag) -> Result<Option<Modifier>, DataError>
+    {
+        self.ensure_target_modifier(&t)?;
+        if self.has_modifier(t)
+        {
+            self.general_tags.remove_tag(t);
+            Ok(self.modifiers.remove_modifier(t))
+        }
+        else
+        {
+            Ok(None)
+        }
+    }
+
+    pub fn set_equation(&mut self, nv: Equation) -> Result<Option<Equation>, DataError>
+    {
+        self.ensure_target_equation(&nv.name)?;
+        if let Some(e) = self.equations.get_mut(&nv.name)
+        {
+            let old = e.clone();
+            *e = nv;
+            Ok(Some(old))
+        }
+        else
+        {
+            self.general_tags.add_tag(&nv.name);
+            self.equations.set_equation(nv);
+            Ok(None)
+        }
+    }
+
+    pub fn eval_equation(&self, equation_name: &Tag) -> Result<f32, DataError>
+    {
+        self.ensure_target_equation(equation_name)?;
+        self.equations.eval(equation_name, self)
+    }
+
+    pub fn remove_equation(&mut self, equation_name: &Tag) -> Result<Option<Equation>, DataError>
+    {
+        self.ensure_target_equation(equation_name)?;
+        if self.has_equation(equation_name)
+        {
+            self.general_tags.remove_tag(equation_name);
+            Ok(self.equations.remove_equation(equation_name))
+        }
+        else
+        {
+            Ok(None)
+        }
+    }
+
+    pub fn set_conditional(&mut self, nv: Conditional) -> Result<Option<Conditional>, DataError>
+    {
+        self.ensure_target_conditional(&nv.name)?;
+        if let Some(c) = self.conditionals.get_mut(&nv.name)
+        {
+            let old = c.clone();
+            *c = nv;
+            Ok(Some(old))
+        }
+        else
+        {
+            self.general_tags.add_tag(&nv.name);
+            self.conditionals.set_conditional(nv);
+            Ok(None)
+        }
+    }
+
+    pub fn eval_conditional(&self, conditional_name: &Tag) -> Result<bool, DataError>
+    {
+        self.ensure_target_conditional(conditional_name)?;
+        self.conditionals.eval(conditional_name, self)
+    }
+
+    pub fn remove_conditional(&mut self, conditional_name: &Tag) -> Result<Option<Conditional>, DataError>
+    {
+        self.ensure_target_conditional(conditional_name)?;
+        if self.has_conditional(conditional_name)
+        {
+            self.general_tags.remove_tag(conditional_name);
+            Ok(self.conditionals.remove_conditional(conditional_name))
+        }
+        else
+        {
+            Ok(None)
+        }
+    }
+
+    /// Checks for attributes and equations which cause cycles
+    /// of evaluation. For example:
+    ///     attribute { name: test_atr }
+    ///     conditional { name: test_cond, equation: test_atr == 3.0 }
+    ///     modifier { name: test_mod, target: test_atr, conditional: test_cond }
+    /// 
+    /// If any cycles are found, the modifier's tag causing the cycle is returned.
+    pub fn check_for_cyclic_evalutation(&self) -> Option<Vec<Tag>>
+    {
+        None
+    }
+
+    fn ensure_target_attribute(&self, t: &Tag) -> Result<(), DataError>
+    {
+        if self.has_conditional(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Condition)));
+        }
+        else if self.has_modifier(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Modifier)));
+        }
+        else if self.has_equation(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Equation)));
+        }
+        else
+        {
+            Ok(())
+        }
+    }
+
+    fn ensure_target_modifier(&self, t: &Tag) -> Result<(), DataError>
+    {
+        if self.has_conditional(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Condition)));
+        }
+        else if self.has_attribute(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Attribute)));
+        }
+        else if self.has_equation(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Equation)));
+        }
+        else
+        {
+            Ok(())
+        }
+    }
+
+    fn ensure_target_equation(&self, t: &Tag) -> Result<(), DataError>
+    {
+        if self.has_modifier(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Modifier)));
+        }
+        else if self.has_attribute(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Attribute)));
+        }
+        else if self.has_conditional(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Condition)));
+        }
+        else
+        {
+            Ok(())
+        }
+    }
+
+    fn ensure_target_conditional(&self, t: &Tag) -> Result<(), DataError>
+    {
+        if self.has_modifier(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Modifier)));
+        }
+        else if self.has_attribute(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Attribute)));
+        }
+        else if self.has_equation(t)
+        {
+            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Equation)));
+        }
+        else
+        {
+            Ok(())
+        }
+    }
+}

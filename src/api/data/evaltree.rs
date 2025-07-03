@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::Tag, Context};
+use crate::api::data::{error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::Tag, context::Context};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -1393,7 +1393,7 @@ pub mod tokenize
 #[cfg(test)]
 mod unit_tests
 {
-    use crate::api::data::{evaltree::EvalTree, tag::Tag, Context};
+    use crate::api::data::{evaltree::EvalTree, tag::Tag, context::Context};
 
     #[test]
     fn equation_test_1()

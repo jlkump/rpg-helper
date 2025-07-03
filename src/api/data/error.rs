@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{evaltree::{tokenize::Token, EvalError}, tag::Tag};
+use crate::api::data::{evaltree::{tokenize::Token, EvalError}, tag::Tag, DataType};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum DataError
@@ -72,16 +72,6 @@ impl ConflictError
     {
         ConflictError { tag, expected, found }
     }
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub enum DataType
-{
-    Tag,
-    Attribute,
-    Condition,
-    Modifier,
-    Equation,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
