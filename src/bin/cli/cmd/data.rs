@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::LazyLock};
 
 use colored::{ColoredString, Colorize};
-use rpg_helper::api::data::Context;
+use rpg_helper::api::data::context::Context;
 
 use crate::cmd::{default, CmdContext};
 

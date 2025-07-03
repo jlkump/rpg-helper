@@ -77,3 +77,15 @@ impl AttributeSet
         self.attributes.iter()
     }
 }
+
+impl IntoIterator for AttributeSet
+{
+    type Item = (Tag, Attribute);
+
+    type IntoIter = std::collections::hash_map::IntoIter<Tag, Attribute>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.attributes.into_iter()
+    }
+}

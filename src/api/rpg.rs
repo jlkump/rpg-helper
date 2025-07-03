@@ -1,5 +1,8 @@
 pub mod character;
 pub mod event;
+pub mod game;
+pub mod inventory;
+pub mod location;
+pub mod parse;
 pub mod ruleset;
 pub mod timeline;
-pub mod user_defined;

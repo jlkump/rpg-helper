@@ -1,4 +1,4 @@
-use crate::api::data::tag::Tag;
+use crate::api::data::{conditional::Conditional, equation::Equation, modifier::Modifier, tag::Tag};
 
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +12,8 @@ pub enum Effect
     AddStateTag(Tag),
     RemoveStateTag(Tag),
     SetAttribute(Tag, f32),
-    SetEquation(Tag, String),
-    SetConditional(Tag, String),
+    SetEquation(Equation),
+    SetConditional(Conditional),
+    SetModifier(Modifier),
+    SetTextData(Tag, String),
 }

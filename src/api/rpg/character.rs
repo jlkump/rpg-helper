@@ -20,7 +20,9 @@
 
 use std::collections::HashMap;
 
-use crate::api::data::{tag::Tag, context::Context};
+use serde::{Deserialize, Serialize};
+
+use crate::api::{data::{context::Context, tag::Tag}, rpg::event::Event};
 
 // First todo:
 //      1. Parse json in order to import character data
@@ -40,11 +42,22 @@ use crate::api::data::{tag::Tag, context::Context};
 //              "equations": [{"name": "equation.name", "equation": "attribute.name + 3.0"}],
 //              "conditionals": [{"name": "conditional.name", "conditional": "equation.name == 3.0"}],
 //          },
-//          "timeline": [{"event_name": "event_temp_name", "date": ...}]
+//          "timeline": [{"event_name": "event_temp_name", "date": ...}],
+//          "inventory": [{"item_name": "cool item", "item_tag": "cool_item_tag", "item_spec": 
+//                         "spec_tag", "item_count": "1", "item_context": {...}}],
+//          "equiped_items": ["cool_item_tag"],
 //      }    
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Character
 {
     data: Context,
-    text_data: HashMap<Tag, String>,
+}
+
+impl Character
+{
+    pub fn apply_event(self, event: &Event) -> Self
+    {
+        todo!()
+    }
 }

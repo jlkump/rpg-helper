@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}, DataType};
 
 use serde::{Deserialize, Serialize};
@@ -24,6 +26,7 @@ pub struct Context
     modifiers: ModifierSet,
     equations: EquationSet,
     conditionals: ConditionalSet,
+    text_data: HashMap<Tag, String>,
 }
 
 impl Context
@@ -36,7 +39,8 @@ impl Context
             atrs: AttributeSet::new(), 
             modifiers: ModifierSet::new(),
             equations: EquationSet::new(),
-            conditionals: ConditionalSet::new(), 
+            conditionals: ConditionalSet::new(),
+            text_data: HashMap::new(),
         }
     }
 
@@ -70,6 +74,11 @@ impl Context
         self.has_attribute(value_name) || self.has_equation(value_name)
     }
 
+    pub fn has_text(&self, text_name: &Tag) -> bool
+    {
+        self.text_data.contains_key(text_name)
+    }
+
     /// Creates a new context that combines this context plus another context.
     /// If there are conflicting keys, the values of "other" are perfered
     /// over self
@@ -101,6 +110,12 @@ impl Context
             res.set_conditional(conditional.clone())?;
         }
 
+        // Insert all lhs text, then override with rhs text
+        for  (tag, text) in self.text_data.iter().chain(other.text_data.iter())
+        {
+            res.set_text_data(tag, text.clone())?;
+        }
+
         res.state_tags = self.state_tags.layer(&other.state_tags);
 
         Ok(res)
@@ -115,8 +130,10 @@ impl Context
             Effect::AddStateTag(tag) => self.state_tags.add_tag(tag),
             Effect::RemoveStateTag(tag) => self.state_tags.remove_tag(tag),
             Effect::SetAttribute(tag, nv) => { self.set_attribute(tag, *nv)?; },
-            Effect::SetEquation(tag, equation) => { self.set_equation(Equation::new(tag.clone(), &equation)?)?; },
-            Effect::SetConditional(tag, conditional) => { self.set_conditional(Conditional::new(tag.clone(), &conditional)?)?; },
+            Effect::SetEquation(equation) => { self.set_equation(equation.clone())?; },
+            Effect::SetConditional(conditional) => { self.set_conditional(conditional.clone())?; },
+            Effect::SetModifier(modifier) => { self.set_modifier(modifier.clone())?; },
+            Effect::SetTextData(tag, text) => { self.set_text_data(tag, text.clone())?; }
         }
         Ok(self)
     }
@@ -292,6 +309,28 @@ impl Context
         }
     }
 
+    pub fn set_text_data(&mut self, text_name: &Tag, text_data: String) -> Result<Option<String>, DataError>
+    {
+        self.ensure_target_text(text_name)?;
+        if !self.has_text(text_name)
+        {
+            self.general_tags.add_tag(text_name);
+        }
+        Ok(self.text_data.insert(text_name.clone(),text_data))
+    }
+
+    pub fn get_text_data(&self, text_name: &Tag) -> Result<Option<&String>, DataError>
+    {
+        self.ensure_target_text(text_name)?;
+        Ok(self.text_data.get(text_name))
+    }
+
+    pub fn remove_text_date(&mut self, text_name: &Tag) -> Result<Option<String>, DataError>
+    {
+        self.ensure_target_text(text_name)?;
+        Ok(self.text_data.remove(text_name))
+    }
+
     /// Checks for attributes and equations which cause cycles
     /// of evaluation. For example:
     ///     attribute { name: test_atr }
@@ -301,86 +340,88 @@ impl Context
     /// If any cycles are found, the modifier's tag causing the cycle is returned.
     pub fn check_for_cyclic_evalutation(&self) -> Option<Vec<Tag>>
     {
-        None
+        todo!()
     }
 
     fn ensure_target_attribute(&self, t: &Tag) -> Result<(), DataError>
     {
-        if self.has_conditional(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Condition)));
-        }
-        else if self.has_modifier(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Modifier)));
-        }
-        else if self.has_equation(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Equation)));
-        }
-        else
-        {
-            Ok(())
-        }
+        self.ensure_target(t, DataType::Attribute)
     }
 
     fn ensure_target_modifier(&self, t: &Tag) -> Result<(), DataError>
     {
-        if self.has_conditional(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Condition)));
-        }
-        else if self.has_attribute(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Attribute)));
-        }
-        else if self.has_equation(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Equation)));
-        }
-        else
-        {
-            Ok(())
-        }
+        self.ensure_target(t, DataType::Modifier)
     }
 
     fn ensure_target_equation(&self, t: &Tag) -> Result<(), DataError>
     {
-        if self.has_modifier(t)
+        self.ensure_target(t, DataType::Equation)
+    }
+
+    fn ensure_target_conditional(&self, t: &Tag) -> Result<(), DataError>
+    {
+        self.ensure_target(t, DataType::Condition)
+    }
+
+    fn ensure_target_text(&self, t: &Tag) -> Result<(), DataError>
+    {
+        self.ensure_target(t, DataType::Text)
+    }
+
+    fn ensure_target(&self, t: &Tag, target: DataType) -> Result<(), DataError>
+    {
+        let conflict = if self.has_attribute(t)
         {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Modifier)));
+            Some(DataType::Attribute)
         }
-        else if self.has_attribute(t)
+        else if self.has_equation(t)
         {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Attribute)));
+            Some(DataType::Equation)
         }
         else if self.has_conditional(t)
         {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Condition)));
+            Some(DataType::Condition)
+        }
+        else if self.has_modifier(t)
+        {
+            Some(DataType::Modifier)
+        }
+        else if self.has_text(t)
+        {
+            Some(DataType::Text)
+        }
+        else
+        {
+            None
+        };
+
+        if let Some(conflict) = conflict
+        {
+            if conflict == target
+            {
+                Ok(())
+            }
+            else
+            {
+                Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), target, conflict)))
+            }
         }
         else
         {
             Ok(())
         }
     }
+}
 
-    fn ensure_target_conditional(&self, t: &Tag) -> Result<(), DataError>
+impl From<&AttributeSet> for Context
+{
+    fn from(value: &AttributeSet) -> Self
     {
-        if self.has_modifier(t)
+        let mut res = Context::new();
+        for (t, a) in value.iter()
         {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Modifier)));
+            let _ = res.set_attribute(&t, a.get_value());
         }
-        else if self.has_attribute(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Attribute)));
-        }
-        else if self.has_equation(t)
-        {
-            return Err(DataError::ConflictingExpectedType(ConflictError::new(t.clone(), DataType::Attribute, DataType::Equation)));
-        }
-        else
-        {
-            Ok(())
-        }
+        res
     }
 }

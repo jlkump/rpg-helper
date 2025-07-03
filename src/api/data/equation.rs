@@ -18,6 +18,11 @@ impl Equation
     {
         Ok(Equation { name, equation_string: equation.to_string(), ast: EvalTree::from_str(equation)? })
     }
+
+    pub fn eval(&self, ctx: &Context) -> Result<f32, DataError>
+    {
+        self.ast.eval_as_num(ctx)
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -47,7 +52,7 @@ impl EquationSet
     {
         if let Some(e) = self.equations.get(equation_name)
         {
-            e.ast.eval_as_num(ctx)
+            e.eval(ctx)
         }
         else
         {
