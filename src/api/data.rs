@@ -1,4 +1,4 @@
-use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, equation::{Equation, EquationSet}, error::{ConflictError, DataError, DataType}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}};
+use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError, DataType}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}};
 
 use serde::{Deserialize, Serialize};
 
@@ -114,6 +114,21 @@ impl Context
         res.state_tags = self.state_tags.layer(&other.state_tags);
 
         Ok(res)
+    }
+
+    /// Modifies a given dataset according to the effect.
+    /// Returns the modified dataset or an error if the modification failed.
+    pub fn apply_effect(mut self, e: &Effect) -> Result<Self, DataError>
+    {
+        match e
+        {
+            Effect::AddStateTag(tag) => self.state_tags.add_tag(tag),
+            Effect::RemoveStateTag(tag) => self.state_tags.remove_tag(tag),
+            Effect::SetAttribute(tag, nv) => { self.set_attribute(tag, *nv)?; },
+            Effect::SetEquation(tag, equation) => { self.set_equation(Equation::new(tag.clone(), &equation)?)?; },
+            Effect::SetConditional(tag, conditional) => { self.set_conditional(Conditional::new(tag.clone(), &conditional)?)?; },
+        }
+        Ok(self)
     }
 
     /// Gets the value of an attribute (including equation aliases) 

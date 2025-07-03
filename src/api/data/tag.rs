@@ -43,9 +43,9 @@ impl Tag
         }
 
         // Ensure first sub-string is not just a number
-        let first_str = if s.contains('.')
+        let first_str = if let Some(f) = s.split('.').next()
         {
-            s.split('.').next().unwrap()
+            f
         }
         else
         {
