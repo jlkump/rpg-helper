@@ -237,6 +237,15 @@ impl TagSet
         self.remove_tag_count(t, 1);
     }
 
+    /// Given a tag prefix, this method returns all
+    /// subtags which exist in this tag set (the count of the tag must be > 0)
+    /// Example:  get_subtags(ability) -> [ability.Magic Theory, ability.Magic Theory.Exp, ability.Latin, ability.Latin.Exp]
+    /// If the given tag is empty, returns all tags in the tag set.
+    pub fn get_subtags(&self, t: &Tag) -> Option<Vec<Tag>>
+    {
+        todo!()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = Tag> + '_
     {
         self.tags.keys().map(| s| Tag::from_str(s).unwrap()).into_iter()

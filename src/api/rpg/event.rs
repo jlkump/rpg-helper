@@ -18,6 +18,7 @@ pub struct EventSchema
     name: String,
     tag: Tag,
     effects: Vec<Effect>,
+    // abilities: Vec<Ability>,
     conditions: Vec<Tag>, // Addressed by name
 }
 
@@ -29,6 +30,7 @@ pub struct Event
     pub schema_ref: Tag,
     pub date: Date,
     pub effects: Vec<Effect>,
+    // abilities: Vec<Ability>,
     pub conditions: Vec<Tag>,
 }
 
