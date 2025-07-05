@@ -619,6 +619,22 @@ mod unit_tests
         }
     }
 
+    /// Tests that a number is not allowed as a tag
+    /// Expected to fail
+    #[test]
+    fn parse_test_20()
+    {
+        match Tag::find_all_parse_errors("10")
+        {
+            Ok(_) => (),
+            Err(e) => 
+            {
+                assert_eq!(e.len(), 1);
+                assert_eq!(e[0].error_type, ParseErrorType::Tag(TagParseError::FirstTagNumeric));
+            },
+        }
+    }
+
     /// Tests adding a simple tag to a tag set.
     /// Expected to succeed with a single count of the simple tag.
     #[test]
