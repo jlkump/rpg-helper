@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct Modifier
 {
     pub name: Tag,
-    pub target: Tag,
+    pub target: Tag,    // Target can be changed for a modifier (example, Flexible Formuliac Magic can increase or decrease specific formuliac spell's levels)
     pub condition: Tag,
     pub change: ModifierChange,
 }

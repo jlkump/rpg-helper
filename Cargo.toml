@@ -10,10 +10,10 @@ edition = "2021"
 actix-web = "4" # Backend for Webserver
 actix-cors = "0.7"
 actix-files = "0.6"
-actix-multipart = "0.6"
+actix-multipart = "0.7.2"
 anyhow = "1"
-bcrypt = "0.15" # A hashing algo for password salting
-bincode = "1.3"
+bcrypt = "0.17.0" # A hashing algo for password salting
+bincode = "2.0.1"
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 colored = "3" # Used to color terminal
@@ -24,20 +24,20 @@ gloo = { version = "0.11", features = [] }
 jsonwebtoken = "9.3.0"
 log = "0.4"
 reqwasm = "0.5"
-reqwest = { version = "0.12", features = ["multipart", "json"] }
-rustyline = "12.0.0"  # For better REPL experience
+reqwest = { version = "0.12.22", features = ["multipart", "json"] }
+rustyline = "16.0.0"  # For better REPL experience
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 simplelog = "^0.12.0"
 stylist = { version = "0.13", features = ["yew", "yew_use_style", "parser", "macros"] }
 sled = { version = "0.34.7" } # Embedded database, so we don't have to deal with cloud servers / setting up SQL
-tokio = "1.34"
+tokio = "1.46.1"
 toml = "0.8"
 uuid = { version="1.8.0", features=["serde","v4"] }
 once_cell = "1.19.0"
-validator = { version="0.18.1", features = ["derive"] }
+validator = { version="0.20.0", features = ["derive"] }
 yew = { version = "0.21.0",  features = ["csr"] } # Frontend Webdev
-yewdux = "0.10.0"
+yewdux = "0.11.0"
 yew-router = "0.18"
 yew_icons = { version = "0.8.0", features = ["LucideMenu", "FeatherChevronDown", "FontAwesomeSolidXmark", "LucideLayoutDashboard", "BootstrapGear", "LucideHammer", "LucideMountainSnow", "BootstrapJournalText", "BootstrapMotherboard", "BootstrapPalette", "OcticonsPersonAdd16", "BootstrapBoxArrowInLeft", "BootstrapReception0", "BootstrapReception1", "BootstrapReception2", "BootstrapReception3", "BootstrapReception4", "BootstrapSearch", "FeatherFeather", "FeatherServer", "FeatherCornerDownRight", "BootstrapPersonPlus", "BootstrapCheckAll", "BootstrapPersonDashFill", "HeroiconsOutlinePencilSquare", "OcticonsInfo24", "LucideCircleSlashed", "BootstrapSortAlphaDown", "BootstrapSortAlphaUp", "LucideClock4", "FeatherPlusSquare", "FeatherFolder", "FeatherFile", "FeatherFilePlus", "FeatherFolderPlus", "FeatherTrash2", "FeatherEdit3"] }
 wasm-bindgen = "0.2"

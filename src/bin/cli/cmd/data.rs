@@ -5,6 +5,8 @@ use rpg_helper::api::data::context::Context;
 
 use crate::cmd::{default, CmdContext};
 
+
+
 static mut DATA : LazyLock<HashMap<String, Context>> = LazyLock::new(|| HashMap::new());
 static mut OPEN : Option<&Context> = None;
 
