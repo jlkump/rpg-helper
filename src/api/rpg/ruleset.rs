@@ -1,3 +1,5 @@
+use crate::api::data::tag::Tag;
+
 /// Contains:
 ///     - The templates for character creation
 ///     - The templates for equations
@@ -8,4 +10,10 @@
 pub struct Ruleset
 {
 
+}
+
+pub struct EffectSpec
+{
+    name: Tag,
+    
 }

@@ -1,4 +1,5 @@
 pub mod character;
+pub mod creation;
 pub mod event;
 pub mod game;
 pub mod inventory;
