@@ -1,0 +1,49 @@
+{
+    "display-name": "Simple Ruleset",
+    "data-spec": 
+    {
+        "ordering": "lhs.year > rhs.year",
+        "required": ["year"]
+    },
+    "character-mods":
+    {
+        "modification.simple":
+        {
+            "type": "Effect",
+            "spec":
+            {
+                "add-state-tag": "state.simple mod"
+            }
+        }
+    },
+    "character-templates":
+    {
+        "template.character.simple":
+        {
+            "name": "Simple Character Template",
+            "defaults":
+            {
+                "text_data": [{"name": "Simple Character"}],
+                "data":
+                {
+                    "state_tags": ["debug.test"],
+                    "attributes": [{"name": "attribute.characteristic.intelligence", "value": "0.0"}],
+                    "modifiers": [{"name": "modifier.increase intelligence", "target": "attribute.characteristic.intelligence", "condition": "condition.test", "change": "3.0"}],
+                    "conditionals": [{"name": "conditional.test", "conditional": "true"}],
+                    "equations": []
+                }
+            }    
+        }
+    },
+    "creation-schemas":
+    {
+        "simple": {}
+    },
+    "creation-stages":
+    {
+        "creation.stage.name":
+        {
+
+        }
+    }
+}

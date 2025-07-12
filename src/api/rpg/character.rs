@@ -22,7 +22,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{context::Context, tag::Tag}, rpg::event::Event};
+use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::{ability::Ability, event::Event}};
 
 // First todo:
 //      1. Parse json in order to import character data
@@ -60,4 +60,29 @@ impl Character
     {
         todo!()
     }
+    
+    pub fn layer_ctx(self, ctx: Context) -> Self
+    {
+        todo!()
+    } 
+}
+
+// Meta-data on the modification of a character
+// Used by events and character creation.
+// Wraps an effect, ability, or item change
+pub enum CharacterModification
+{
+    Effect(Effect),
+    Ability(AbilityModification),
+    Item(ItemModification)
+}
+
+pub struct AbilityModification
+{
+
+}
+
+pub struct ItemModification
+{
+
 }

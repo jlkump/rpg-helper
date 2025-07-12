@@ -622,7 +622,7 @@ mod unit_tests
     /// Tests that a number is not allowed as a tag
     /// Expected to fail
     #[test]
-    fn parse_test_20()
+    fn parse_test_21()
     {
         match Tag::find_all_parse_errors("10")
         {

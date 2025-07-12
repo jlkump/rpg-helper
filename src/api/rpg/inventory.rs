@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +25,8 @@ use crate::api::data::tag::Tag;
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Inventory
 {
-    items: Vec<Item>,
+    items: Vec<Item>,          // Stored items
+    slots: HashMap<Tag, Item>, // Equiped items
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{evaltree::{tokenize::Token, EvalError}, tag::Tag, DataType};
+use crate::api::{data::{evaltree::{tokenize::Token, EvalError}, tag::Tag, DataType}, ApiError};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum DataError
@@ -44,6 +44,14 @@ impl DataError
     pub fn value_dne(t: Tag) -> DataError
     {
         DataError::DoesNotExist(DoesNotExistError::Value(t))
+    }
+}
+
+impl From<DataError> for ApiError
+{
+    fn from(value: DataError) -> Self
+    {
+        ApiError::DataErr(value)
     }
 }
 

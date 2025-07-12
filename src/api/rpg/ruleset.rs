@@ -1,4 +1,6 @@
-use crate::api::rpg::{event::EventSet, location::Location, timeline::DateSpec};
+use std::collections::HashMap;
+
+use crate::api::{data::tag::Tag, rpg::{character::CharacterModification, creation::CharacterTemplate, event::EventSet, location::Location, timeline::DateSpec}};
 
 /// Contains:
 ///     - The templates for character creation
@@ -18,6 +20,34 @@ use crate::api::rpg::{event::EventSet, location::Location, timeline::DateSpec};
 pub struct Ruleset
 {
     date_spec: DateSpec,
-    events: EventSet,
-    locations: Location,
+    character_modifications: HashMap<Tag, CharacterModification>,
+    character_templates: HashMap<Tag, CharacterTemplate>,
+}
+
+impl Ruleset
+{
+    pub fn new() -> RulesetBuilder
+    {
+        todo!()
+    }
+
+    pub fn from_existing(ruleset: &Ruleset) -> RulesetBuilder
+    {
+        todo!()
+    }
+}
+
+pub struct RulesetBuilder
+{
+    date_spec: Option<DateSpec>,
+    character_modifications: HashMap<Tag, CharacterModification>,
+    character_templates: HashMap<Tag, CharacterTemplate>,
+}
+
+impl RulesetBuilder
+{
+    pub fn build(self) -> Ruleset
+    {
+        todo!()
+    }
 }

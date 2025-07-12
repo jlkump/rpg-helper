@@ -9,3 +9,7 @@
 /// - Context (to layer atop the character's context)
 /// - Input actions
 /// - Maybe? Helper text targets
+pub struct Ability
+{
+    
+}

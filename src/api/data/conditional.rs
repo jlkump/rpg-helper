@@ -18,6 +18,11 @@ impl Conditional
     {
         Ok(Conditional { name, equation_string: equation.to_string(), ast: EvalTree::from_str(equation)? })
     }
+
+    pub fn get_conditional_as_string(&self) -> String
+    {
+        self.equation_string.clone()
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
