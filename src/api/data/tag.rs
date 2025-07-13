@@ -251,6 +251,11 @@ impl TagSet
         self.tags.keys().map(| s| Tag::from_str(s).unwrap()).into_iter()
     }
 
+    pub fn iter_primary_tags(&self) -> impl Iterator<Item = (&Tag, &i32)> + '_
+    {
+        self.primary_tags.iter()
+    }
+
     /// Current implementation is to just add the tag counts to the resulting
     /// final tag set.
     pub fn layer(&self, other: &Self) -> Self

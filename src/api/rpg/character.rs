@@ -33,7 +33,6 @@ use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::{abili
 //              "id": "",
 //              "version": "1.0.0"
 //          },
-//          "text_data": [{"name", "Test Character"}, {"name.alias.0": "First Character"}],
 //          "data":
 //          {
 //              "state_tags": ["tag", "tag.two"],
@@ -41,6 +40,7 @@ use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::{abili
 //              "modifiers": [{"name": "modifier.name", "target": "attribute.name", "condition": "condition.name", "change": "3.0"}],
 //              "equations": [{"name": "equation.name", "equation": "attribute.name + 3.0"}],
 //              "conditionals": [{"name": "conditional.name", "conditional": "equation.name == 3.0"}],
+//              "text_data": [{"name", "Test Character"}, {"name.alias.0": "First Character"}],
 //          },
 //          "timeline": [{"event_name": "event_temp_name", "date": ...}],
 //          "inventory": [{"item_name": "cool item", "item_tag": "cool_item_tag", "item_spec": 

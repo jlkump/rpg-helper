@@ -23,6 +23,11 @@ impl Equation
     {
         self.ast.eval_as_num(ctx)
     }
+
+    pub fn get_equation_string(&self) -> String
+    {
+        self.equation_string.clone()
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -78,5 +83,17 @@ impl EquationSet
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Tag, Equation>
     {
         self.equations.iter()
+    }
+}
+
+impl IntoIterator for EquationSet
+{
+    type Item = (Tag, Equation);
+
+    type IntoIter = std::collections::hash_map::IntoIter<Tag, Equation>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.equations.into_iter()
     }
 }

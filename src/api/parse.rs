@@ -1,4 +1,6 @@
-use crate::api::{data, parse::json::JsonParseError, ApiError};
+use serde::{Deserialize, Serialize};
+
+use crate::api::{parse::json::JsonParseError, ApiError};
 
 /// This module handles parsing all data from a given input file type into the associated
 /// type in rust and vice versa.
@@ -6,9 +8,9 @@ use crate::api::{data, parse::json::JsonParseError, ApiError};
 /// For now, the only supported file-type will be json, but future file types will be placed in the parse module.
 pub mod json;
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum ParseError
 {
-    // DataParseErr(data::error::ParseError),
     JsonErr(JsonParseError),
 }
 

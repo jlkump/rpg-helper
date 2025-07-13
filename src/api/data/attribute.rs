@@ -13,7 +13,7 @@ pub struct Attribute
 
 impl Attribute
 {
-    fn new(name: Tag, value: f32) -> Attribute
+    pub fn new(name: Tag, value: f32) -> Attribute
     {
         Attribute { name, value }
     }

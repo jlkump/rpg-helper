@@ -19,7 +19,7 @@ impl Conditional
         Ok(Conditional { name, equation_string: equation.to_string(), ast: EvalTree::from_str(equation)? })
     }
 
-    pub fn get_conditional_as_string(&self) -> String
+    pub fn get_equation_string(&self) -> String
     {
         self.equation_string.clone()
     }
@@ -78,5 +78,17 @@ impl ConditionalSet
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Tag, Conditional>
     {
         self.conditionals.iter()
+    }
+}
+
+impl IntoIterator for ConditionalSet
+{
+    type Item = (Tag, Conditional);
+
+    type IntoIter = std::collections::hash_map::IntoIter<Tag, Conditional>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.conditionals.into_iter()
     }
 }

@@ -411,6 +411,53 @@ impl Context
             Ok(())
         }
     }
+
+    pub(crate) fn as_raw(&self) -> RawContextData
+    {
+        RawContextData
+        {
+            general_tags: self.general_tags.clone(),
+            state_tags: self.state_tags.clone(),
+            atrs: self.atrs.clone(),
+            modifiers: self.modifiers.clone(),
+            equations: self.equations.clone(),
+            conditionals: self.conditionals.clone(),
+            text_data: self.text_data.clone(),
+        }
+    }
+
+    pub(crate) fn from_raw(raw: RawContextData) -> Result<Self, DataError>
+    {
+        let mut result = Self::new();
+        result.state_tags = raw.state_tags;
+
+        for (_, a) in raw.atrs
+        {
+            result.set_attribute(a.get_name(), a.get_value())?;
+        }
+
+        for (_, m) in raw.modifiers
+        {
+            result.set_modifier(m)?;
+        }
+
+        for (_, e) in raw.equations
+        {
+            result.set_equation(e)?;
+        }
+
+        for (_, c) in raw.conditionals
+        {
+            result.set_conditional(c)?;
+        }
+
+        for (t, text) in raw.text_data
+        {
+            result.set_text_data(&t, text)?;
+        }
+
+        Ok(result)
+    }
 }
 
 impl From<&AttributeSet> for Context
@@ -424,4 +471,16 @@ impl From<&AttributeSet> for Context
         }
         res
     }
+}
+
+/// Contains simply the raw data of a context. Useful for parsing and debug, should not be used for any major logic
+pub struct RawContextData
+{
+    pub general_tags: TagSet,
+    pub state_tags: TagSet,
+    pub atrs: AttributeSet,
+    pub modifiers: ModifierSet,
+    pub equations: EquationSet,
+    pub conditionals: ConditionalSet,
+    pub text_data: HashMap<Tag, String>,
 }

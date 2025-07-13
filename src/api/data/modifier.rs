@@ -14,6 +14,14 @@ pub struct Modifier
     pub change: ModifierChange,
 }
 
+impl Modifier
+{
+    pub fn new(name: Tag, target: Tag, condition: Tag, change: ModifierChange) -> Modifier
+    {
+        Modifier { name, target, condition, change }
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum ModifierChange
 {
@@ -119,5 +127,17 @@ impl ModifierSet
     pub fn iter(&self) -> std::collections::hash_map::Iter<'_, Tag, Modifier>
     {
         self.modifiers.iter()
+    }
+}
+
+impl IntoIterator for ModifierSet
+{
+    type Item = (Tag, Modifier);
+
+    type IntoIter = std::collections::hash_map::IntoIter<Tag, Modifier>;
+
+    fn into_iter(self) -> Self::IntoIter
+    {
+        self.modifiers.into_iter()
     }
 }
