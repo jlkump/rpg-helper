@@ -76,6 +76,34 @@ impl AttributeSet
     {
         self.attributes.iter()
     }
+
+    // Modifies this attribute set such that all attributes are now
+    // prefixed with an input tag. For example, consider the attribute set:
+    //         date.year:  1240.0
+    //         date.month: 5.0
+    //         date.day:   15.0
+    // Which is modified with prefix tag "lhs":
+    //         lhs.date.year:      1240.0
+    //         lhs.date.month:     5.0
+    //         lhs.date.day:       15.0
+    // This is useful for comparision of dates, items, etc. As a context can be
+    // made combining both values for the purposes of evaluation.
+    pub fn add_prefix(mut self, prefix: &Tag) -> Self
+    {
+        let mut new_atr = self.attributes.clone();
+        for (_, a) in self.attributes.iter()
+        {
+            let mut a = a.clone();
+            let mut new_tag = prefix.to_string();
+            new_tag.push('.');
+            new_tag.push_str(a.name.to_str());
+            let new_tag = Tag::from_str(&new_tag).unwrap(); // Based on current tag logic, this can't fail if the prefix tag is valid.
+            a.name = new_tag.clone();
+            new_atr.insert(new_tag, a);
+        }
+        self.attributes = new_atr;
+        self
+    }
 }
 
 impl IntoIterator for AttributeSet

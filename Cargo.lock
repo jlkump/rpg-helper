@@ -2814,6 +2814,7 @@ dependencies = [
  "jsonwebtoken",
  "log",
  "once_cell",
+ "rand 0.9.1",
  "reqwasm",
  "reqwest",
  "rustyline",

@@ -14,6 +14,12 @@ pub struct Tag
 
 impl Tag
 {
+    /// Alias for from_str(s)
+    pub fn new(s: &str) -> Result<Tag, ParseError>
+    {
+        Self::from_str(s)
+    }
+
     /// Parse a string into the according tag.
     /// 
     /// Ex:
@@ -242,6 +248,16 @@ impl TagSet
     /// Example:  get_subtags(ability) -> [ability.Magic Theory, ability.Magic Theory.Exp, ability.Latin, ability.Latin.Exp]
     /// If the given tag is empty, returns all tags in the tag set.
     pub fn get_subtags(&self, t: &Tag) -> Option<Vec<Tag>>
+    {
+        todo!()
+    }
+
+    /// Given a tag prefix, this method returns all
+    /// immediate subtags which exist in this tag set (the count of the tag must be > 0)
+    /// Example:  get_subtags(ability) -> [ability.Magic Theory, ability.Latin]
+    ///           but does not return [ability.Magic Theory.Exp]
+    /// If the given tag is empty, returns all first subtags in the set
+    pub fn get_immediate_subtags(&self, t: &Tag) -> Option<Vec<Tag>>
     {
         todo!()
     }

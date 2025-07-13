@@ -2,7 +2,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{effect::Effect, tag::Tag}, rpg::timeline::Date, };
+use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::{character::CharacterModification, timeline::Date}, };
 
 /// This is what is defined in a ruleset. It represents the effects
 /// performed on a character's data.
@@ -23,15 +23,18 @@ pub struct EventSchema
 }
 
 /// This is an instance of an Event using specifications from the EventSchema.
-/// It holds the date it took place
+/// It holds the date it took place and all the modifications performed.
+/// NOTE: If event schemas are changed, the associated Event will NOT be changed.
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Event
 {
-    pub schema_ref: Tag,
+    pub schema: Tag,        // Reference to the type that made this event
+    pub id: Tag,            // The identifier of this event in particular
     pub date: Date,
-    pub effects: Vec<Effect>,
-    // abilities: Vec<Ability>,
-    pub conditions: Vec<Tag>,
+    pub effects: Vec<CharacterModification>,
+    pub ctx: Context,           // This is the additional ctx which was active during
+                                // the creation of this event. It should be fairly small, as it
+                                // represents values such as the calculation of event values
 }
 
 impl PartialOrd for Event

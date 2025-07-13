@@ -123,7 +123,7 @@ impl Context
 
     /// Modifies a given dataset according to the effect.
     /// Returns the modified dataset or an error if the modification failed.
-    pub fn apply_effect(mut self, e: &Effect) -> Result<Self, DataError>
+    pub fn apply_effect(&mut self, e: &Effect) -> Result<(), DataError>
     {
         match e
         {
@@ -134,8 +134,14 @@ impl Context
             Effect::SetConditional(conditional) => { self.set_conditional(conditional.clone())?; },
             Effect::SetModifier(modifier) => { self.set_modifier(modifier.clone())?; },
             Effect::SetTextData(tag, text) => { self.set_text_data(tag, text.clone())?; }
+            Effect::SetAttributeFromValue(tag, val) => { 
+                if let Some(val) = self.get_value(val)?
+                {
+                    self.set_attribute(tag, val)?; 
+                }
+            },
         }
-        Ok(self)
+        Ok(())
     }
 
     /// Gets the value of an attribute (including equation aliases) 

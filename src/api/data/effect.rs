@@ -12,6 +12,7 @@ pub enum Effect
     AddStateTag(Tag),
     RemoveStateTag(Tag),
     SetAttribute(Tag, f32),
+    SetAttributeFromValue(Tag, Tag),    // Only sets the value if it exists
     SetEquation(Equation),
     SetConditional(Conditional),
     SetModifier(Modifier),

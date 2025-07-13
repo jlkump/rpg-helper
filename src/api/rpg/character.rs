@@ -22,7 +22,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::{ability::Ability, event::Event}};
+use crate::api::{data::{context::Context, effect::Effect, error::DataError, tag::Tag}, rpg::{ability::Ability, event::Event, timeline::{Date, Timeline}}};
 
 // First todo:
 //      1. Parse json in order to import character data
@@ -51,25 +51,119 @@ use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::{abili
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Character
 {
-    data: Context,
+    data: CharacterData,    // The character's base starting data
+    timeline: Timeline,     // All the changes applied to character-creation data
+    current_date: Date,
+    context_data: Context,  // Additional context data applied not through the timeline (ruleset data)
+
+    // Whenever we change the current date, the final data of the character changes
+    // This is the data we actually read for the purposes of gameplay.
+    cached_final_data: CharacterData,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+struct CharacterData
+{
+    ctx: Context,
+    // abilities: Vec<Ability>,
+    // inventory: Inventory,
 }
 
 impl Character
 {
-    pub fn apply_event(self, event: &Event) -> Self
+    /// Creates a copy of this character
+    /// and applies all values of the events in the timeline
+    /// up to the given date. For this to work properly, data
+    pub fn set_date(&mut self, date: Date) -> Result<(), DataError>
+    {
+        self.current_date = date;
+        self.update_final_data()?;
+        Ok(())
+    }
+
+    pub fn add_event(&mut self, event: Event) -> Result<(), DataError>
+    {
+        self.timeline.add_event(event);
+        self.update_final_data()?;
+        Ok(())
+    }
+    
+    /// Used to layer additional data, such as equations
+    /// from a ruleset
+    pub fn layer_ctx(mut self, ctx: &Context) -> Result<Self, DataError>
+    {
+        self.context_data = self.context_data.layer_context(&ctx)?;
+        self.update_final_data()?;
+        Ok(self)
+    }
+
+    /// Given a prefix tag, gets all immediate sub-tag values with that prefix
+    /// For example, given the prefix "value.ability",
+    /// retrives the value "value.ability.Magic Theory" but not "value.ability.Magic Theory.Exp"
+    /// This is useful for display when we know we want to display all values of a given prefix type
+    /// such as abilities or characteristics.
+    pub fn get_values_of_prefix(&self, prefix: &Tag) -> Result<Vec<(Tag, f32)>, DataError>
     {
         todo!()
     }
-    
-    pub fn layer_ctx(self, ctx: Context) -> Self
+
+    fn update_final_data(&mut self) -> Result<(), DataError>
     {
-        todo!()
-    } 
+        // Change the character's data based on the current year and all timeline data
+        let mut final_data = self.data.clone();
+        final_data.ctx = self.context_data.layer_context(&final_data.ctx)?;
+
+        for e in self.timeline.iter()
+        {
+            if e.date <= self.current_date
+            {
+                final_data.apply_event(e)?;
+            }
+            else
+            {
+                // We can end early, as we know the rest of the list will only be greater
+                break;
+            }
+        }
+
+        // Save resultant cached_character
+        self.cached_final_data = final_data;
+        Ok(())
+    }
+}
+
+impl CharacterData
+{
+    /// Actually apply the changes of an event to
+    /// the data of this character.
+    fn apply_event(&mut self, event: &Event) -> Result<(), DataError>
+    {
+        for eff in event.effects.iter()
+        {
+            match &eff
+            {
+                CharacterModification::Effect(effect) =>
+                {
+                    self.ctx.apply_effect(effect)?;
+                },
+                CharacterModification::Ability(ability_modification) =>
+                {
+                    todo!()
+                },
+                CharacterModification::Item(item_modification) =>
+                {
+                    todo!()
+                },
+            }
+        }
+        Ok(())
+    }
 }
 
 // Meta-data on the modification of a character
 // Used by events and character creation.
 // Wraps an effect, ability, or item change
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum CharacterModification
 {
     Effect(Effect),
@@ -77,11 +171,13 @@ pub enum CharacterModification
     Item(ItemModification)
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct AbilityModification
 {
 
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct ItemModification
 {
 
