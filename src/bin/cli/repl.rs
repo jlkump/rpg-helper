@@ -1,6 +1,6 @@
 use rustyline::{error::ReadlineError, DefaultEditor};
 
-use crate::{cmd::{data, default, CmdContext}, Cli};
+use crate::{cmd::{data::{self, CtxData}, default, CmdContext}, Cli};
 
 use colored::Colorize;
 
@@ -25,11 +25,7 @@ pub fn start_repl(cli: Cli) -> std::io::Result<()>
 
     loop
     {
-        let prompt = match &cmd_context
-        {
-            CmdContext::Default => "[Default] >> ",
-            CmdContext::Data => "[Data] >> ",
-        };
+        let prompt = cmd_context.to_prompt();
 
         let readline = rl.readline(&prompt);
         match readline 
@@ -49,7 +45,7 @@ pub fn start_repl(cli: Cli) -> std::io::Result<()>
                 let res = match cmd_context
                 {
                     CmdContext::Default => default::execute_command(line.as_str(), &mut cmd_context),
-                    CmdContext::Data => data::execute_command(line.as_str(), &mut cmd_context),
+                    CmdContext::Data(_) => data::execute_command(line.as_str(), &mut cmd_context),
                 };
 
                 match res
@@ -60,13 +56,13 @@ pub fn start_repl(cli: Cli) -> std::io::Result<()>
             },
             Err(ReadlineError::Interrupted) => 
             {
-                info!("Signal Interrupt (CTRL-C)");
+                warn!("Signal Interrupt (CTRL-C)");
                 println!("CTRL-C");
                 break;
             },
             Err(ReadlineError::Eof) => 
             {
-                info!("Signal EOF (CTRL-D)");
+                warn!("Signal EOF (CTRL-D)");
                 println!("CTRL-D");
                 break;
             },

@@ -1,6 +1,6 @@
 use colored::{ColoredString, Colorize};
 
-use crate::cmd::CmdContext;
+use crate::cmd::{data::CtxData, CmdContext};
 
 pub fn execute_command(s: &str, cmd_context: &mut CmdContext) -> Result<ColoredString, ColoredString> 
 {
@@ -18,7 +18,7 @@ pub fn execute_command(s: &str, cmd_context: &mut CmdContext) -> Result<ColoredS
         "mode" => mode_change(parts, cmd_context),
         _ => 
         {
-            info!("[Default] Unknown Command: \"{}\"", parts[0]);
+            warn!("[Default] Unknown Command: \"{}\"", parts[0]);
             Err(format!("Unknown command: {}", parts[0]).red())
         },
     }
@@ -32,7 +32,6 @@ Available commands:
     help                                           - Display this help message
     mode [default|data]                            - Create a container (ruleset, setting, etc.) 
                                                      or store (typestore, valuestore, etc.) in memory to edit
-    open []                                        - TODO
     "#.cyan())
 }
 
@@ -40,7 +39,7 @@ pub fn mode_change(parts: Vec<&str>, cmd_context: &mut CmdContext) -> Result<Col
 {
     if parts.len() < 1
     {
-        info!("[Default] Attempt to use \"mode\" command, missing target for command");
+        warn!("[{}] Attempt to use \"mode\" command, missing target for command", cmd_context);
         return Err("Command \"mode\" is missing a target.".red());
     }
 
@@ -48,17 +47,19 @@ pub fn mode_change(parts: Vec<&str>, cmd_context: &mut CmdContext) -> Result<Col
     {
         "default" =>
         {
+            info!("[{}] Command used: \"mode default\"", cmd_context);
             *cmd_context = CmdContext::Default;
             Ok("Entered default mode".cyan())
         },
         "data" =>
         {
-            *cmd_context = CmdContext::Data;
+            info!("[{}] Command used: \"mode data\"", cmd_context);
+            *cmd_context = CmdContext::Data(CtxData::new());
             Ok("Entered data mode".cyan())
         },
         _ =>
         {
-            info!("[Default] Attempt to use \"mode\" command, invalid target \"{}\" for command", parts[1]);
+            warn!("[{}] Attempt to use \"mode\" command, invalid target \"{}\" for command", cmd_context, parts[1]);
             return Err(format!("mode target \"{}\" is unknown", parts[1]).red());
         }
     }
