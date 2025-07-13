@@ -1,17 +1,80 @@
-use crate::api::{data::attribute::{Attribute, AttributeSet}, parse::json::{JsonParseError, ParseJson}};
+use crate::api::{data::{attribute::{Attribute, AttributeSet}, tag::Tag}, parse::json::{JsonParseError, ParseJson}};
 
-use serde_json::Value;
+use serde_json::{Map, Number, Value};
 
 impl ParseJson for Attribute
 {
     fn from_json(json: Value) -> Result<Self, crate::api::ApiError> where Self: Sized
     {
-        Ok(serde_json::from_value(json)?)
+        match json
+        {
+            Value::Object(m) =>
+            {
+                let mut name = None;
+                let mut val = None;
+                for (s, v) in m.into_iter()
+                {
+                    match s.as_str()
+                    {
+                        "name" => 
+                        {
+                            if name.is_none()
+                            {
+                                name = Some(Tag::from_json(v)?);
+                            }
+                            else
+                            {
+                                return Err(JsonParseError::DuplicateValueFound(s).into())
+                            }
+                        },
+                        "value" =>
+                        {
+                            if val.is_none()
+                            {
+                                if let Some(v) = v.as_f64()
+                                {
+                                    val = Some(v);
+                                }
+                                else
+                                {
+                                    return Err(JsonParseError::InvalidValueFound(v).into())
+                                }
+                            }
+                            else
+                            {
+                                return Err(JsonParseError::DuplicateValueFound(s).into())
+                            }
+                        },
+                        _ => return Err(JsonParseError::InvalidValueFound(v).into())
+                    }
+                }
+                if let Some(n) = name
+                {
+                    if let Some(v) = val
+                    {
+                        Ok(Attribute::new(n, v as f32))
+                    }
+                    else
+                    {
+                        Err(JsonParseError::ExpectedValueNotFound("value".to_string()).into())
+                    }
+                }
+                else
+                {
+                    Err(JsonParseError::ExpectedValueNotFound("name".to_string()).into())
+                }
+            },
+            _  => Err(JsonParseError::InvalidRootValue(json).into()),
+        }
     }
 
     fn to_json(&self) -> Value
     {
-        serde_json::to_value(self).unwrap()
+        let mut result = Map::new();
+        result.insert("name".to_string(), Value::String(self.get_name().to_string()));
+        let n = Number::from_f64(self.get_value() as f64).unwrap();
+        result.insert("value".to_string(), Value::Number(n));
+        Value::Object(result)
     }
 }
 

@@ -290,8 +290,9 @@ fn get(parts: Vec<&str>, ctx_data: &mut CtxData, s: &str) -> Result<ColoredStrin
         warn!("[Data] Attempt to use \"{}\" command, missing target for command", parts[0]);
         return Err("Command \"get\" is missing a target.".red());
     }
-    let (_, s) = s.split_at(s.find(|c: char| c.is_whitespace()).unwrap());
-    let (_, s) = s.split_at(s.find(|c: char| c.is_whitespace()).unwrap());
+
+    // Pre-process s such that the first two words are removed and the rest remains
+    let s = s.splitn(3, ' ').nth(2).unwrap_or("");
 
     match parts[1]
     {
@@ -314,7 +315,7 @@ fn get(parts: Vec<&str>, ctx_data: &mut CtxData, s: &str) -> Result<ColoredStrin
                                 }
                                 else
                                 {
-                                    Ok(format!("Found no value").cyan())
+                                    Ok(format!("Found no value for \"{}\"", t).cyan())
                                 }
                             },
                             Err(e) =>
@@ -371,7 +372,7 @@ fn save(parts: Vec<&str>, ctx_data: &mut CtxData) -> Result<ColoredString, Color
                 return Err("Command \"save json\" is missing a file path.".red());
             }
 
-            if let Ok(file) = File::open(parts[2])
+            if let Ok(file) = File::create(parts[2])
             {
                 let writer = BufWriter::new(file);
                 if let Some(ctx) = &ctx_data.open
@@ -444,7 +445,7 @@ fn close(parts: Vec<&str>, cmd_context: &mut CmdContext) -> Result<ColoredString
                     }
                 }
             }
-            *cmd_context = CmdContext::Default;
+            *cmd_context = CmdContext::Data(CtxData::new());
             info!("[{}] Command used: \"close\"", cmd_context);
             Ok("Closed dataset".cyan())
         },

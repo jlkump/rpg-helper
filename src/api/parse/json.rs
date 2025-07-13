@@ -17,6 +17,7 @@ pub enum JsonParseError
 {
     InvalidRootValue(Value),
     ExpectedValueNotFound(String),
+    DuplicateValueFound(String),
     InvalidValueFound(Value),
     SerdeJsonErr(String),
 }
