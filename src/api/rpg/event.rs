@@ -28,8 +28,8 @@ pub struct EventSchema
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Event
 {
-    pub schema: Tag,        // Reference to the type that made this event
-    pub id: Tag,            // The identifier of this event in particular
+    pub schema: Tag,            // Reference to the type that made this event
+    pub id: Tag,                // The identifier of this event in particular
     pub date: Date,
     pub effects: Vec<CharacterModification>,
     pub ctx: Context,           // This is the additional ctx which was active during

@@ -92,7 +92,7 @@ impl Character
     /// from a ruleset
     pub fn layer_ctx(mut self, ctx: &Context) -> Result<Self, DataError>
     {
-        self.context_data = self.context_data.layer_context(&ctx)?;
+        self.context_data.layer_context(&ctx)?;
         self.update_final_data()?;
         Ok(self)
     }
@@ -111,7 +111,7 @@ impl Character
     {
         // Change the character's data based on the current year and all timeline data
         let mut final_data = self.data.clone();
-        final_data.ctx = self.context_data.layer_context(&final_data.ctx)?;
+        final_data.ctx.layer_context(&self.context_data)?;
 
         for e in self.timeline.iter()
         {
@@ -134,10 +134,10 @@ impl Character
 
 impl CharacterData
 {
-    /// Actually apply the changes of an event to
-    /// the data of this character.
+    /// Actually apply the changes of an event to the data of this character.
     fn apply_event(&mut self, event: &Event) -> Result<(), DataError>
     {
+        let h = self.ctx.layer_temporary_context(event.ctx.clone())?;
         for eff in event.effects.iter()
         {
             match &eff
@@ -156,6 +156,7 @@ impl CharacterData
                 },
             }
         }
+        self.ctx.remove_temporary_context(h)?;
         Ok(())
     }
 }

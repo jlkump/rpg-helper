@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, mem::swap};
 
 use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}, DataType};
 
@@ -27,7 +27,11 @@ pub struct Context
     equations: EquationSet,
     conditionals: ConditionalSet,
     text_data: HashMap<Tag, String>,
+
+    temporary_layers: Option<HashMap<LayerHandle, Context>>,
 }
+
+pub type LayerHandle = u32;
 
 impl Context
 {
@@ -41,6 +45,7 @@ impl Context
             equations: EquationSet::new(),
             conditionals: ConditionalSet::new(),
             text_data: HashMap::new(),
+            temporary_layers: None,
         }
     }
 
@@ -82,43 +87,77 @@ impl Context
     /// Creates a new context that combines this context plus another context.
     /// If there are conflicting keys, the values of "other" are perfered
     /// over self
-    pub fn layer_context(&self, other: &Self) -> Result<Self, DataError>
+    pub fn layer_context(&mut self, other: &Self) -> Result<(), DataError>
     {
-        let mut res = Context::new();
-
-        // Insert all lhs attributes, then override with rhs attributes
-        for (tag, atr) in self.atrs.iter().chain(other.atrs.iter())
+        // Insert all rhs values (overriding our own in the case of conflict)
+        // Attributes
+        for (tag, atr) in other.atrs.iter()
         {
-            res.set_attribute(tag, atr.get_value())?;
+            self.set_attribute(tag, atr.get_value())?;
         }
 
-        // Insert all lhs modifiers, then override with rhs modifiers
-        for  (_, modifier) in self.modifiers.iter().chain(other.modifiers.iter())
+        // Modifiers
+        for  (_, modifier) in other.modifiers.iter()
         {
-            res.set_modifier(modifier.clone())?;
+            self.set_modifier(modifier.clone())?;
         }
 
-        // Insert all lhs equations, then override with rhs equations
-        for  (_, equation) in self.equations.iter().chain(other.equations.iter())
+        // Equations
+        for  (_, equation) in other.equations.iter()
         {
-            res.set_equation(equation.clone())?;
+            self.set_equation(equation.clone())?;
         }
 
-        // Insert all lhs conditionals, then override with rhs conditionals
-        for  (_, conditional) in self.conditionals.iter().chain(other.conditionals.iter())
+        // Conditionals
+        for  (_, conditional) in other.conditionals.iter()
         {
-            res.set_conditional(conditional.clone())?;
+            self.set_conditional(conditional.clone())?;
         }
 
-        // Insert all lhs text, then override with rhs text
-        for  (tag, text) in self.text_data.iter().chain(other.text_data.iter())
+        // Text data
+        for  (tag, text) in other.text_data.iter()
         {
-            res.set_text_data(tag, text.clone())?;
+            self.set_text_data(tag, text.clone())?;
         }
 
-        res.state_tags = self.state_tags.layer(&other.state_tags);
+        // State tags
+        self.state_tags = self.state_tags.layer(&other.state_tags);
 
-        Ok(res)
+        Ok(())
+    }
+
+    /// Introduced because there are cases where we want to temporarily
+    /// layer the values of another ctx for effect application,
+    /// then remove those layers after effect application.
+    /// Temporary layers can not be modified, they only can overlay this
+    /// ctx's values. Layering temporarily should be used carefully, as it can
+    /// cause state where a value can not change if it overriden with a temporary layer.
+    /// 
+    /// Whenever possible, prefer `layer_context()` as it is less prone to logic errors
+    pub fn layer_temporary_context(&mut self, other: Self) -> Result<LayerHandle, DataError>
+    {
+        todo!()
+    }
+
+    pub fn remove_temporary_context(&mut self, handle: LayerHandle) -> Result<Self, DataError>
+    {
+        todo!()
+    }
+
+    pub fn remove_all_temporary_contexts(&mut self) -> Vec<Self>
+    {
+        let mut result = vec![];
+        let mut v = None;
+        swap(&mut v, &mut self.temporary_layers);
+        if let Some(v) = v
+        {
+            for (_, c) in v
+            {
+                result.push(c);
+            }
+            self.temporary_layers = None;
+        }
+        result
     }
 
     /// Modifies a given dataset according to the effect.
