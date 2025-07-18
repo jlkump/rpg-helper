@@ -11,7 +11,6 @@ use crate::api::data::{context::Context, effect::Effect, tag::Tag};
 /// - Maybe? Helper text targets
 pub struct Ability
 {
-    is_active: bool,
     granted_effects: Vec<Effect>,       // Effects on the character's data when this ability is granted
     active_effects: Vec<Effect>,        // Effects on the character's data when this ability is "active"
     input_actions: Vec<PlayerAction>,   // Actions that the player can perform because of this ability.
@@ -21,7 +20,7 @@ pub struct Ability
                                         // ability.spell.Unseen Arm.range.voice
                                         // ability.spell.Unseen Arm.duration.concentration
                                         // ability.spell.Unseen Arm.target.individual
-                                        // ability.spell.Unseen Arm.lvl: spell-equation
+                                        // ability.spell.Unseen Arm.lvl: spell.equation // Might be useful to copy equation from containing character to the ability's ctx
                                         // ability.spell.Unseen Arm.lvl.base: 2
                                         // ability.spell.Unseen Arm.lvl.magnitude.voice: 2
                                         // ability.spell.Unseen Arm.lvl.magnitude.concentration: 2
@@ -33,7 +32,28 @@ pub struct Ability
 
 pub struct AbilitySpec
 {
-    ability_prefix: Tag,    // All abilities are prefixed with some tag
+    ability_prefix: Tag,    // All ability's ctxs and names are prefixed with some tag, the leading first subtag being "ability"
+
+}
+
+/// An ability type constructs an ability
+/// For example, spells in Ars Magica could be considered a type of ability
+///     We then construct an ability using a template of what the abiltiy should
+///     look like. For a spell, this requires having a set of input options
+///     the player can choose from.
+/// 
+///     For example, being able to choose the option spell.magnitude.voice,
+///     which adds the attribute ability.spell.Spell Name.lvl.magnitude.voice: 2
+///     to the ability.
+/// 
+///     For this to work, a player input option needs to be able to query for
+///     tag value pairings in a context based on a given tag prefix. For example,
+///     querying for prefixes "rules.ability.spell.magnitude.range" and letting the player choose
+///     from the options given. The option chosen then adds the chosen value as an attribute (with a different tag)
+///     to the ability ctx.
+pub struct AbilityType
+{
+
 }
 
 /// Player input actions
@@ -48,6 +68,7 @@ pub struct AbilitySpec
 ///     - Perform player modification based on the inputs above
 pub struct PlayerAction
 {
+    // ToggleTag to set state of ability active?
 
 }
 
@@ -60,10 +81,5 @@ pub enum PlayerActionSpec
 pub struct PlayerRollSpec
 {
     die_roll: Tag,
-
-}
-
-pub struct TagFilter
-{
 
 }

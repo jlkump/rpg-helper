@@ -518,6 +518,23 @@ impl From<&AttributeSet> for Context
     }
 }
 
+/// Used to filter a context
+/// - Filter for values (attributes or equations returned as tag, f32 pairs)
+/// - Filter for equations
+/// - Filter for conditionals
+/// - Filter for modifiers
+/// - Filter for tags
+/// 
+/// Filter with a condition such as
+/// - Value equals
+/// - Contains tag
+/// - Immediate Prefix
+/// - Simple Prefix 
+pub struct TagFilter
+{
+
+}
+
 /// Contains simply the raw data of a context. Useful for parsing and debug, should not be used for any major logic
 pub struct RawContextData
 {
