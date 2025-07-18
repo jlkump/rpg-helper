@@ -73,11 +73,12 @@ impl ParseJson for Effect
             Effect::SetConditional(conditional) => result.insert("set-conditional".to_string(), conditional.to_json()),
             Effect::SetModifier(modifier) => result.insert("set-modifier".to_string(), modifier.to_json()),
             Effect::SetTextData(tag, text) => 
-            {
-                let mut data = Map::new();
-                data.insert(tag.to_string(), Value::String(text.clone()));
-                result.insert("set-text".to_string(), Value::Object(data))
-            },
+                    {
+                        let mut data = Map::new();
+                        data.insert(tag.to_string(), Value::String(text.clone()));
+                        result.insert("set-text".to_string(), Value::Object(data))
+                    },
+            Effect::SetAttributeFromValue(tag, tag1) => todo!(),
         };
         Value::Object(result)
     }

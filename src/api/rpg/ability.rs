@@ -26,8 +26,15 @@ pub struct Ability
                                         // ability.spell.Unseen Arm.lvl.magnitude.voice: 2
                                         // ability.spell.Unseen Arm.lvl.magnitude.concentration: 2
                                         // ability.spell.Unseen Arm.lvl.flat.always active: 3
+                                        // NOTE: for the above to work, equations need the ability to querry for all values
+                                        //       with a given prefix, then add then perform some operation on them, 
+                                        //       such as adding them all together or tallying up values that land on a side
 }
 
+pub struct AbilitySpec
+{
+    ability_prefix: Tag,    // All abilities are prefixed with some tag
+}
 
 /// Player input actions
 /// 1. Take in a &ctx, outputs a ctx that represents what the actions does.

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::character::{Character, CharacterModification}};
 
 pub struct CharacterTemplate
@@ -8,25 +10,26 @@ pub struct CharacterTemplate
     creation_schema: CreationSchema,
 }
 
-pub struct CreationSchema
-{
-    stages: Vec<CreationStage>,
-}
-
-
 pub struct CreationContext
 {
     ctx: Context,
-    character: Character,   // Default character built from template, modified in this creation context to reach final character
+    character: Character,                   // Default character built from template, modified in this creation context to reach final character
+    active_stage: Option<CreationStage>,    //
     schema: CreationSchema,
+}
+
+pub struct CreationSchema
+{
+    stages: HashMap<Tag, CreationStage>,
 }
 
 pub struct CreationStage
 {
-    ctx: Context,               // Values specific to this stage of creation (such as exp points to spend)
-    options: Vec<CreationOption>,
+    ctx: Context,                           // Values specific to this stage of creation (such as exp points to spend)
+    options: Vec<CreationOption>,           
     restrictions: Vec<CreationRestriction>, // Conditionals targeting values of the character or creation context that ensure the stage can progress forward
     warnings: Vec<CreationRestriction>,     // Warnings of unused creation values (such as having more available exp points to spend that will be lost)
+    next_stage: Tag,
 }
 
 pub struct CreationOption

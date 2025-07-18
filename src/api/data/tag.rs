@@ -93,6 +93,45 @@ impl Tag
         &self.name
     }
 
+    /// Removes the prefix of the tag up to the
+    /// matching given prefix.
+    /// 
+    /// Returns None if no match is found
+    /// Ex:
+    ///     remove_prefix(ability.spell.Name Of Spell, ability.spell)     -> Name Of Spell
+    ///     remove_prefix(ability.spell.Name Of Spell.Exp, ability.spell) -> Name Of Spell.Exp
+    pub fn remove_prefix(&self, prefix: &Tag) -> Option<Tag>
+    {
+        todo!()
+    }
+    
+    /// Prefix a tag with another prefix
+    /// Ex:
+    ///     add_prefix(Name Of Spell, ability.spell) -> ability.spell.Name Of Spell
+    pub fn add_prefix(&self, prefix: &Tag) -> Tag
+    {
+        todo!()
+    }
+
+    /// Removes all sub-tags in a tag.
+    /// Ex:
+    ///     ability.spell.Name Of Spell.Exp -> ability
+    ///     Name Of Spell.Exp               -> Name Of Spell
+    /// 
+    pub fn no_subtags(&self) -> Tag
+    {
+        todo!()
+    }
+
+    /// Returns the number of sub-tags in the tag
+    /// Ex:
+    ///     ability.spell.Name Of Spell -> 2
+    ///     ability                     -> 0
+    pub fn count_subtags(&self) -> i32
+    {
+        todo!()
+    }
+
     pub fn find_all_parse_errors(s: &str) -> Result<(), Vec<ParseError>>
     {
         let mut res = vec![];
@@ -292,6 +331,37 @@ impl Index<&str> for TagSet
     #[inline]
     fn index(&self, index: &str) -> &Self::Output {
         self.tags.get(index).unwrap_or(&0)
+    }
+}
+
+pub struct TagTemplate
+{
+    subtags: Vec<String>,
+}
+
+impl TagTemplate
+{
+    /// Given a string, constructs a TagTemplate
+    /// Expects to find at least one template value, indicated by a subtag surrounded
+    /// by "[]". Also expects each template identifier to be unique
+    /// 
+    /// Ex:
+    ///     "tag.test.[template].value"
+    pub fn from_str(s: &str) -> Result<TagTemplate, ParseError>
+    {
+        todo!()
+    }
+
+    pub fn get_required_inputs(&self) -> Vec<String>
+    {
+        todo!()
+    }
+
+    /// Inserts the mapping of templated subtags to tag values.
+    /// Expected only to fail if there is a template subtag missing a tag value.
+    pub fn into_tag(&self, template_inputs: &HashMap<String, Tag>) -> Result<Tag, ParseError>
+    {
+        todo!()
     }
 }
 
@@ -652,6 +722,32 @@ mod unit_tests
             {
                 assert_eq!(e.len(), 1);
                 assert_eq!(e[0].error_type, ParseErrorType::Tag(TagParseError::FirstTagNumeric));
+            },
+        }
+    }
+
+    #[test]
+    fn parse_test_22()
+    {
+        match Tag::from_str("First.")
+        {
+            Ok(_) => panic!("Expected error"),
+            Err(e) => 
+            {
+                assert_eq!(e.error_type, ParseErrorType::Tag(TagParseError::SubTagEmpty));
+            },
+        }
+    }
+
+    #[test]
+    fn parse_test_23()
+    {
+        match Tag::from_str("First.[Template]")
+        {
+            Ok(_) => panic!("Expected error"),
+            Err(e) => 
+            {
+                assert_eq!(e.error_type, ParseErrorType::Tag(TagParseError::InvalidCharacter));
             },
         }
     }

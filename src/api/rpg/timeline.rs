@@ -27,6 +27,19 @@ impl Timeline
     {
         self.events.iter_mut()
     }
+
+    /// Add the events of both timelines together
+    /// Returns the resultant combination of events in a new timeline
+    pub fn combine(&self, other: &Self) -> Self
+    {
+        let mut result_events = self.events.clone();
+        for o in other.events.iter()
+        {
+            result_events.push(o.clone());
+        }
+        result_events.sort_by(|l, r| l.partial_cmp(r).unwrap_or(Ordering::Equal));
+        Timeline { events: result_events }
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]

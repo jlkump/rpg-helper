@@ -35,6 +35,12 @@
             }    
         }
     },
+    "abilities":
+    [
+        {
+            "name": "ability.spell.spec"
+        }
+    ],
     "creation-schemas":
     {
         "simple": {}
