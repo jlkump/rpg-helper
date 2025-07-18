@@ -16,5 +16,4 @@ pub enum Effect
     SetEquation(Equation),
     SetConditional(Conditional),
     SetModifier(Modifier),
-    SetTextData(Tag, String),
 }

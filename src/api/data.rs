@@ -18,5 +18,4 @@ pub enum DataType
     Condition,
     Modifier,
     Equation,
-    Text,
 }

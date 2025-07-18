@@ -43,7 +43,6 @@ impl Context
             modifiers: ModifierSet::new(),
             equations: EquationSet::new(),
             conditionals: ConditionalSet::new(),
-            text_data: HashMap::new(),
             temporary_layers: None,
         }
     }
@@ -78,11 +77,6 @@ impl Context
         self.has_attribute(value_name) || self.has_equation(value_name)
     }
 
-    pub fn has_text(&self, text_name: &Tag) -> bool
-    {
-        self.text_data.contains_key(text_name)
-    }
-
     /// Creates a new context that combines this context plus another context.
     /// If there are conflicting keys, the values of "other" are perfered
     /// over self
@@ -111,12 +105,6 @@ impl Context
         for  (_, conditional) in other.conditionals.iter()
         {
             self.set_conditional(conditional.clone())?;
-        }
-
-        // Text data
-        for  (tag, text) in other.text_data.iter()
-        {
-            self.set_text_data(tag, text.clone())?;
         }
 
         // State tags
@@ -171,7 +159,6 @@ impl Context
             Effect::SetEquation(equation) => { self.set_equation(equation.clone())?; },
             Effect::SetConditional(conditional) => { self.set_conditional(conditional.clone())?; },
             Effect::SetModifier(modifier) => { self.set_modifier(modifier.clone())?; },
-            Effect::SetTextData(tag, text) => { self.set_text_data(tag, text.clone())?; }
             Effect::SetAttributeFromValue(tag, val) => { 
                 if let Some(val) = self.get_value(val)?
                 {
@@ -353,28 +340,6 @@ impl Context
         }
     }
 
-    pub fn set_text_data(&mut self, text_name: &Tag, text_data: String) -> Result<Option<String>, DataError>
-    {
-        self.ensure_target_text(text_name)?;
-        if !self.has_text(text_name)
-        {
-            self.general_tags.add_tag(text_name);
-        }
-        Ok(self.text_data.insert(text_name.clone(),text_data))
-    }
-
-    pub fn get_text_data(&self, text_name: &Tag) -> Result<Option<&String>, DataError>
-    {
-        self.ensure_target_text(text_name)?;
-        Ok(self.text_data.get(text_name))
-    }
-
-    pub fn remove_text_date(&mut self, text_name: &Tag) -> Result<Option<String>, DataError>
-    {
-        self.ensure_target_text(text_name)?;
-        Ok(self.text_data.remove(text_name))
-    }
-
     /// Checks for attributes and equations which cause cycles
     /// of evaluation. For example:
     ///     attribute { name: test_atr }
@@ -407,11 +372,6 @@ impl Context
         self.ensure_target(t, DataType::Condition)
     }
 
-    fn ensure_target_text(&self, t: &Tag) -> Result<(), DataError>
-    {
-        self.ensure_target(t, DataType::Text)
-    }
-
     fn ensure_target(&self, t: &Tag, target: DataType) -> Result<(), DataError>
     {
         let conflict = if self.has_attribute(t)
@@ -429,10 +389,6 @@ impl Context
         else if self.has_modifier(t)
         {
             Some(DataType::Modifier)
-        }
-        else if self.has_text(t)
-        {
-            Some(DataType::Text)
         }
         else
         {
@@ -466,7 +422,6 @@ impl Context
             modifiers: self.modifiers.clone(),
             equations: self.equations.clone(),
             conditionals: self.conditionals.clone(),
-            text_data: self.text_data.clone(),
         }
     }
 
@@ -493,11 +448,6 @@ impl Context
         for (_, c) in raw.conditionals
         {
             result.set_conditional(c)?;
-        }
-
-        for (t, text) in raw.text_data
-        {
-            result.set_text_data(&t, text)?;
         }
 
         Ok(result)
@@ -543,5 +493,4 @@ pub struct RawContextData
     pub modifiers: ModifierSet,
     pub equations: EquationSet,
     pub conditionals: ConditionalSet,
-    pub text_data: HashMap<Tag, String>,
 }

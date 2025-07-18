@@ -25,31 +25,6 @@ impl ParseJson for Effect
                         "set-equation" => Ok(Effect::SetEquation(Equation::from_json(effect)?)),
                         "set-conditional" => Ok(Effect::SetConditional(Conditional::from_json(effect)?)),
                         "set-modifier" => Ok(Effect::SetModifier(Modifier::from_json(effect)?)),
-                        "set-text" =>
-                        {
-                            if let Some(m) = effect.as_object()
-                            {
-                                if let Some((tag, text)) = m.iter().next()
-                                {
-                                    if let Some(text) = text.as_str()
-                                    {
-                                        Ok(Effect::SetTextData(Tag::from_str(tag).map_err(|e| Into::<DataError>::into(e))?, text.to_string()))
-                                    }
-                                    else
-                                    {
-                                        Err(JsonParseError::InvalidValueFound(text.clone()).into())
-                                    }
-                                }
-                                else
-                                {
-                                    Err(JsonParseError::ExpectedValueNotFound("text-tag".to_string()).into())
-                                }
-                            }
-                            else
-                            {
-                                Err(JsonParseError::InvalidValueFound(effect).into())
-                            }
-                        },
                         _ => Err(JsonParseError::InvalidValueFound(Value::String(effect_type)).into()),
                     }
                 }
@@ -72,12 +47,6 @@ impl ParseJson for Effect
             Effect::SetEquation(equation) => result.insert("set-equation".to_string(), equation.to_json()),
             Effect::SetConditional(conditional) => result.insert("set-conditional".to_string(), conditional.to_json()),
             Effect::SetModifier(modifier) => result.insert("set-modifier".to_string(), modifier.to_json()),
-            Effect::SetTextData(tag, text) => 
-                    {
-                        let mut data = Map::new();
-                        data.insert(tag.to_string(), Value::String(text.clone()));
-                        result.insert("set-text".to_string(), Value::Object(data))
-                    },
             Effect::SetAttributeFromValue(tag, tag1) => todo!(),
         };
         Value::Object(result)
@@ -143,14 +112,6 @@ mod unit_tests
     fn to_from_effect_6()
     {
         let e = Effect::SetModifier(Modifier { name: Tag::from_str("simple modifier.name").unwrap(), target: Tag::from_str("simple modifier.target").unwrap(), condition: Tag::from_str("simple modifier.cond").unwrap(), change: ModifierChange::BasicValue(1023.3) });
-        let json = Effect::from_json(e.to_json()).unwrap();
-        assert_eq!(e, json);
-    }
-
-    #[test]
-    fn to_from_effect_7()
-    {
-        let e = Effect::SetTextData(Tag::from_str("simple text.tag").unwrap(), "Text data test".to_string());
         let json = Effect::from_json(e.to_json()).unwrap();
         assert_eq!(e, json);
     }

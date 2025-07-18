@@ -20,7 +20,6 @@ impl ParseJson for Context
                         modifiers: ModifierSet::new(),
                         equations: EquationSet::new(),
                         conditionals: ConditionalSet::new(),
-                        text_data: HashMap::new(),
                     };
                 for (s, v) in root.into_iter()
                 {
@@ -31,28 +30,6 @@ impl ParseJson for Context
                         "modifiers" => raw_data.modifiers = ModifierSet::from_json(v)?,
                         "equations" => raw_data.equations = EquationSet::from_json(v)?,
                         "conditions" => raw_data.conditionals = ConditionalSet::from_json(v)?,
-                        "text_data" =>
-                        {
-                            raw_data.text_data = HashMap::new();
-                            if let Some(text) = v.as_object()
-                            {
-                                for (tag, text) in text
-                                {
-                                    if let Some(text) = text.as_str()
-                                    {
-                                        raw_data.text_data.insert(Tag::from_str(tag).map_err(|e| Into::<DataError>::into(e))?, text.to_string());
-                                    }
-                                    else
-                                    {
-                                        return Err(JsonParseError::InvalidValueFound(text.clone()).into())
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                return Err(JsonParseError::InvalidValueFound(v).into())
-                            }
-                        },
                         _ => return Err(JsonParseError::InvalidValueFound(v).into()),
                     }
                 }
@@ -71,12 +48,6 @@ impl ParseJson for Context
         result.insert("modifiers".to_string(), data.modifiers.to_json());
         result.insert("equations".to_string(), data.equations.to_json());
         result.insert("conditions".to_string(), data.conditionals.to_json());
-        let mut text = Map::new();
-        for (tag, t) in data.text_data.iter()
-        {
-            text.insert(tag.to_string(), Value::String(t.clone()));
-        }
-        result.insert("text_data".to_string(), Value::Object(text));
 
         Value::Object(result)
     }
