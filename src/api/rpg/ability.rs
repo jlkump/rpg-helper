@@ -1,4 +1,4 @@
-use crate::api::data::{context::Context, effect::Effect, tag::Tag};
+use crate::api::data::{context::{Context, TagFilter}, effect::Effect, tag::Tag};
 
 /// An ability is given to a character
 /// It grants modifiers, can alter attributes, equations, conditionals, and state-tags

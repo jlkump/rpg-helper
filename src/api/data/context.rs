@@ -26,7 +26,6 @@ pub struct Context
     modifiers: ModifierSet,
     equations: EquationSet,
     conditionals: ConditionalSet,
-    text_data: HashMap<Tag, String>,
 
     temporary_layers: Option<HashMap<LayerHandle, Context>>,
 }

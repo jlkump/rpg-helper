@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::api::{data::tag::Tag, rpg::{character::CharacterModification, creation::CharacterTemplate, dice::{DiceSet, DieRoll}, event::EventSet, location::Location, timeline::DateSpec}};
+use crate::api::{data::tag::Tag, rpg::{character::CharacterModification, creation::CharacterTemplate, dice::{DiceSet, DieRoll}, location::Location, timeline::DateSpec}};
 
 /// Contains:
 ///     - The templates for character creation

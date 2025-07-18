@@ -1,26 +1,9 @@
 use std::{collections::HashMap, rc::Rc};
 
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::{character::CharacterModification, timeline::Date}, };
-
-/// This is what is defined in a ruleset. It represents the effects
-/// performed on a character's data.
-/// 
-/// It holds
-///     - A list of effects to apply to the character
-///     - The conditions required to see the event schema (for it to be available to be applied)
-///     - A name for the event
-///     - A tag for identification
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct EventSchema
-{
-    name: String,
-    tag: Tag,
-    effects: Vec<Effect>,
-    // abilities: Vec<Ability>,
-    conditions: Vec<Tag>, // Addressed by name
-}
+use crate::api::{data::{context::Context, effect::Effect, error::{DataError, ParseError}, tag::Tag}, rpg::{character::CharacterModification, timeline::Date}, };
 
 /// This is an instance of an Event using specifications from the EventSchema.
 /// It holds the date it took place and all the modifications performed.
@@ -45,9 +28,66 @@ impl PartialOrd for Event
     }
 }
 
-/// This does not hold instances of events, but instead contains all EventSchemas
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct EventSet
+/// An event schema is used to create an event during active gameplay.
+/// It contains the specifications for how to make an event of
+/// a specific type.
+/// 
+/// For example, ars magica lets players teach abilities and arts to each other.
+/// For this, a player's character would be marked as a resource, with the resource's
+/// tags being prefixed with "teacher". We would then querry for the abilities and arts
+/// of the teacher with the prefix "teacher.attribute.ability" and "teacher.attribute.art".
+/// 
+/// The player would be able to choose a value as long as certain restrictions are met.
+/// Namely, having a shared language and the teacher having a higher score than the player.
+pub struct EventSchema
 {
-    specs: HashMap<Tag, EventSchema>,
+    name: Tag,
+    
+}
+
+/// The event interval is the range of time over which
+/// resources are limited. 
+/// 
+/// For example, ars magica lets players share books, but
+/// not during the same season. Thus, each season
+/// would be defined as an event interval and books as a
+/// resource would have a share limit of 1.
+pub struct EventInterval
+{
+    
+}
+
+
+/// A resource is some set of values (in a ctx)
+/// that is available as a choice during the creation of
+/// events.
+/// 
+/// They represent some shared values that are provided
+/// by a location, items, or other characters.
+/// 
+/// All resources are prefixed with
+/// "resource.resource name" when
+/// layered with another ctx.
+pub struct Resource
+{
+    ctx: Context,
+}
+
+impl Resource
+{
+    /// Return a value representing
+    /// the maximum number of times this resource can
+    /// be used in a single event interval
+    pub fn get_share_limit(&self) -> Result<i32, DataError>
+    {
+        static SHARE_LIMIT_TAG: Lazy<Tag> = Lazy::new(|| Tag::from_str("share limit").unwrap());
+        if let Ok(Some(v)) = self.ctx.get_value(&SHARE_LIMIT_TAG)
+        {
+            Ok(v as i32)
+        }
+        else
+        {
+            Err(DataError::InvalidState("Resource does not contain share limit attribute".to_string()))
+        }
+    }
 }
