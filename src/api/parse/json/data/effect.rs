@@ -1,4 +1,4 @@
-use crate::api::{data::{attribute::Attribute, conditional::Conditional, effect::Effect, equation::Equation, error::DataError, modifier::Modifier, tag::Tag}, parse::json::{JsonParseError, ParseJson}};
+use crate::api::{data::{attribute::Attribute, conditional::Conditional, effect::Effect, equation::Equation, modifier::Modifier, tag::Tag}, parse::json::{JsonParseError, ParseJson}};
 
 use serde_json::{Map, Value};
 

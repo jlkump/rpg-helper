@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use crate::api::{data::{attribute::AttributeSet, conditional::ConditionalSet, context::{Context, RawContextData}, equation::EquationSet, error::DataError, modifier::ModifierSet, tag::{Tag, TagSet}}, parse::json::{JsonParseError, ParseJson}};
+use crate::api::{data::{attribute::AttributeSet, conditional::ConditionalSet, context::{Context, RawContextData}, equation::EquationSet, modifier::ModifierSet, tag::TagSet}, parse::json::{JsonParseError, ParseJson}};
 
 use serde_json::{Map, Value};
 
@@ -56,7 +54,7 @@ impl ParseJson for Context
 #[cfg(test)]
 mod unit_tests 
 {
-    use crate::api::data::{conditional::Conditional, equation::Equation, modifier::{Modifier, ModifierChange}};
+    use crate::api::data::{conditional::Conditional, equation::Equation, modifier::{Modifier, ModifierChange}, tag::Tag};
 
     use super::*;
 

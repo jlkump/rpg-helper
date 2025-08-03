@@ -6,5 +6,6 @@ pub mod event;
 pub mod game;
 pub mod inventory;
 pub mod location;
+pub mod player;
 pub mod ruleset;
 pub mod timeline;

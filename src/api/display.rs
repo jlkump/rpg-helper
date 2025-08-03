@@ -6,3 +6,6 @@
 /// of the client, so html and css is not directly referenced here.
 /// Instead, a specification for how things should look is defind
 /// and the client decides how to display based on that specification.
+/// 
+/// This also includes things, such as the color style of tags,
+/// coloring for panels, etc.
