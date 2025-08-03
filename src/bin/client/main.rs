@@ -1,5 +1,6 @@
-fn main() -> std::io::Result<()>
+mod app;
+
+fn main()
 {
-    println!("Running Client...");
-    Ok(())
+    app::run_app();
 }

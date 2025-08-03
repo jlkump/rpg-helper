@@ -9,3 +9,4 @@
 /// 
 /// This also includes things, such as the color style of tags,
 /// coloring for panels, etc.
+pub mod panel;
