@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::character::{Character, CharacterModification}};
+use crate::api::{data::{context::Context, effect::Effect, tag::Tag}, rpg::character::Character};
 
 pub struct CharacterTemplate
 {
@@ -42,4 +42,9 @@ pub struct CreationRestriction
 {
     cond_tag: Tag,
     display_error: String, // What we display to the user if this conditional fails
+}
+
+pub struct CharacterModification
+{
+    
 }

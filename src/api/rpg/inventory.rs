@@ -32,19 +32,16 @@ pub struct Inventory
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Item
 {
-    name: String,
-    tag: Tag,
-    spec: Rc<ItemSpec>,
+    id: Tag,
+    spec: Tag,
     count: u32,
 }
 
-/// An item spec defines how an item is formatted
-///     i.e, what attributes it requires, what attributes are given, what tags are given, and the conditional.
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct ItemSpec
 {
-    name: String,
-    tag: Tag,
+    id: Tag,
+    id_prefix: Tag,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]

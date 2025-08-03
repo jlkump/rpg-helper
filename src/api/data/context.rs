@@ -1,5 +1,3 @@
-use std::{collections::HashMap, mem::swap};
-
 use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}, DataType};
 
 use serde::{Deserialize, Serialize};
@@ -26,8 +24,6 @@ pub struct Context
     modifiers: ModifierSet,
     equations: EquationSet,
     conditionals: ConditionalSet,
-
-    temporary_layers: Option<HashMap<LayerHandle, Context>>,
 }
 
 pub type LayerHandle = u32;
@@ -43,7 +39,6 @@ impl Context
             modifiers: ModifierSet::new(),
             equations: EquationSet::new(),
             conditionals: ConditionalSet::new(),
-            temporary_layers: None,
         }
     }
 
@@ -111,40 +106,6 @@ impl Context
         self.state_tags = self.state_tags.layer(&other.state_tags);
 
         Ok(())
-    }
-
-    /// Introduced because there are cases where we want to temporarily
-    /// layer the values of another ctx for effect application,
-    /// then remove those layers after effect application.
-    /// Temporary layers can not be modified, they only can overlay this
-    /// ctx's values. Layering temporarily should be used carefully, as it can
-    /// cause state where a value can not change if it overriden with a temporary layer.
-    /// 
-    /// Whenever possible, prefer `layer_context()` as it is less prone to logic errors
-    pub fn layer_temporary_context(&mut self, other: Self) -> Result<LayerHandle, DataError>
-    {
-        todo!()
-    }
-
-    pub fn remove_temporary_context(&mut self, handle: LayerHandle) -> Result<Self, DataError>
-    {
-        todo!()
-    }
-
-    pub fn remove_all_temporary_contexts(&mut self) -> Vec<Self>
-    {
-        let mut result = vec![];
-        let mut v = None;
-        swap(&mut v, &mut self.temporary_layers);
-        if let Some(v) = v
-        {
-            for (_, c) in v
-            {
-                result.push(c);
-            }
-            self.temporary_layers = None;
-        }
-        result
     }
 
     /// Modifies a given dataset according to the effect.

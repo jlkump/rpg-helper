@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::HashSet, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{attribute::AttributeSet, equation::Equation, tag::Tag}, rpg::event::Event};
+use crate::api::{data::{attribute::AttributeSet, equation::Equation, tag::Tag}, rpg::event::{Event, EventInterval}};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Timeline
@@ -26,6 +26,14 @@ impl Timeline
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut Event>
     {
         self.events.iter_mut()
+    }
+
+    /// Produces a sorted list of events which are grouped by
+    /// existing within the same interval identifier. The interval
+    /// identifier is provided.
+    pub fn split_by_interval(&self, interval: &EventInterval) -> Vec<(Tag, Vec<&Event>)>
+    {
+        todo!()
     }
 
     /// Add the events of both timelines together

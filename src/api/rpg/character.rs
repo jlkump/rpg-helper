@@ -58,7 +58,26 @@ pub struct Character
 
     // Whenever we change the current date, the final data of the character changes
     // This is the data we actually read for the purposes of gameplay.
-    cached_final_data: CharacterData,
+    // The cached data is set to None whenever the
+    // cache is invalidated.
+    cached_final_data: Option<CharacterData>,
+}
+
+/// The character state tracks the less
+/// impactful changes to the character that modify
+/// the character's ctx, but not enough to be tracked
+/// on the timeline.
+/// 
+/// For example, what items are actively equiped in a slot
+/// and what abilities are active.
+/// 
+/// This is tracked in the timeline when an event is created,
+/// thus, when the player goes to dates in the timeline,
+/// the character state is adjusted accordingly.
+struct CharacterState
+{
+    equiped_items: HashMap<Tag, Tag>,    // Map from slot to item.
+    active_abilities: Vec<Tag>,          // Abilities active
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -71,23 +90,33 @@ struct CharacterData
 
 impl Character
 {
-    /// Creates a copy of this character
-    /// and applies all values of the events in the timeline
-    /// up to the given date. For this to work properly, data
-    pub fn set_date(&mut self, date: Date) -> Result<(), DataError>
+    /// Sets the active current date for the character.
+    /// This changes the data of the character
+    /// according to the events applied to the character.
+    pub fn set_date(&mut self, date: Date)
     {
         self.current_date = date;
-        self.update_final_data()?;
-        Ok(())
+        self.cached_final_data = None;
     }
 
-    pub fn add_event(&mut self, event: Event) -> Result<(), DataError>
+    pub fn get_date(&self) -> &Date
+    {
+        &self.current_date
+    }
+
+    /// Changes the data of a character. For the event to take place,
+    /// the event's date must occur before the set current date.
+    pub fn add_event(&mut self, event: Event)
     {
         self.timeline.add_event(event);
-        self.update_final_data()?;
-        Ok(())
+        self.cached_final_data = None;
     }
     
+    pub fn get_timeline(&self) -> &Timeline
+    {
+        &self.timeline
+    }
+
     /// Used to layer additional data, such as equations
     /// from a ruleset
     pub fn layer_ctx(mut self, ctx: &Context) -> Result<Self, DataError>
@@ -127,7 +156,7 @@ impl Character
         }
 
         // Save resultant cached_character
-        self.cached_final_data = final_data;
+        self.cached_final_data = Some(final_data);
         Ok(())
     }
 }
@@ -137,49 +166,24 @@ impl CharacterData
     /// Actually apply the changes of an event to the data of this character.
     fn apply_event(&mut self, event: &Event) -> Result<(), DataError>
     {
-        let h = self.ctx.layer_temporary_context(event.ctx.clone())?;
-        for eff in event.effects.iter()
-        {
-            match &eff
-            {
-                CharacterModification::Effect(effect) =>
-                {
-                    self.ctx.apply_effect(effect)?;
-                },
-                CharacterModification::Ability(ability_modification) =>
-                {
-                    todo!()
-                },
-                CharacterModification::Item(item_modification) =>
-                {
-                    todo!()
-                },
-            }
-        }
-        self.ctx.remove_temporary_context(h)?;
+        // for eff in event.get_character_mods(&self.ctx).iter()
+        // {
+        //     match &eff
+        //     {
+        //         CharacterModification::Effect(effect) =>
+        //         {
+        //             self.ctx.apply_effect(&effect.effect)?;
+        //         },
+        //         CharacterModification::Ability(ability_modification) =>
+        //         {
+        //             todo!()
+        //         },
+        //         CharacterModification::Item(item_modification) =>
+        //         {
+        //             todo!()
+        //         },
+        //     }
+        // }
         Ok(())
     }
-}
-
-// Meta-data on the modification of a character
-// Used by events and character creation.
-// Wraps an effect, ability, or item change
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub enum CharacterModification
-{
-    Effect(Effect),
-    Ability(AbilityModification),
-    Item(ItemModification)
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct AbilityModification
-{
-
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct ItemModification
-{
-
 }
