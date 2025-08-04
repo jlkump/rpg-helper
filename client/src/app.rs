@@ -1,5 +1,8 @@
 use yew::prelude::*;
 
+pub mod gui;
+pub mod router;
+
 pub fn run_app()
 {
     yew::Renderer::<App>::new().render();
