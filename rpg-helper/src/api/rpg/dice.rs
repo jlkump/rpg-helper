@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use rand::prelude::*;
+
 use once_cell::sync::Lazy;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -93,7 +95,7 @@ impl DieRoll
 
     fn roll_recursive(&self, set: &DiceSet, num_of_rolls: u16) -> DieRollResult
     {
-        let mut rng = rand::rng();
+        let mut rng = SmallRng::seed_from_u64(1);
         let side = rng.random_range(1..=self.num_sides);
         self.evaluate_side(set, num_of_rolls, side)
     }

@@ -191,9 +191,9 @@ fn execute_attribute(s: &str, cmd_context: &mut CmdContext) -> Result<ColoredStr
                         if s == "y" || s == "yes"
                         {
                             info!("[Set - Atr] Set attribute \"{}: {}\"", t, v);
-                            data_ctx.open = match data_ctx.open.clone().unwrap().apply_effect(&Effect::SetAttribute(t.clone(), v))
+                            match data_ctx.open.unwrap().apply_effect(&Effect::SetAttribute(t.clone(), v))
                             {
-                                Ok(c) => Some(c),
+                                Ok(_) => (),
                                 Err(e) =>
                                 {
                                     error!("[Set - Atr] Could not set attribute \"{}: {}\":\n{:?}", t, v, e);

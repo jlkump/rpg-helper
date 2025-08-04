@@ -1,0 +1,15 @@
+[package]
+name = "rpg-helper-web-client"
+authors = ["Landon Kump"]
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "client"
+path = "src/main.rs"
+
+[dependencies]
+rpg-helper = { path = "../rpg-helper" }
+yew = { version = "0.21.0", features = ["csr"] }
+yewdux = "0.11.0"
+yew-router = "0.18"
