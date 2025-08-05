@@ -64,7 +64,7 @@ pub struct DateSpec
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Date
 {
-    spec: Rc<DateSpec>,
+    ordering: Equation,
     values: AttributeSet,
 }
 
@@ -86,10 +86,10 @@ impl PartialOrd for Date
 
         // Doing some cloning, but attribute sets on dates are typically very small so doesn't really matter
         let ctx = self.values.clone().add_prefix(&lhs_prefix);
-        if let Ok(date_val) = self.spec.ordering.eval(&(&ctx).into())
+        if let Ok(date_val) = self.ordering.eval(&(&ctx).into())
         { 
             let ctx = other.values.clone().add_prefix(&rhs_prefix);
-            if let Ok(other_date_val) = other.spec.ordering.eval(&(&ctx).into())
+            if let Ok(other_date_val) = other.ordering.eval(&(&ctx).into())
             {
                 if date_val < other_date_val
                 {
