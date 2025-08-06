@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::api::display::error::DisplayError;
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum Color
 {
@@ -156,6 +158,101 @@ impl Color
         }
     }
 
+    pub fn from_str(s: &str) -> Result<Color, DisplayError>
+    {
+        let s = s.trim();
+        
+        // Handle hex colors
+        if s.starts_with('#')
+        {
+            let hex_str = &s[1..];
+            
+            // Parse hex string to u32
+            let hex_value = match hex_str.len()
+            {
+                6 =>
+                {
+                    // RGB format - add full alpha
+                    u32::from_str_radix(hex_str, 16)
+                        .map(|v| (v << 8) | 0xFF)
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?
+                }
+                8 =>
+                {
+                    // RGBA format
+                    u32::from_str_radix(hex_str, 16)
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?
+                }
+                _ => return Err(DisplayError::InvalidColorFormat(s.to_string()))
+            };
+            
+            return Ok(Color::HEX(hex_value));
+        }
+        
+        // Handle function notation (rgb, rgba, hsl, hsla)
+        if let Some(paren_pos) = s.find('(')
+        {
+            let func_name = &s[..paren_pos];
+            
+            // Check for closing parenthesis
+            if !s.ends_with(')')
+            {
+                return Err(DisplayError::InvalidColorFormat(s.to_string()));
+            }
+            
+            // Extract values between parentheses
+            let values_str = &s[paren_pos + 1..s.len() - 1];
+            let values: Vec<&str> = values_str.split(',').map(|v| v.trim()).collect();
+            
+            match func_name
+            {
+                "rgb" if values.len() == 3 =>
+                {
+                    let r = values[0].parse::<u8>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    let g = values[1].parse::<u8>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    let b = values[2].parse::<u8>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    Ok(Color::RGB { r, g, b })
+                }
+                "rgba" if values.len() == 4 =>
+                {
+                    let r = values[0].parse::<u8>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    let g = values[1].parse::<u8>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    let b = values[2].parse::<u8>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    let a = values[3].parse::<f32>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    Ok(Color::RGBA { r, g, b, a })
+                }
+                "hsl" if values.len() == 3 =>
+                {
+                    let h = parse_hsl_value(values[0], false)?;
+                    let s = parse_hsl_value(values[1], true)?;
+                    let l = parse_hsl_value(values[2], true)?;
+                    Ok(Color::HSL { h, s, l })
+                }
+                "hsla" if values.len() == 4 =>
+                {
+                    let h = parse_hsl_value(values[0], false)?;
+                    let s = parse_hsl_value(values[1], true)?;
+                    let l = parse_hsl_value(values[2], true)?;
+                    let a = values[3].parse::<f32>()
+                        .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))?;
+                    Ok(Color::HSLA { h, s, l, a })
+                }
+                _ => Err(DisplayError::InvalidColorFormat(s.to_string()))
+            }
+        }
+        else
+        {
+            Err(DisplayError::InvalidColorFormat(s.to_string()))
+        }
+    }
+
     pub fn to_string(&self) -> String
     {
         match *self
@@ -170,6 +267,25 @@ impl Color
                 format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, hex & 0xFF)
             },
         }
+    }
+}
+
+// Helper function to parse HSL values (handles both percentage and decimal notation)
+fn parse_hsl_value(s: &str, is_percentage: bool) -> Result<f32, DisplayError> {
+    let s = s.trim();
+    
+    if is_percentage && s.ends_with('%') {
+        // Parse percentage
+        let value_str = &s[..s.len() - 1];
+        value_str.parse::<f32>()
+            .map(|v| v / 100.0)
+            .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))
+    } else {
+        // Parse as direct value
+        // For hue: it's in degrees (0-360)
+        // For saturation/lightness: it's 0-1 if not percentage
+        s.parse::<f32>()
+            .map_err(|_| DisplayError::InvalidColorFormat(s.to_string()))
     }
 }
 
@@ -308,5 +424,61 @@ mod unit_tests
     {
         let c = Color::rgba(255, 255, 255, 0.0);
         assert_eq!(c.into_hex().to_string(), "#ffffff00");
+    }
+
+    #[test]
+    fn parse_color_1()
+    {
+        let c = Color::from_str("rgb(124, 245, 0)").unwrap();
+        assert_eq!(c, Color::rgb(124, 245, 0));
+    }
+
+    #[test]
+    fn parse_color_2()
+    {
+        let c = Color::from_str("rgb(256, 245, 0)");
+        assert!(c.is_err());
+    }
+
+    #[test]
+    fn parse_color_3()
+    {
+        let c = Color::from_str("rgb(1.0, 0.5, 0)");
+        assert!(c.is_err());
+    }
+
+    #[test]
+    fn parse_color_4()
+    {
+        let c = Color::from_str("rgba(245, 55, 234, 0.5)").unwrap();
+        assert_eq!(c, Color::rgba(245, 55, 234, 0.5));
+    }
+
+    #[test]
+    fn parse_color_5()
+    {
+        let c = Color::from_str("hsl(56, 0.5, 0.5)").unwrap();
+        assert_eq!(c, Color::hsl(56.0, 0.5, 0.5));
+    }
+
+    #[test]
+    fn parse_color_6()
+    {
+        let c = Color::from_str("hsla(56, 0.5, 0.5, 0.6)").unwrap();
+        assert_eq!(c, Color::hsla(56.0, 0.5, 0.5, 0.6));
+    }
+
+    #[test]
+    fn parse_color_7()
+    {
+        let c = Color::from_str("#FF3455FF").unwrap();
+        assert_eq!(c, Color::hex(0xFF3455FF));
+    }
+
+    #[test]
+    fn parse_color_8()
+    {
+        let c = Color::from_str("#FF3455").unwrap();
+        assert_eq!(c, Color::hex(0xFF3455FF));
     }
 }
