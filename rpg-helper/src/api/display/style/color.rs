@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 
 use crate::api::display::error::DisplayError;
@@ -267,6 +269,14 @@ impl Color
                 format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, hex & 0xFF)
             },
         }
+    }
+}
+
+impl Display for Color
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        write!(f, "{}", self.to_string())
     }
 }
 

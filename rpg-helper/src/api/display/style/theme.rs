@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+
 use crate::api::display::style::{color::Color, font::Font};
 
 // A theme is used to color the client
@@ -9,15 +11,22 @@ use crate::api::display::style::{color::Color, font::Font};
 // Themes can be overlayed to be more specific for specific panel or text elements,
 pub struct Theme
 {
-    plain_font: Font,       // Plain body font
-    header_font: Font,      // Header font
+    pub plain_font: Font,       // Plain body font
+    pub header_font: Font,      // Header font
 
-    text: Color,            // Plain body text
-    text_accent: Color,     // Hyperlinks and icons 
-    background: Color,      
-    primary: Color,         // CTAs and buttons
-    secondary: Color,       // Less important buttons and info cards
-    accent: Color,          // Unique buttons and borders
+    // Simple color variants
+    pub text: Color,            // Plain body text
+    pub text_accent: Color,     // Hyperlinks and icons 
+    pub background: Color,      
+    pub primary: Color,         // CTAs and buttons
+    pub secondary: Color,       // Less important buttons and info cards
+    pub accent: Color,          // Unique buttons and borders
+
+    // Advanced color variants
+    pub text_minor_faint: Color,
+    pub text_medium_faint: Color,
+    pub text_major_faint: Color,
+    pub text_max_faint: Color,
 }
 
 impl Theme
@@ -27,10 +36,32 @@ impl Theme
         todo!()
     }
 
-    
+    pub fn default_light() -> &'static Theme
+    {
+        static DEFAULT_LIGHT_THEME: Lazy<Theme> = Lazy::new(||
+            Theme
+            {
+                plain_font: Font::Winky,
+                header_font: Font::Macondo,
+
+                text: Color::rgb(58, 54, 54),
+                text_accent: Color::hex(0xd39218),
+                background: Color::rgb(236, 233, 228),
+                primary: Color::rgb(111, 35, 32),
+                secondary: Color::rgb(203, 195, 179),
+                accent: Color::rgb(225, 165, 81),
+
+                text_minor_faint: Color::rgba(58, 54, 54, 0.75),
+                text_medium_faint: Color::rgba(58, 54, 54, 0.60),
+                text_major_faint: Color::rgba(58, 54, 54, 0.50),
+                text_max_faint: Color::rgba(58, 54, 54, 0.35),
+            }
+        );
+
+        &*DEFAULT_LIGHT_THEME
+    }
 }
 
 pub struct ThemeBuilder
 {
-    basic_selection: bool,      // This begins true, but is set false anytime the 
 }

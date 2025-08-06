@@ -969,7 +969,11 @@ dependencies = [
 name = "rpg-helper-web-client"
 version = "0.1.0"
 dependencies = [
+ "log",
  "rpg-helper",
+ "serde",
+ "serde_json",
+ "stylist",
  "yew",
  "yew-router",
  "yewdux",

@@ -1,26 +1,5 @@
 html, body
 {
-    /* --text-color: #3a3636;
-    --text-minor-faint: #3a3636d5;
-    --text-medium-faint: #3a3636b7;
-    --text-major-faint: #3a36367c;
-    --text-accent: #d39218;
-    --background: #ece9e4;
-    --primary: #6f2320;
-    --secondary: #cbc3b3;
-    --accent: #e1a551; */
-
-    --text: rgb(58, 54, 54);
-    --text-minor-faint: rgba(58, 54, 54, 0.75);
-    --text-medium-faint: rgba(58, 54, 54, 0.60);
-    --text-major-faint: rgba(58, 54, 54, 0.50);
-    --text-max-faint: rgba(58, 54, 54, 0.35);
-    --text-accent: #d39218;
-    --background: rgb(236, 233, 228);
-    --primary: rgb(111, 35, 32);
-    --secondary: rgb(203, 195, 179);
-    --accent: rgb(225, 165, 81);
-
     font-family: "Winky Sans", sans-serif;
     font-weight: 500;
     font-style: normal;
@@ -29,7 +8,6 @@ html, body
 
     background-color: var(--background);
     color: var(--text-color);
-
 }
 
 h1, h2, h3, h4, h5, h6
@@ -90,11 +68,6 @@ a
     border: 4px solid #6f2320;
     border-radius: 6px;
     box-shadow: 10px 10px 4px #e2ded8;
-
-    /* background-color: #e4e0d5;
-    border: 4px solid #e1dccf;
-    border-radius: 6px;
-    box-shadow: 10px 10px 4px #e2ded8; */
 }
 
 .panel.selected

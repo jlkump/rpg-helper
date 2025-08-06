@@ -1,7 +1,9 @@
 use yew::prelude::*;
+use stylist::{css, yew::Global};
 
 pub mod gui;
 pub mod router;
+pub mod store;
 
 pub fn run_app()
 {
@@ -10,23 +12,37 @@ pub fn run_app()
 
 #[function_component(App)]
 fn app() -> Html {
+    let theme = rpg_helper::api::display::style::theme::Theme::default_light();
     html!
     {
-        <div class="test-container">
-            <img src="/assets/Dice RPG Icon.svg"/>
-            <div style="display: flex; flex-direction: column;">
-                <h1>{"RPG Helper"}</h1>
-                <h2>{"RPG Helper"}</h2>
-                <h3>{"RPG Helper"}</h3>
-                <h4>{"RPG Helper"}</h4>
-                <h5>{"RPG Helper"}</h5>
-                <h6>{"RPG Helper"}</h6>
+        <>
+            <Global css={css!(
+                r#"
+                    html, body
+                    {
+                        --text: ${text},
+                        --text-accent: ${text_accent};
+                        --background: ${background};
+                        --primary: ${primary};
+                        --secondary: ${secondary};
+                        --accent: ${accent};
+
+                        --text-minor-faint: ${text_minor_faint};
+                        --text-medium-faint: ${text_medium_faint};
+                        --text-major-faint: ${text_major_faint};
+                        --text-max-faint: ${text_max_faint};
+                    }
+                "#, 
+                text=theme.text, text_accent=theme.text_accent, background=theme.background,
+                primary=theme.primary, secondary=theme.secondary, accent=theme.accent,
+                text_minor_faint=theme.text_minor_faint, text_medium_faint=theme.text_medium_faint,
+                text_major_faint=theme.text_major_faint, text_max_faint=theme.text_major_faint
+            )} />
+
+            <div class="test-container">
+                <div class="panel">
+                </div>
             </div>
-            <div class="panel">
-                <p>
-                    <a>{"Hyper "}</a>{"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."}
-                </p>
-            </div>
-        </div>
+        </>
     }
 }
