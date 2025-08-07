@@ -1,6 +1,8 @@
 use yew::prelude::*;
 use stylist::{css, yew::Global};
 
+use crate::app::router::Router;
+
 pub mod gui;
 pub mod router;
 pub mod store;
@@ -16,6 +18,7 @@ fn app() -> Html {
     html!
     {
         <>
+            <Router/>
             <Global css={css!(
                 r#"
                     html, body
