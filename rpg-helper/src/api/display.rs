@@ -7,8 +7,8 @@
 /// Instead, a specification for how things should look is defind
 /// and the client decides how to display based on that specification.
 /// 
-/// This also includes things, such as the color style of tags,
-/// coloring for panels, etc.
+/// Specifically, this api allows a user to define style settings (color theme and font)
+/// as well as layout style for character sheets / game sheets.
 pub mod error;
+pub mod layout;
 pub mod style;
-pub mod panel;
