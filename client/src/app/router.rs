@@ -1,6 +1,8 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
+use crate::app::gui::pages::editor::display::DisplayEditor;
+
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum Route
 {
@@ -12,7 +14,7 @@ fn switch(route: Route) -> Html
 {
     match route
     {
-        Route::Home => html! { <h1>{"Home Page WIP"}</h1>},
+        Route::Home => html! { <DisplayEditor/> },
     }
 }
 

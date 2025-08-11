@@ -18,7 +18,6 @@ fn app() -> Html {
     html!
     {
         <>
-            <Router/>
             <Global css={css!(
                 r#"
                     html, body
@@ -41,11 +40,7 @@ fn app() -> Html {
                 text_minor_faint=theme.text_minor_faint, text_medium_faint=theme.text_medium_faint,
                 text_major_faint=theme.text_major_faint, text_max_faint=theme.text_major_faint
             )} />
-
-            <div class="test-container">
-                <div class="panel">
-                </div>
-            </div>
+            <Router/>
         </>
     }
 }
