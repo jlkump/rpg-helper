@@ -15,15 +15,35 @@ pub struct Props
 #[styled_component(Navbar)]
 pub fn navbar(props: &Props) -> Html
 {
+    let active = use_state(|| false);
+
+    let onclick = 
+    {
+        let active = active.clone();
+        Callback::from(
+            move |_|
+            {
+                active.set(!*active);
+            }
+        )
+    };
+
     html!
     {
-        <span class={"navbar"}>
-            <h1>{"RPG Helper"}</h1>
-            <h3>{"Home"}</h3>
-            <h3>{"Dashboard"}</h3>
-            <h3>{"Settings"}</h3>
-
-            <p>{"Profile"}</p>
-        </span>
+        <nav class={"navbar"}>
+            <span class={"content-container"}>
+                <a class={"logo"}>{"RPG Helper"}</a>
+                <button class={if *active { "nav-toggle active" } else { "nav-toggle" }} {onclick}>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+                <ul class={if *active { "menu active" } else { "menu" }}>
+                    <li><a>{"Home"}</a></li>
+                    <li><a>{"Dashboard"}</a></li>
+                    <li><a>{"About"}</a></li>
+                </ul>
+            </span>
+        </nav>
     }
 }

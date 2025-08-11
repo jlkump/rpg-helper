@@ -87,7 +87,7 @@ fn switch(routes: Route) -> Html {
         Route::GameViewer => todo!(), // View active public games able to join
         Route::GameEditor { id } => todo!(),
         Route::GameHostSelect => todo!(),
-        Route::GameHost {id } => todo!(),
+        Route::GameHost { id } => todo!(),
         Route::JoinGame { id } => todo!(),
         Route::PlayGame { id } => todo!(),
     }

@@ -1,0 +1,1 @@
+// Define the border radius, border thickeness, margin, and padding for a targeted StyleId element.

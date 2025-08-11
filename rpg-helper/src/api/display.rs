@@ -10,5 +10,6 @@
 /// Specifically, this api allows a user to define style settings (color theme and font)
 /// as well as layout style for character sheets / game sheets.
 pub mod error;
+pub mod icon;
 pub mod layout;
 pub mod style;
