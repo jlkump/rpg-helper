@@ -4,3 +4,4 @@
 // is a state stored in a state provider, the root of that provider being in the
 // base page html (as changing the page will reset the focus).
 pub mod focus;
+pub mod theme;
