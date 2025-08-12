@@ -4,6 +4,7 @@ use yew::prelude::*;
 use crate::app::{context::focus::{use_focus, FocusProvider}, gui::molecules::navbar::Navbar};
 
 pub mod editor;
+pub mod general;
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props

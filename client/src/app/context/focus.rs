@@ -1,53 +1,45 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-use log::info;
 use yew::{function_component, hook, html, use_state, Children, ContextProvider, Html, Properties, UseStateHandle};
-
-pub trait Focusable
-{
-    /// Used to notify focus events
-    fn set_focus(&mut self, is_focused: bool);
-
-    /// Used for comparison between focused elements
-    fn get_id(&self) -> u32;
-}
 
 #[derive(Clone)]
 pub struct FocusContext
 {
-    inner: UseStateHandle<Option<Rc<RefCell<dyn Focusable>>>>
+    inner: UseStateHandle<Option<String>>
 }
 
 impl FocusContext
 {
-    pub fn new(inner: UseStateHandle<Option<Rc<RefCell<dyn Focusable>>>>) -> FocusContext
+    pub fn new(inner: UseStateHandle<Option<String>>) -> FocusContext
     {
         FocusContext { inner }
     }
     
-    /// Clear the current focus
     pub fn clear_focus(&self)
     {
-        info!("Focus changed");
-        if let Some(current) = (*self.inner).as_ref()
-        {
-            current.borrow_mut().set_focus(false);
-        }
+        log::info!("Cleared focus");
         self.inner.set(None);
     }
     
-    /// Focus a new element (unfocuses the previous one if any)
-    pub fn focus_element(&self, element: Rc<RefCell<dyn Focusable>>)
+    pub fn set_focus(&self, element: &str)
     {
-        // Unfocus current element if there is one
-        if let Some(current) = (*self.inner).as_ref()
+        log::info!("Focus updated to: {}", element);
+        self.inner.set(Some(element.to_string()));
+    }
+
+    pub fn toggle_focus(&self, element: &str)
+    {
+        if (*self.inner).as_ref().map(|s| s.as_str()) == Some(element)
         {
-            current.borrow_mut().set_focus(false);
+            self.clear_focus();
         }
-        
-        // Focus the new element
-        element.borrow_mut().set_focus(true);
-        self.inner.set(Some(element));
+        else
+        {
+            self.set_focus(element);
+        }
+    }
+
+    pub fn get_focus(&self) -> Option<&str>
+    {
+        (*self.inner).as_ref().map(|s| s.as_str())
     }
 }
 
@@ -60,7 +52,7 @@ impl PartialEq for FocusContext
         {
             (Some(left), Some(right)) =>
             {
-                left.borrow().get_id() == right.borrow().get_id()
+                left == right
             },
             (None, None) => true,
             _ => false,
@@ -77,7 +69,7 @@ pub struct FocusProviderProps
 #[function_component(FocusProvider)]
 pub fn focus_provider(props: &FocusProviderProps) -> Html
 {
-    let focus_state = use_state(|| None::<Rc<RefCell<dyn Focusable>>>);
+    let focus_state = use_state(|| None::<String>);
     let context = FocusContext::new(focus_state);
     
     html!
