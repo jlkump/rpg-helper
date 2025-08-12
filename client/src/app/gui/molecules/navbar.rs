@@ -5,8 +5,6 @@ use stylist::yew::styled_component;
 pub struct Props
 {
     #[prop_or_default]
-    pub children: Html,
-    #[prop_or_default]
     pub class: Classes,
     #[prop_or_default]
     pub style: Option<AttrValue>,
@@ -30,17 +28,18 @@ pub fn navbar(props: &Props) -> Html
 
     html!
     {
-        <nav class={"navbar"}>
+        <nav class={classes!("navbar", props.class.clone())} style={props.style.clone()}>
             <span class={"content-container"}>
-                <a class={"logo"}>{"RPG Helper"}</a>
+                <a><div class={"logo"}><img src="/assets/Dice RPG Icon.svg"/>{"RPG Helper"}</div></a>
                 <button class={if *active { "nav-toggle active" } else { "nav-toggle" }} {onclick}>
                     <span class="bar"></span>
                     <span class="bar"></span>
                     <span class="bar"></span>
                 </button>
                 <ul class={if *active { "menu active" } else { "menu" }}>
-                    <li><a>{"Home"}</a></li>
                     <li><a>{"Dashboard"}</a></li>
+                    <li><a>{"Rulesets"}</a></li>
+                    <li><a>{"Tools"}</a></li>
                     <li><a>{"About"}</a></li>
                 </ul>
             </span>

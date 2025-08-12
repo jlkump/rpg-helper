@@ -44,8 +44,8 @@ impl Theme
                 plain_font: Font::Winky,
                 header_font: Font::Macondo,
 
-                text: Color::rgb(58, 54, 54),
-                text_accent: Color::hex(0xd39218),
+                text: Color::rgba(36, 34, 34, 1.0),
+                text_accent: Color::hex(0xd39218FF),
                 background: Color::rgb(236, 233, 228),
                 primary: Color::rgb(111, 35, 32),
                 secondary: Color::rgb(203, 195, 179),

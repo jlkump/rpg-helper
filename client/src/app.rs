@@ -3,12 +3,14 @@ use stylist::{css, yew::Global};
 
 use crate::app::router::Router;
 
-pub mod gui;
-pub mod router;
-pub mod store;
+mod context;
+mod gui;
+mod router;
+mod store;
 
 pub fn run_app()
 {
+    wasm_logger::init(wasm_logger::Config::default());
     yew::Renderer::<App>::new().render();
 }
 
@@ -22,7 +24,7 @@ fn app() -> Html {
                 r#"
                     html, body
                     {
-                        --text: ${text},
+                        --text: ${text};
                         --text-accent: ${text_accent};
                         --background: ${background};
                         --primary: ${primary};

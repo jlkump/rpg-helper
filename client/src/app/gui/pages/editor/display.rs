@@ -14,7 +14,7 @@ pub fn display_editor() -> Html
     html!
     {
         <BasePage>
-            
+            <h1>{"Display Editor"}</h1>
             // <EditorBar<DisplayEditorState> buttons={vec![]} />
         </BasePage>
     }
