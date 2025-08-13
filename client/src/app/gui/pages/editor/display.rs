@@ -14,8 +14,9 @@ pub fn display_editor() -> Html
     html!
     {
         <BasePage>
-            <h1>{"Display Editor"}</h1>
-            // <EditorBar<DisplayEditorState> buttons={vec![]} />
+            <div class="fullpage-container" style="display: flex; justify-content: center;">
+                <EditorBar<DisplayEditorState> buttons={vec![]} />
+            </div>
         </BasePage>
     }
 }

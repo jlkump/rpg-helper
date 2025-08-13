@@ -34,10 +34,15 @@ pub enum EditorBarButtonType<T>
 #[function_component(EditorBar)]
 pub fn editor_bar<T: PartialEq + Clone>(props: &Props<T>) -> Html
 {
+
+    // Editor buttons
+    // - Move tool
+    // 
+    // - Create panel
     html!
     {
-        <div>
-            <h1>{"Title bar"}</h1>
+        <div style="width: 60vw; height: 60px; background: rgba(203, 195, 179, 0.5); border-radius: 4px; margin: 20px;">
+            <button>{"Test"}</button>
         </div>
     }
 }

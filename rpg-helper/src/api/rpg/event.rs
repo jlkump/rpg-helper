@@ -62,7 +62,8 @@ pub enum EventModification
 /// Namely, having a shared language and the teacher having a higher score than the player.
 pub struct EventSchema
 {
-    name: Tag,
+    pub id: Tag,
+    
     // template_tags: Vec<TagTemplate>,
     // template_attributes: Vec<TagTemplate>,
     // template_equations: Vec<TagTemplate>,

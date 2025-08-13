@@ -41,6 +41,12 @@ fn inner_base_page(props: &Props) -> Html
                 height: 100vh;
                 z-index: -1;
             }
+
+            .fullpage-container
+            {
+                width: 100%; 
+                height: calc(100vh - 83px);
+            }
         "#
     );
     
@@ -49,8 +55,8 @@ fn inner_base_page(props: &Props) -> Html
     {
         <div class={classes!(inner, props.class.clone())} style={props.style.clone()}>
             <Navbar />
-            <div class={"page"} onclick={Callback::from(move |_| { fctx.clear_focus(); })}></div>
             {props.children.clone()}
+            <div class={"page"} onclick={Callback::from(move |_| { fctx.clear_focus(); })}></div>
         </div>
     }
 }
