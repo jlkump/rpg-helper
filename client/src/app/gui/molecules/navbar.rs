@@ -43,13 +43,18 @@ pub fn navbar(props: &Props) -> Html
                 </button>
                 <ul class={if *active { "menu active" } else { "menu" }}>
                     <li><a>{"Dashboard"}</a></li>
-                    <li><a>{"Rulesets"}</a></li>
+                    <NavbarDropdown dropdown_name={"Play"}>
+                        <ul class={"dropdown-menu"}>
+                            <li><a>{"Host Game"}</a></li>
+                            <li><a>{"Join Game"}</a></li>
+                        </ul>
+                    </NavbarDropdown>
                     <NavbarDropdown dropdown_name={"Tools"}>
                         <ul class={"dropdown-menu"}>
+                            <li><a>{"Character Creator"}</a></li>
+                            <li><a>{"Ruleset Creator"}</a></li>
                             <li><a>{"Theme Editor"}</a></li>
                             <li><Link<ToolsRoute> to={ToolsRoute::DisplayEditor} >{"Display Editor"}</Link<ToolsRoute>></li>
-                            <li><a>{"Ruleset Editor"}</a></li>
-                            <li><a>{"Character Editor"}</a></li>
                         </ul>
                     </NavbarDropdown>
                     <li><a>{"About"}</a></li>

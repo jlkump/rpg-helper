@@ -66,6 +66,10 @@ h6
 
     background: var(--secondary);
     border-bottom: 3px solid var(--primary);
+
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
 }
 
 .navbar .content-container
@@ -133,7 +137,6 @@ h6
 }
 
 .navbar .menu li:hover a,
-.navbar .menu li.focused a,
 .navbar .menu li.dropdown .dropdown-menu li:hover a
 {
     color: var(--text-accent);
@@ -142,7 +145,9 @@ h6
 
 .navbar .menu li.dropdown .dropdown-menu
 {
-    display: none;
+    transition: max-height 0.15s cubic-bezier(0.55, 0.8, 0.68, 0.91), padding 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91);
+
+    display: flex;
     padding: 0;
     position: absolute;
 
@@ -150,19 +155,29 @@ h6
     left: 0;
     
     flex-direction: column;
+    overflow-y: hidden;
+
     list-style: none;
     gap: 1rem;
-    padding: 10px;
+    padding: 0px;
 
-    border: 3px solid var(--primary);
     background-color: var(--secondary);
+
+    max-height: 0;
 }
 
-.navbar .menu li:hover.dropdown .dropdown-menu,
-.navbar .menu li.dropdown.focused .dropdown-menu
+@media (min-width: 881px)
 {
-    display: flex;
+    .navbar .menu li:hover.dropdown .dropdown-menu
+    {
+        transition: max-height 0.65s cubic-bezier(0.55, 0.8, 0.68, 0.91), padding 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91);
+    
+        border: 3px solid var(--primary);
+        max-height: 550px;
+        padding: 10px;
+    }
 }
+
 
 .nav-toggle
 {
@@ -236,18 +251,27 @@ h6
         position: static;
     }
 
-    .navbar .menu li:hover.dropdown .dropdown-menu
+    .navbar .menu li.dropdown.focused a
     {
-        display: none;
+        color: var(--text-accent);
+        background-color: var(--primary);
     }
 
-    .navbar .menu li.dropdown.focused .dropdown-menu
+    .navbar .menu li.dropdown .dropdown-menu
     {
-        display: flex;
         width: min(350px, 100vw);
         border-right: 0;
         border-left: 0;
         padding-left: 0;
         padding-right: 0;
+    }
+
+    .navbar .menu li.dropdown.focused .dropdown-menu
+    {
+        transition: max-height 0.65s cubic-bezier(0.55, 0.8, 0.68, 0.91), padding 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91), border 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91);
+    
+        border: 3px solid var(--primary);
+        max-height: 550px;
+        padding: 10px 0px 10px 0px;
     }
 }
