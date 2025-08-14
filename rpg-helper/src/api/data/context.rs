@@ -229,6 +229,11 @@ impl Context
 
     pub fn set_equation(&mut self, nv: Equation) -> Result<Option<Equation>, DataError>
     {
+        if nv.is_template()
+        {
+            return Err(DataError::CtxInsertTemplate);
+        }
+
         self.ensure_target_equation(&nv.name)?;
         if let Some(e) = self.equations.get_mut(&nv.name)
         {
@@ -266,6 +271,11 @@ impl Context
 
     pub fn set_conditional(&mut self, nv: Conditional) -> Result<Option<Conditional>, DataError>
     {
+        if nv.is_template()
+        {
+            return Err(DataError::CtxInsertTemplate);
+        }
+
         self.ensure_target_conditional(&nv.name)?;
         if let Some(c) = self.conditionals.get_mut(&nv.name)
         {

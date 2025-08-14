@@ -13,6 +13,7 @@ pub enum DataError
     Template(TemplateError),
     Tokenization(TokenizationError),
     Syntax(Token),
+    CtxInsertTemplate,              // A context can not contain a templated equation,  conditional, or tag
 }
 
 impl DataError

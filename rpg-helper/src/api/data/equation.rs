@@ -28,6 +28,11 @@ impl Equation
     {
         self.equation_string.clone()
     }
+
+    pub fn is_template(&self) -> bool
+    {
+        todo!()
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
