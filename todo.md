@@ -1,8 +1,8 @@
 # Finish RPG Layer Functionality
 
 ## Character and events
-- [ ] Complete template tags
-~ [ ] Complete template equations / conditionals?
+- [x] Complete template tags
+- [ ] Complete template equations / conditionals
 - [ ] Create events from event schema
 
 ## Rulesets
