@@ -1,11 +1,14 @@
+# builds
 /target
 /dist
-/Config.toml
-/database
-/database_test
-/files
-/uploads
+
+# Logs and temps
 *.log
-/*_database
-/database
+*.temp
+
+# config
 rustfmt.toml
+
+# server data
+/server/data
+/server/Config.toml

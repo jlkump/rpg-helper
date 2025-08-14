@@ -1,0 +1,19 @@
+[package]
+name = "rpg-helper-cli"
+authors = ["Landon Kump"]
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "cli"
+path = "src/main.rs"
+
+[dependencies]
+rpg-helper = { path = "../rpg-helper" }
+colored = "3"
+clap = { version = "4.5", features = ["derive"] }
+log = { workspace = true }
+rustyline = "17.0.0"  # For better REPL experience
+serde = { workspace = true }
+serde_json = { workspace = true }
+simplelog = "^0.12.0"
