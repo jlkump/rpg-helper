@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use std::ops::Index;
 
-use crate::api::data::error::{ParseError, ParseErrorType, TagParseError};
+use crate::api::data::error::{DataError, ParseError, ParseErrorType, TagParseError, TemplateError};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 pub struct Tag
@@ -76,7 +76,6 @@ impl Tag
             {
                 return Err(ParseError::new(s.to_string(), s.find(sub).unwrap(), ParseErrorType::Tag(TagParseError::SubTagEmpty)))
             }
-            // TODO trim non-spaces ' ' white-space
 
             name.push_str(sub.trim());
             if it.peek().is_some()
@@ -102,7 +101,66 @@ impl Tag
     ///     remove_prefix(ability.spell.Name Of Spell.Exp, ability.spell) -> Name Of Spell.Exp
     pub fn remove_prefix(&self, prefix: &Tag) -> Option<Tag>
     {
-        todo!()
+        if self.name.starts_with(&prefix.name)
+        {
+            // Calculate where to split: prefix length + potential dot
+            let prefix_len = prefix.name.len();
+            
+            if prefix_len >= self.name.len()
+            {
+                return None;
+            }
+            
+            // Check if there's a dot after the prefix
+            let remaining = if self.name.chars().nth(prefix_len) == Some('.')
+            {
+                &self.name[prefix_len + 1..]
+            }
+            else
+            {
+                return None;
+            };
+            
+            if remaining.is_empty()
+            {
+                None
+            }
+            else
+            {
+                Some(Tag { name: remaining.to_string() })
+            }
+        }
+        else
+        {
+            None
+        }
+    }
+
+    pub fn remove_prefix_by_count(&self, count: usize) -> Option<Tag>
+    {
+        let mut iter = self.name.split('.').peekable();
+        for _ in 0..count
+        {
+            iter.next();
+        }
+
+        if iter.peek().is_none()
+        {
+            return None;
+        }
+        else
+        {
+            let mut result_string = String::new();
+            while let Some(st) = iter.next()
+            {
+                result_string.push_str(&st);
+                if iter.peek().is_some()
+                {
+                    result_string.push('.');
+                }
+            }
+            Some(Tag { name: result_string })
+        }
     }
     
     /// Prefix a tag with another prefix
@@ -110,7 +168,22 @@ impl Tag
     ///     add_prefix(Name Of Spell, ability.spell) -> ability.spell.Name Of Spell
     pub fn add_prefix(&self, prefix: &Tag) -> Tag
     {
-        todo!()
+        let mut final_string = prefix.name.clone();
+        final_string.push('.');
+        final_string.push_str(&self.name);
+        Tag { name: final_string }
+    }
+
+    pub fn has_prefix(&self, prefix: &str) -> bool
+    {
+        if self.name.len() > prefix.len()
+        {
+            self.name.starts_with(prefix) && self.name.chars().nth(prefix.len()) == Some('.') 
+        }
+        else
+        {
+            self.name.starts_with(prefix)
+        }
     }
 
     /// Removes all sub-tags in a tag.
@@ -120,16 +193,23 @@ impl Tag
     /// 
     pub fn no_subtags(&self) -> Tag
     {
-        todo!()
+        if let Some(f) = self.name.split('.').next()
+        {
+            Tag { name: f.to_string() }
+        }
+        else
+        {
+            self.clone()
+        }
     }
 
     /// Returns the number of sub-tags in the tag
     /// Ex:
     ///     ability.spell.Name Of Spell -> 2
     ///     ability                     -> 0
-    pub fn count_subtags(&self) -> i32
+    pub fn count_subtags(&self) -> usize
     {
-        todo!()
+        self.name.split('.').count() - 1
     }
 
     pub fn find_all_parse_errors(s: &str) -> Result<(), Vec<ParseError>>
@@ -285,20 +365,42 @@ impl TagSet
     /// Given a tag prefix, this method returns all
     /// subtags which exist in this tag set (the count of the tag must be > 0)
     /// Example:  get_subtags(ability) -> [ability.Magic Theory, ability.Magic Theory.Exp, ability.Latin, ability.Latin.Exp]
-    /// If the given tag is empty, returns all tags in the tag set.
-    pub fn get_subtags(&self, t: &Tag) -> Option<Vec<Tag>>
+    pub fn get_matching_prefix(&self, prefix: &Tag) -> Vec<Tag>
     {
-        todo!()
+        self.tags.clone().into_iter().filter_map(|(t, c)| 
+        {
+            let t = Tag { name: t };
+            if c > 0 && t.has_prefix(&prefix.name)
+            {
+                Some(t)
+            }
+            else
+            {
+                None
+            }
+        }).collect()
     }
 
     /// Given a tag prefix, this method returns all
-    /// immediate subtags which exist in this tag set (the count of the tag must be > 0)
+    /// immediate tags which exist in this tag set (the count of the tag must be > 0)
     /// Example:  get_subtags(ability) -> [ability.Magic Theory, ability.Latin]
-    ///           but does not return [ability.Magic Theory.Exp]
-    /// If the given tag is empty, returns all first subtags in the set
-    pub fn get_immediate_subtags(&self, t: &Tag) -> Option<Vec<Tag>>
+    ///           but does not return [ability.Magic Theory.Exp, ability.Latin.Exp]
+    pub fn get_immediate_matching_prefix(&self, prefix: &Tag) -> Vec<Tag>
     {
-        todo!()
+        let num_subtags = prefix.count_subtags() + 1;
+        self.tags.clone().into_iter().filter_map(|(t, c)|
+        {
+            let t = Tag { name: t };
+            if c > 0 && t.count_subtags() == num_subtags && t.has_prefix(&prefix.name) 
+            {
+                Some(t)
+            }
+            else
+            {
+                None
+            }
+        }
+        ).collect()
     }
 
     pub fn iter(&self) -> impl Iterator<Item = Tag> + '_
@@ -334,9 +436,17 @@ impl Index<&str> for TagSet
     }
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct TagTemplate
 {
-    subtags: Vec<String>,
+    decomposed_tag: Vec<TagTemplateSubtag>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+enum TagTemplateSubtag
+{
+    Literal(String),
+    Subtag(String),
 }
 
 impl TagTemplate
@@ -349,19 +459,166 @@ impl TagTemplate
     ///     "tag.test.[template].value"
     pub fn from_str(s: &str) -> Result<TagTemplate, ParseError>
     {
-        todo!()
+        // Initial error check to ensure not empty
+        if s.is_empty() || s.chars().all(char::is_whitespace)
+        {
+            return Err(ParseError::new(s.to_string(), s.len(), ParseErrorType::Tag(TagParseError::TagEmpty)));
+        }
+
+        // Check that the string only contains alpha-numeric values or '.'s
+        if !s.chars().all(|c| Self::is_valid_tag_char(c))
+        {
+            return Err(ParseError::new(s.to_string(), s.find(|c| !Self::is_valid_tag_char(c)).unwrap(), ParseErrorType::Tag(TagParseError::InvalidCharacter)));
+        }
+
+        // Ensure first sub-string is not just a number
+        let first_str = if let Some(f) = s.split('.').next()
+        {
+            f
+        }
+        else
+        {
+            s
+        };
+
+        if first_str.chars().all(|c| c.is_numeric() || c.is_whitespace())
+        {
+            return Err(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::FirstTagNumeric)));
+        }
+
+        let mut decomposed_tag = vec![];
+
+        let mut it = s.split('.').peekable();
+        while let Some(sub) = it.next()
+        {
+            if sub.chars().all(char::is_whitespace)
+            {
+                return Err(ParseError::new(s.to_string(), s.find(sub).unwrap(), ParseErrorType::Tag(TagParseError::SubTagEmpty)));
+            }
+
+            let sub = sub.trim();
+            if let Some(first_char) = sub.chars().next()
+            {
+                let is_literal;
+                let check;
+                if first_char == '['
+                {
+                    if let Some(last_char) = sub.chars().next_back()
+                    {
+                        if last_char == ']'
+                        {
+                            check = &sub[1..sub.len()-1];
+                            is_literal = false;
+                        }
+                        else
+                        {
+                            return Err(ParseError::new(s.to_string(), s.find(sub).unwrap_or(0), ParseErrorType::Tag(TagParseError::InvalidCharacter)));
+                        }
+                    }
+                    else
+                    {
+                        return Err(ParseError::new(s.to_string(), s.find(sub).unwrap_or(0), ParseErrorType::Tag(TagParseError::SubTagEmpty)));
+                    }
+                }
+                else
+                {
+                    check = sub;
+                    is_literal = true;
+                }
+
+                if check.contains(|c| !Tag::is_valid_tag_char(c))
+                {
+                    return Err(ParseError::new(s.to_string(), s.find(sub).unwrap_or(0), ParseErrorType::Tag(TagParseError::InvalidCharacter)))
+                }
+
+                if is_literal
+                {
+                    decomposed_tag.push(TagTemplateSubtag::Literal(sub.to_string()));
+                }
+                else
+                {
+                    decomposed_tag.push(TagTemplateSubtag::Subtag(check.to_string()));
+                }
+            }
+            else
+            {
+                return Err(ParseError::new(s.to_string(), s.find(sub).unwrap(), ParseErrorType::Tag(TagParseError::SubTagEmpty)))
+            }
+        }
+
+        Ok(TagTemplate { decomposed_tag })
+    }
+
+    fn is_valid_tag_char(c: char) -> bool
+    {
+        Tag::is_valid_tag_char(c) || c == '[' || c == ']'
     }
 
     pub fn get_required_inputs(&self) -> Vec<String>
     {
-        todo!()
+        self.decomposed_tag.clone().into_iter().filter_map(|st|
+            if let TagTemplateSubtag::Subtag(s) = st
+            {
+                Some(s)
+            }
+            else
+            {
+                None
+            }
+        ).collect()
     }
 
     /// Inserts the mapping of templated subtags to tag values.
     /// Expected only to fail if there is a template subtag missing a tag value.
-    pub fn into_tag(&self, template_inputs: &HashMap<String, Tag>) -> Result<Tag, ParseError>
+    pub fn into_tag(&self, template_inputs: &HashMap<String, Tag>) -> Result<Tag, DataError>
     {
-        todo!()
+        let full_subtags = self.decomposed_tag.iter().map(|e|
+            match e {
+                TagTemplateSubtag::Literal(l) => Ok(l.to_string()),
+                TagTemplateSubtag::Subtag(s) =>
+                if let Some(t) = template_inputs.get(s) {
+                    Ok(t.name.to_string())
+                }
+                else
+                {
+                    Err(s.to_string())
+                },
+            }
+        );
+        if full_subtags.clone().any(|st| st.is_err())
+        {
+            return Err(DataError::Template(TemplateError::MissingTemplateValues(full_subtags.filter_map(|e| 
+                if let Err(e) = e
+                {
+                    Some(e)
+                }
+                else
+                {
+                    None
+                }
+            ).collect())));
+        }
+        else
+        {
+            let mut full_subtags = full_subtags.filter_map(|st|
+            if let Ok(st) = st {
+                Some(st)
+            }
+            else
+            {
+                None   
+            }).peekable();
+            let mut result_string = String::new();
+            while let Some(st) = full_subtags.next()
+            {
+                result_string.push_str(&st);
+                if full_subtags.peek().is_some()
+                {
+                    result_string.push('.');
+                }
+            }
+            Ok(Tag::from_str(&result_string)?)
+        }
     }
 }
 
@@ -895,4 +1152,215 @@ mod unit_tests
         assert_eq!(tag_set.count_tag(&other), 0);
     }
     
+    /// Tests the creation of a simple template tag
+    #[test]
+    fn tag_template_1()
+    {
+        let temp = TagTemplate::from_str("simple.[template]").unwrap();
+        assert_eq!(temp.decomposed_tag.iter().nth(0).unwrap(), &TagTemplateSubtag::Literal("simple".to_string()));
+        assert_eq!(temp.decomposed_tag.iter().nth(1).unwrap(), &TagTemplateSubtag::Subtag("template".to_string()));
+    }
+
+    /// Tests the creation of a simple template tag with leading template
+    #[test]
+    fn tag_template_2()
+    {
+        let temp = TagTemplate::from_str("[simple].template").unwrap();
+        assert_eq!(temp.decomposed_tag.iter().nth(0).unwrap(), &TagTemplateSubtag::Subtag("simple".to_string()));
+        assert_eq!(temp.decomposed_tag.iter().nth(1).unwrap(), &TagTemplateSubtag::Literal("template".to_string()));
+    }
+
+    /// Tests the creation of a template tag full of templates
+    #[test]
+    fn tag_template_3()
+    {
+        let temp = TagTemplate::from_str("[simple].[template]").unwrap();
+        assert_eq!(temp.decomposed_tag.iter().nth(0).unwrap(), &TagTemplateSubtag::Subtag("simple".to_string()));
+        assert_eq!(temp.decomposed_tag.iter().nth(1).unwrap(), &TagTemplateSubtag::Subtag("template".to_string()));
+    }
+
+    /// Tests filling in a template tag with values
+    #[test]
+    fn tag_template_4()
+    {
+        let temp = TagTemplate::from_str("simple.[template]").unwrap();
+        let mut input = HashMap::new();
+        input.insert("template".to_string(), Tag::from_str("inserted").unwrap());
+        let tag = temp.into_tag(&input).unwrap();
+        assert_eq!(tag, Tag::from_str("simple.inserted").unwrap());
+    }
+
+    /// Tests filling in a template tag with values
+    #[test]
+    fn tag_template_5()
+    {
+        let temp = TagTemplate::from_str("[simple].[template]").unwrap();
+        let mut input = HashMap::new();
+        input.insert("template".to_string(), Tag::from_str("inserted").unwrap());
+        input.insert("simple".to_string(), Tag::from_str("first").unwrap());
+        let tag = temp.into_tag(&input).unwrap();
+        assert_eq!(tag, Tag::from_str("first.inserted").unwrap());
+    }
+
+    /// Tests filling in a template tag with a long tag
+    #[test]
+    fn tag_template_6()
+    {
+        let temp = TagTemplate::from_str("[simple].[template]").unwrap();
+        let mut input = HashMap::new();
+        input.insert("template".to_string(), Tag::from_str("inserted.other. Long Tag").unwrap());
+        input.insert("simple".to_string(), Tag::from_str("first").unwrap());
+        let tag = temp.into_tag(&input).unwrap();
+        assert_eq!(tag, Tag::from_str("first.inserted.other.Long Tag").unwrap());
+    }
+
+    /// Test no-subtags method
+    /// Expects no change to the tag
+    #[test]
+    fn tag_no_subtags_1()
+    {
+        let t = Tag::from_str("first").unwrap();
+        let r = t.no_subtags();
+        assert_eq!(t, r);
+    }
+
+    /// Test no-subtags method
+    /// Expects only first tag
+    #[test]
+    fn tag_no_subtags_2()
+    {
+        let t = Tag::from_str("first.second.third").unwrap();
+        let r = t.no_subtags();
+        assert_eq!(Tag::from_str("first").unwrap(), r);
+    }
+
+    /// Test removing simple prefix
+    #[test]
+    fn tag_prefix_1()
+    {
+        let t = Tag::from_str("first.second.third").unwrap();
+        assert_eq!(t.remove_prefix(&Tag::from_str("first.second").unwrap()).unwrap(), Tag::from_str("third").unwrap());
+    }
+
+    /// Test removing prefix by count
+    #[test]
+    fn tag_prefix_2()
+    {
+        let t = Tag::from_str("first.second.third").unwrap();
+        assert_eq!(t.remove_prefix_by_count(2).unwrap(), Tag::from_str("third").unwrap());
+    }
+
+    /// Test adding and removing prefix
+    #[test]
+    fn tag_prefix_3()
+    {
+        let t = Tag::from_str("first.second.third").unwrap();
+        let a = Tag::from_str("additional.prefix").unwrap();
+        assert_eq!(t.add_prefix(&a), Tag::from_str("additional.prefix.first.second.third").unwrap());
+        assert_eq!(t.add_prefix(&a).remove_prefix(&a).unwrap(), t);
+    }
+
+    /// Test removing prefix as full tag
+    /// Expected to fail
+    #[test]
+    fn tag_prefix_4()
+    {
+        let t = Tag::from_str("first.second.third").unwrap();
+        assert_eq!(t.remove_prefix(&t), None);
+    }
+
+    /// Test removing prefix as full tag by count
+    /// Expected to fail
+    #[test]
+    fn tag_prefix_5()
+    {
+        let t = Tag::from_str("first.second.third").unwrap();
+        assert_eq!(t.remove_prefix_by_count(3), None);
+    }
+
+    /// Ensure count subtags method works as expected
+    #[test]
+    fn count_subtags()
+    {
+        let t = Tag::from_str("ability").unwrap();
+        assert_eq!(t.count_subtags(), 0);
+        let t = Tag::from_str("ability.Magic Theory").unwrap();
+        assert_eq!(t.count_subtags(), 1);
+        let t = Tag::from_str("ability.Magic Theory.Exp").unwrap();
+        assert_eq!(t.count_subtags(), 2);
+    }
+
+
+    /// Test getting tags by prefix
+    #[test]
+    fn tagset_prefix_1()
+    {
+        let mut ts = TagSet::new();
+        ts.add_tag(&Tag::from_str("ability.Magic Theory").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Magic Theory.Exp").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Latin").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Latin.Exp").unwrap());
+        ts.add_tag(&Tag::from_str("charateristic.Intelligence").unwrap());
+        ts.add_tag(&Tag::from_str("charateristic.Intelligence.Age").unwrap());
+        let expected  = vec![
+            Tag::from_str("ability").unwrap(),
+            Tag::from_str("ability.Magic Theory").unwrap(),
+            Tag::from_str("ability.Magic Theory.Exp").unwrap(),
+            Tag::from_str("ability.Latin").unwrap(),
+            Tag::from_str("ability.Latin.Exp").unwrap(),
+        ];
+        let result = ts.get_matching_prefix(&Tag::from_str("ability").unwrap());
+        assert_eq!(expected.len(), result.len());
+        for e in expected
+        {
+            assert!(result.contains(&e));
+        }
+    }
+
+    /// Test getting tags by immediate prefix
+    #[test]
+    fn tagset_prefix_2()
+    {
+        let mut ts = TagSet::new();
+        ts.add_tag(&Tag::from_str("ability.Magic Theory").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Magic Theory.Exp").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Latin").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Latin.Exp").unwrap());
+        ts.add_tag(&Tag::from_str("charateristic.Intelligence").unwrap());
+        ts.add_tag(&Tag::from_str("charateristic.Intelligence.Age").unwrap());
+        let expected = vec![
+            Tag::from_str("ability.Magic Theory").unwrap(),
+            Tag::from_str("ability.Latin").unwrap(),
+        ];
+        let result = ts.get_immediate_matching_prefix(&Tag::from_str("ability").unwrap());
+        assert_eq!(expected.len(), result.len());
+        for e in expected
+        {
+            assert!(result.contains(&e));
+        }
+    }
+
+    /// Tests prefix search searching properly by subtags
+    #[test]
+    fn tagset_prefix_3()
+    {
+        let mut ts = TagSet::new();
+        ts.add_tag(&Tag::from_str("ability.Magic Theory").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Magic Theory Extended").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Magic Theory Extended.Exp").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Magic Theory.Exp").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Latin").unwrap());
+        ts.add_tag(&Tag::from_str("ability.Latin.Exp").unwrap());
+        ts.add_tag(&Tag::from_str("charateristic.Intelligence").unwrap());
+        ts.add_tag(&Tag::from_str("charateristic.Intelligence.Age").unwrap());
+        let expected = vec![
+            Tag::from_str("ability.Magic Theory.Exp").unwrap(),
+        ];
+        let result = ts.get_immediate_matching_prefix(&Tag::from_str("ability.Magic Theory").unwrap());
+        assert_eq!(expected.len(), result.len());
+        for e in expected
+        {
+            assert!(result.contains(&e));
+        }
+    }
 }

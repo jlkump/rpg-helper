@@ -41,7 +41,7 @@ pub enum EventModification
 {
     AddProgress(Tag, Tag, Option<(f32, f32)>),   // First tag is target to add to, second tag is the value to add to, optional clamped values
     CheckProgress(Tag, Vec<EventModification>),  // First tag is the conditional to check, second is the vec of modifications to apply if the check succeeds.
-    RemoveProgress(Tag),                         // Clears the progress value. Useful on the completion of progress
+    ClearProgress(Tag),                         // Clears the progress value. Useful on the completion of progress
     AddToAttribute(Tag, f32),
     GrantAbility(Ability),                              // Grant an ability to the player. The ability is created in the process of creating this event, which is why it isn't defined from values within the event ctx
     GiveItem(Item),                                  // Gives an item. Like ability, the item is defined in the creation of the event

@@ -367,13 +367,13 @@ impl EvalNode
     {
         if tokens.iter().position(|t| !t.eq(&Token::OpenParen)).is_some_and(|i| i != root_index) || root_index != 0
         {
-            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()));
+            return Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone()));
         }
 
         let child = match op.get_input_type(0)
         {
             Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[1..].to_vec()), value_hint)?,
-            None => return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())),
+            None => return Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone())),
         };
         Ok(EvalNode::Operation(OperationNode::new(op, vec![child])))
     }
@@ -382,19 +382,19 @@ impl EvalNode
     {
         if tokens.iter().position(|t| !t.eq(&Token::OpenParen)).is_some_and(|i| i == root_index) || root_index == 0
         {
-            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()))
+            return Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone()))
         }
 
         let left = match op.get_input_type(0)
         {
             Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[..root_index].to_vec()), value_hint)?,
-            None => return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())),
+            None => return Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone())),
         };
 
         let right = match op.get_input_type(1)
         {
             Some(value_hint) => Self::build_node(parse::remove_parentheses(tokens[root_index + 1..].to_vec()), value_hint)?,
-            None => return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())),
+            None => return Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone())),
         };
 
         Ok(EvalNode::Operation(OperationNode::new(op, vec![left, right])))
@@ -442,7 +442,7 @@ impl EvalNode
         
         if child_tokens.len() != 3
         {
-            Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()))
+            Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone()))
         }
         else
         {
@@ -461,7 +461,7 @@ impl EvalNode
     {
         if root_index + 1 >= tokens.len() || tokens.iter().nth(root_index + 1).unwrap().ne(&Token::OpenParen)
         {
-            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone())) // The method call is empty
+            return Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone())) // The method call is empty
         }
 
         let mut child_tokens = vec![];
@@ -480,7 +480,7 @@ impl EvalNode
 
         if child_tokens.len() != op.get_number_of_operands()
         {
-            return Err(DataError::SyntaxError(tokens.iter().nth(root_index).unwrap().clone()))
+            return Err(DataError::Syntax(tokens.iter().nth(root_index).unwrap().clone()))
         }
 
         let mut children = vec![];

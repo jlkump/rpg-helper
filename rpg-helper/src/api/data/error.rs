@@ -10,8 +10,9 @@ pub enum DataError
     InvalidState(String),
     Evaluation(EvalError),
     Parsing(ParseError),
+    Template(TemplateError),
     Tokenization(TokenizationError),
-    SyntaxError(Token)
+    Syntax(Token),
 }
 
 impl DataError
@@ -111,6 +112,12 @@ pub enum ParseErrorType
 {
     Tag(TagParseError),
     Evaluation(EvalParseError),
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum TemplateError
+{
+    MissingTemplateValues(Vec<String>),
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
