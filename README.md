@@ -26,22 +26,20 @@ The core architecture is discussed in extensive detail in the [Architecture](./g
 
 ## Contribution
 ### Getting Started
-If you would like to contribute to this project, clone this repo and download the Rust toolchain. Contributors will have access to the GitHub project to pick up larger tasks in particular while those not given contributor access can provide bug fixes and assorted improvements.
+If you would like to contribute to this project, clone or fork this repo and download the Rust toolchain. Contributors will have access to the GitHub project to pick up larger tasks in particular while those not given contributor access can provide bug fixes and assorted improvements.
 
 The project's front-end uses Trunk, a Rust package that runs the Yew web client locally. Other than that, the Cargo.toml file should handle all dependencies.
 
 ### Project Structure
-`assets` contains art and other assets for the front-end display. These will need to be shipped with the web client build for proper display.
+`rpg-helper` contains the package with the core api of the RPG helper
+
+`client` contains the web user interface implementation using Yew for the front-end
+
+`server` contains the backend for the various clients. It uses actix for the http requests and sled as the backend database.
+
+`old-code` contains the old client code that was used before the swap to a unified project structure. It remains as a reference for future implementation of the client code and will be removed once the web client is fully implemented.
 
 `github` contains files specific just to GitHub and nothing important to the code of the project.
-
-`old-client-code` contains the old client code that was used before the swap to a unified project structure. It remains as a reference for future implementation of the client code and will be removed once the web client is fully implemented.
-
-`src` contains all the code of the project detailed in the tree below.
-
-`src/bin`: Code for the specific binaries which are the implementations that use the library api defined in `src/lib.rs`
-
-`src/model`: Code for the [Data Model](./github/Architecture.md). Essentially all the library code to define the API used in the project.
 
 ### Coding Standards
 Rust has [standard formatting and style guide recommendations](https://doc.rust-lang.org/beta/style-guide/index.html) which are followed in this repo. The only major concern not covered in the standard style guide is that, in this project, we use new lines for braces rather than same-line for braces.
@@ -70,10 +68,8 @@ fn some_function() -> Result<(), Err> {
 ### Roadmap
 See the [Roadmap](./github/Roadmap.md) file to see a detailed outline of each planned feature.
 
-See the [TODO](./TODO.md) file to see what is actively being worked on.
-
 ## License
 [GNU General Public License v3](./LICENSE)
 
 ## Authors
-Landon Kump - Programming, Design, and Art
+Landon Kump - Programming, Architextural Design, and Art
