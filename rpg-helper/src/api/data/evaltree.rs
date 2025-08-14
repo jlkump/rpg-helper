@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::Tag, context::Context};
+use crate::api::data::{context::Context, error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -10,6 +10,7 @@ pub enum EvalError
     ExpectedValueMismatch,
     EvaluationMismatch,
     UnsupportedOperation,
+    TemplatedEquation,
 }
 
 impl From<EvalError> for DataError
@@ -141,6 +142,8 @@ enum OperandNode
     ReferencedValue(Tag),
     ReferencedCondition(Tag),
     ReferencedTag(Tag),
+    // Templated Tag. Will fail any evaluation and will return that the equation is a templated equation as an error
+    TagTemplate(TagTemplate)
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -538,6 +541,10 @@ impl EvalNode
                                 }
 
                             },
+                OperandNode::TagTemplate(_) =>
+                            {
+                                Err(DataError::Evaluation(EvalError::TemplatedEquation))
+                            },
             },
             EvalNode::Operation(operation_node) => 
             match operation_node
@@ -587,7 +594,7 @@ impl EvalNode
             match operand_node {
                 OperandNode::ExplicitNumber(_) | OperandNode::ReferencedValue(_) => ExpectedResult::Number,
                 OperandNode::ExplicitBool(_) | OperandNode::ReferencedCondition(_) => ExpectedResult::Boolean,
-                OperandNode::ReferencedTag(_) => ExpectedResult::Unknown,
+                OperandNode::ReferencedTag(_) | OperandNode::TagTemplate(_) => ExpectedResult::Unknown,
             },
             EvalNode::Operation(operation_node) =>
             match operation_node {
@@ -613,6 +620,7 @@ impl std::fmt::Display for EvalNode
                 OperandNode::ExplicitNumber(n) => format!("{}", n),
                 OperandNode::ExplicitBool(b) => format!("{}", b),
                 OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) => format!("{}", tag.to_str()),
+                OperandNode::TagTemplate(template) => format!("{:?}", template)
             },
             EvalNode::Operation(operation_node) => 
             match operation_node.get_operation()
