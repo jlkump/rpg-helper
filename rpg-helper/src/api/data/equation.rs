@@ -31,7 +31,7 @@ impl Equation
 
     pub fn is_template(&self) -> bool
     {
-        todo!()
+        self.ast.is_template()
     }
 }
 

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{context::Context, error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}};
+use crate::api::data::{context::Context, error::{DataError, TemplateError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -70,6 +70,21 @@ impl EvalTree
     pub fn can_eval_as_number(&self) -> bool
     {
         self.root.expected_result() != ExpectedResult::Boolean
+    }
+
+    pub fn is_template(&self) -> bool
+    {
+        todo!()
+    }
+
+    pub fn get_template_inputs(&self) -> Vec<String>
+    {
+        todo!()
+    }
+
+    pub fn insert_template_input(&mut self, s: &str, t: Tag) -> Result<(), TemplateError>
+    {
+        todo!()
     }
 
     /// Constructs a full abstract syntax tree from the given string.
@@ -310,6 +325,7 @@ impl EvalNode
                                 ExpectedResult::Number => OperandNode::ReferencedValue(tag),
                                 ExpectedResult::Unknown => OperandNode::ReferencedTag(tag),
                             }),
+                    Token::TagTemplate(temp) => Some(OperandNode::TagTemplate(temp)),
                     Token::OpenParen | Token::ClosedParen | Token::Comma | Token::Colon => None,
                     Token::Operation(o) => panic!("Found an operation token {:?} when expected none from not finding root index.", o),
                     Token::Number(n) => Some(OperandNode::ExplicitNumber(n)),
@@ -349,7 +365,7 @@ impl EvalNode
         while let Some((i, t)) = it.next() {
             match t
             {
-                Token::Bool(_) | Token::Number(_) | Token::Tag(_) | Token::Colon | Token::Comma => (),
+                Token::Bool(_) | Token::Number(_) | Token::Tag(_) | Token::TagTemplate(_) | Token::Colon | Token::Comma => (),
                 Token::OpenParen => brace_count = brace_count + 1,
                 Token::ClosedParen => brace_count = brace_count - 1,
                 Token::Operation(operation) => 
@@ -411,7 +427,7 @@ impl EvalNode
         {
             match t
             {
-                Token::Comma | Token::Colon | Token::Tag(_) | Token::Number(_) | Token::Bool(_) => (),
+                Token::Comma | Token::Colon | Token::Tag(_) | Token::TagTemplate(_) | Token::Number(_) | Token::Bool(_) => (),
                 Token::OpenParen => num_paren += 1,
                 Token::ClosedParen => num_paren -= 1,
                 Token::Operation(o) =>
@@ -439,7 +455,7 @@ impl EvalNode
                     child_tokens.push(Vec::from_iter(tokens[i + 1..tokens.len() - num_paren].iter().cloned()));
                     break;
                 },
-                Token::Comma | Token::Tag(_) | Token::Number(_) | Token::Bool(_) | Token::Operation(_) => (),
+                Token::Comma | Token::Tag(_) | Token::Number(_) | Token::Bool(_) | Token::Operation(_) | Token::TagTemplate(_) => (),
             }
         }
         
@@ -921,7 +937,7 @@ pub(super) mod parse
 
             match token
             {
-                Token::Comma | Token::Colon | Token::Number(_) | Token::Bool(_) | Token::Tag(_) => (),
+                Token::Comma | Token::Colon | Token::Number(_) | Token::Bool(_) | Token::Tag(_) | Token::TagTemplate(_) => (),
                 Token::OpenParen =>
                 {
                     stack.push(ParenPair::new(Some(i), prev_is_method));
@@ -1018,14 +1034,17 @@ pub(super) mod parse
 
 pub mod tokenize
 {
+    use std::collections::HashSet;
+
     use serde::{Deserialize, Serialize};
 
-    use crate::api::data::{error::{EvalParseError, ParseError, ParseErrorType}, evaltree::Operation, tag::Tag};
+    use crate::api::data::{error::{EvalParseError, ParseError, ParseErrorType, TagParseError}, evaltree::Operation, tag::{Tag, TagTemplate}};
 
     #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
     pub enum Token
     {
         Tag(Tag),
+        TagTemplate(TagTemplate),
         OpenParen,
         ClosedParen,
         Comma,
@@ -1117,8 +1136,7 @@ pub mod tokenize
                     {
                         let v = match l
                         {
-                            Token::Tag(_) => Token::Operation(Operation::Subtract),
-                            // Token::Placeholder(_) => Token::Operation(Operation::Subtract),
+                            Token::Tag(_) | Token::TagTemplate(_) => Token::Operation(Operation::Subtract),
                             Token::OpenParen => Token::Operation(Operation::Negate),
                             Token::ClosedParen => Token::Operation(Operation::Subtract),
                             Token::Comma => Token::Operation(Operation::Negate),
@@ -1288,13 +1306,24 @@ pub mod tokenize
                             "sqrt" => Token::Operation(Operation::Sqrt),
                             _ => 
                             {
-                                if let Ok(tag) = Tag::from_str(ident_str)
+                                match Tag::from_str(ident_str)
                                 {
-                                    Token::Tag(tag)
-                                }
-                                else
-                                {
-                                    return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)))
+                                    Ok(t) => Token::Tag(t),
+                                    Err(e) => 
+                                    if e.error_type == ParseErrorType::Tag(TagParseError::InvalidCharacter) {
+                                        if let Ok(temp) = TagTemplate::from_str(ident_str)
+                                        {
+                                            Token::TagTemplate(temp)
+                                        }
+                                        else
+                                        {
+                                        return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                                    },
                                 }
                             },
                         }
@@ -1306,6 +1335,26 @@ pub mod tokenize
                 {
                     // Unknown character
                     return Err(ParseError::new(c.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                }
+            }
+        }
+
+        // Error check, ensure distinct template inputs
+        let mut template_inputs = HashSet::new();
+        for t in res.iter()
+        {
+            if let Token::TagTemplate(t) = t
+            {
+                for input in t.get_required_inputs()
+                {
+                    if template_inputs.contains(&input)
+                    {
+                        return Err(ParseError { string: s.to_string(), index_of_error: 0, error_type: ParseErrorType::Evaluation(EvalParseError::DuplicateTemplateTag(input)) })
+                    }
+                    else
+                    {
+                        template_inputs.insert(input);
+                    }
                 }
             }
         }

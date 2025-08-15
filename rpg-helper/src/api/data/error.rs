@@ -134,6 +134,7 @@ pub enum TagParseError
 pub enum EvalParseError
 {
     TokenInvalid,
+    DuplicateTemplateTag(String),
     NumberMultipleDecimals,
     UnbalancedParentheses,
     MissingParentheses,
