@@ -2,7 +2,7 @@
 
 ## Character and events
 - [x] Complete template tags
-- [ ] Complete template equations / conditionals
+- [x] Complete template equations / conditionals
 - [ ] Create events from event schema
 
 ## Rulesets
