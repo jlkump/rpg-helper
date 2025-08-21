@@ -3,6 +3,11 @@
 ## Character and events
 - [x] Complete template tags
 - [x] Complete template equations / conditionals
+- [ ] Create template ctx, which can contain a ctx as well as template values, tags, equations, conditonals, modifiers, etc.
+            - The template ctx is not used for characters or rulesets, but for event schemas (as well as other schemas), to ease filling in values of an intermediate context.
+- [ ] Create template attributes
+- [ ] Create template modifiers
+- [ ] Template effects?
 - [ ] Create events from event schema
 
 ## Rulesets

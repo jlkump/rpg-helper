@@ -60,6 +60,11 @@ pub enum EventModification
 /// 
 /// The player would be able to choose a value as long as certain restrictions are met.
 /// Namely, having a shared language and the teacher having a higher score than the player.
+/// 
+/// NOTE: While restrictions to tag types are defined here, it is up to
+/// the implmentation of the client and server to ensure that the restrictions
+/// are upheld. An event schema can be turned into an event without restrictions
+/// enforced (in this layer of the API)
 pub struct EventSchema
 {
     pub id: Tag,
