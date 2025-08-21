@@ -33,6 +33,16 @@ impl Equation
     {
         self.ast.is_template()
     }
+
+    pub fn get_template_inputs(&self) -> Vec<String>
+    {
+        self.ast.get_template_inputs()
+    }
+
+    pub fn insert_template_input(&mut self, s: &str, t: &Tag)
+    {
+        self.ast.insert_template_input(s, t);
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]

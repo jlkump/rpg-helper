@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use std::ops::Index;
 
-use crate::api::data::error::{DataError, ParseError, ParseErrorType, TagParseError, TemplateError};
+use crate::api::data::error::{ParseError, ParseErrorType, TagParseError, TemplateError};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 pub struct Tag
@@ -568,26 +568,52 @@ impl TagTemplate
         ).collect()
     }
 
-    /// Inserts the mapping of templated subtags to tag values.
-    /// Expected only to fail if there is a template subtag missing a tag value.
-    pub fn into_tag(&self, template_inputs: &HashMap<String, Tag>) -> Result<Tag, DataError>
+    /// Inserts a template value into the tag template.
+    /// This method does nothing if the provided input is not contained
+    /// in the template.
+    /// 
+    /// If the template value provided was the last required input,
+    /// the tag created is returned.
+    pub fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Tag>
     {
-        let full_subtags = self.decomposed_tag.iter().map(|e|
-            match e {
-                TagTemplateSubtag::Literal(l) => Ok(l.to_string()),
+        self.decomposed_tag = self.decomposed_tag.clone().into_iter().map(|t|
+            match &t
+            {
+                TagTemplateSubtag::Literal(_) => t,
                 TagTemplateSubtag::Subtag(s) =>
-                if let Some(t) = template_inputs.get(s) {
-                    Ok(t.name.to_string())
+                if s == input_name
+                {
+                    TagTemplateSubtag::Literal(input_value.name.to_string())
                 }
                 else
                 {
-                    Err(s.to_string())
+                    t
                 },
             }
+        ).collect();
+
+        match self.into_tag()
+        {
+            Ok(t) => Some(t),
+            Err(_) => None,
+        }
+    }
+
+    /// Inserts the mapping of templated subtags to tag values.
+    /// Expected only to fail if there is a template subtag missing a tag value.
+    pub fn into_tag(&self) -> Result<Tag, TemplateError>
+    {
+        let full_subtags = self.decomposed_tag.iter().map(|e|
+            match e
+            {
+                TagTemplateSubtag::Literal(l) => Ok(l.to_string()),
+                TagTemplateSubtag::Subtag(s) => Err(s.to_string()),
+            }
         );
+
         if full_subtags.clone().any(|st| st.is_err())
         {
-            return Err(DataError::Template(TemplateError::MissingTemplateValues(full_subtags.filter_map(|e| 
+            return Err(TemplateError::MissingTemplateValues(full_subtags.filter_map(|e| 
                 if let Err(e) = e
                 {
                     Some(e)
@@ -596,7 +622,7 @@ impl TagTemplate
                 {
                     None
                 }
-            ).collect())));
+            ).collect()));
         }
         else
         {
@@ -617,7 +643,7 @@ impl TagTemplate
                     result_string.push('.');
                 }
             }
-            Ok(Tag::from_str(&result_string)?)
+            Ok(Tag { name: result_string })
         }
     }
 }
@@ -1183,10 +1209,9 @@ mod unit_tests
     #[test]
     fn tag_template_4()
     {
-        let temp = TagTemplate::from_str("simple.[template]").unwrap();
-        let mut input = HashMap::new();
-        input.insert("template".to_string(), Tag::from_str("inserted").unwrap());
-        let tag = temp.into_tag(&input).unwrap();
+        let mut temp = TagTemplate::from_str("simple.[template]").unwrap();
+        temp.insert_template_value("template", &Tag::from_str("inserted").unwrap());
+        let tag = temp.into_tag().unwrap();
         assert_eq!(tag, Tag::from_str("simple.inserted").unwrap());
     }
 
@@ -1194,11 +1219,10 @@ mod unit_tests
     #[test]
     fn tag_template_5()
     {
-        let temp = TagTemplate::from_str("[simple].[template]").unwrap();
-        let mut input = HashMap::new();
-        input.insert("template".to_string(), Tag::from_str("inserted").unwrap());
-        input.insert("simple".to_string(), Tag::from_str("first").unwrap());
-        let tag = temp.into_tag(&input).unwrap();
+        let mut temp = TagTemplate::from_str("[simple].[template]").unwrap();
+        temp.insert_template_value("template", &Tag::from_str("inserted").unwrap());
+        temp.insert_template_value("simple", &Tag::from_str("first").unwrap());
+        let tag = temp.into_tag().unwrap();
         assert_eq!(tag, Tag::from_str("first.inserted").unwrap());
     }
 
@@ -1206,11 +1230,10 @@ mod unit_tests
     #[test]
     fn tag_template_6()
     {
-        let temp = TagTemplate::from_str("[simple].[template]").unwrap();
-        let mut input = HashMap::new();
-        input.insert("template".to_string(), Tag::from_str("inserted.other. Long Tag").unwrap());
-        input.insert("simple".to_string(), Tag::from_str("first").unwrap());
-        let tag = temp.into_tag(&input).unwrap();
+        let mut temp = TagTemplate::from_str("[simple].[template]").unwrap();
+        temp.insert_template_value("template", &Tag::from_str("inserted.other. Long Tag").unwrap());
+        temp.insert_template_value("simple", &Tag::from_str("first").unwrap());
+        let tag = temp.into_tag().unwrap();
         assert_eq!(tag, Tag::from_str("first.inserted.other.Long Tag").unwrap());
     }
 

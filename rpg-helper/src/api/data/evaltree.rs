@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{context::Context, error::{DataError, TemplateError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}};
+use crate::api::data::{context::Context, error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -74,17 +74,22 @@ impl EvalTree
 
     pub fn is_template(&self) -> bool
     {
-        todo!()
+        self.root.recursive_check_contains_template()
     }
 
     pub fn get_template_inputs(&self) -> Vec<String>
     {
-        todo!()
+        let mut result = vec![];
+        self.root.recursive_template_inputs(&mut result);
+        return result;
     }
 
-    pub fn insert_template_input(&mut self, s: &str, t: Tag) -> Result<(), TemplateError>
+    /// Inserts template tag value
+    /// Ex: 5 * tag.[template] + 4  =>  5 * tag.inserted + 4
+    /// Ex: 2 + tag.[template] + 1 / other.[template] => 2 + tag.inserted + 1 / other.inserted
+    pub fn insert_template_input(&mut self, s: &str, t: &Tag)
     {
-        todo!()
+        self.root.recursive_insert_template_input(s, t, ExpectedResult::Unknown);
     }
 
     /// Constructs a full abstract syntax tree from the given string.
@@ -105,6 +110,12 @@ impl EvalTree
     /// The resultant equation uses the minimum required parentheses
     /// with some perfered syntax formatting for some operations 
     /// (such as power of using pow() over #^#).
+    /// 
+    /// This should return the simple expression (not some tree representation of the AST)
+    /// Ex:
+    /// EvalTree::from_str("3 + 4*10 / 5").to_expression_str() => "3 + 4 * 10 / 5"
+    /// EvalTree::from_str("3 + 4^10 / 5").to_expression_str() => "3 + pow(4, 10) / 5"
+    /// EvalTree::from_str("(3 + 4)^10 / 5").to_expression_str() => "pow(3 + 4, 10) / 5"
     pub fn to_expression_str(&self) -> String
     {
         todo!()
@@ -250,6 +261,17 @@ impl OperationNode
     }
 
     fn get_children(&self) -> Vec<&Box<EvalNode>>
+    {
+        match self
+        {
+            OperationNode::Add(n, n1) | OperationNode::Subtract(n, n1) | OperationNode::Multiply(n, n1) | OperationNode::Divide(n, n1) | OperationNode::Pow(n, n1) |
+            OperationNode::Equal(n, n1) | OperationNode::NotEqual(n, n1) | OperationNode::LessThan(n, n1) | OperationNode::LessThanEq(n, n1) | OperationNode::GreaterThan(n, n1) | OperationNode::GreaterThanEq(n, n1) | OperationNode::Or(n, n1) | OperationNode::And(n, n1) => vec![n, n1],
+            OperationNode::Negate(n) | OperationNode::Sqrt(n) | OperationNode::Round(n) | OperationNode::RoundDown(n) | OperationNode::RoundUp(n) | OperationNode::Not(n) => vec![n],
+            OperationNode::Range(n, n1, n2) | OperationNode::Ternary(n, n1, n2) => vec![n, n1, n2],
+        }
+    }
+
+    fn get_mut_children(&mut self) -> Vec<&mut Box<EvalNode>>
     {
         match self
         {
@@ -602,6 +624,69 @@ impl EvalNode
         }
     }
 
+    fn recursive_template_inputs(&self, inputs: &mut Vec<String>)
+    {
+        match self
+        {
+            EvalNode::Operand(operand_node) => 
+            match operand_node
+            {
+                OperandNode::TagTemplate(tag_template) => inputs.extend(tag_template.get_required_inputs().into_iter()),
+                _ => (),
+            },
+            EvalNode::Operation(operation_node) => operation_node.get_children().iter().for_each(|c| c.recursive_template_inputs(inputs)),
+        }
+    }
+
+    fn recursive_insert_template_input(&mut self, s: &str, t: &Tag, value_hint: ExpectedResult)
+    {
+        match self
+        {
+            EvalNode::Operand(operand_node) => 
+            match operand_node
+            {
+                OperandNode::TagTemplate(tag_template) =>
+                {
+                    if let Some(tag) = tag_template.insert_template_value(s, t)
+                    {
+                        match value_hint
+                        {
+                            ExpectedResult::Boolean => *self = EvalNode::Operand(OperandNode::ReferencedCondition(tag)),
+                            ExpectedResult::Number => *self = EvalNode::Operand(OperandNode::ReferencedValue(tag)),
+                            ExpectedResult::Unknown => *self = EvalNode::Operand(OperandNode::ReferencedTag(tag)),
+                        }
+                    }
+                },
+                _ => (),
+            },
+            EvalNode::Operation(operation_node) => 
+            {
+                let op = operation_node.get_operation();
+                operation_node.get_mut_children().iter_mut().enumerate().for_each(|(i, c)| c.recursive_insert_template_input(s, t, op.get_input_type(i).unwrap_or(ExpectedResult::Unknown)))
+            },
+        }
+    }
+
+    fn recursive_check_contains_template(&self) -> bool
+    {
+        match self
+        {
+            EvalNode::Operand(op) =>
+            if let OperandNode::TagTemplate(_) = op
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            },
+            EvalNode::Operation(op) =>
+            {
+                return op.get_children().iter().any(|c| c.recursive_check_contains_template())
+            },
+        }
+    }
+
     fn expected_result(&self) -> ExpectedResult
     {
         match &self
@@ -687,7 +772,7 @@ where
     Ok(EvalResult::Boolean(f(v1, v2)?))
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone, Copy)]
 enum ExpectedResult
 {
     Boolean,
@@ -1034,8 +1119,6 @@ pub(super) mod parse
 
 pub mod tokenize
 {
-    use std::collections::HashSet;
-
     use serde::{Deserialize, Serialize};
 
     use crate::api::data::{error::{EvalParseError, ParseError, ParseErrorType, TagParseError}, evaltree::Operation, tag::{Tag, TagTemplate}};
@@ -1247,7 +1330,7 @@ pub mod tokenize
                     }
                     i = j;
                 },
-                _ if c.is_alphabetic() =>
+                _ if c.is_alphabetic() || c == '[' || c == ']' =>
                 {
                     // Parse identifier (could be bool, method, or tag)
                     let mut j = i;
@@ -1256,7 +1339,7 @@ pub mod tokenize
                     while j < chars.len()
                     {
                         let ch = chars[j];
-                        if ch.is_alphanumeric() || ch == '.' || ch == ' '
+                        if ch.is_alphanumeric() || ch == '.' || ch == ' ' || ch == '[' || ch == ']'
                         {
                             // Check if space is part of a tag
                             if ch == ' ' {
@@ -1310,14 +1393,15 @@ pub mod tokenize
                                 {
                                     Ok(t) => Token::Tag(t),
                                     Err(e) => 
-                                    if e.error_type == ParseErrorType::Tag(TagParseError::InvalidCharacter) {
+                                    if e.error_type == ParseErrorType::Tag(TagParseError::InvalidCharacter)
+                                    {
                                         if let Ok(temp) = TagTemplate::from_str(ident_str)
                                         {
                                             Token::TagTemplate(temp)
                                         }
                                         else
                                         {
-                                        return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
+                                            return Err(ParseError::new(s.to_string(), i, ParseErrorType::Evaluation(EvalParseError::TokenInvalid)));
                                         }
                                     }
                                     else
@@ -1339,25 +1423,25 @@ pub mod tokenize
             }
         }
 
-        // Error check, ensure distinct template inputs
-        let mut template_inputs = HashSet::new();
-        for t in res.iter()
-        {
-            if let Token::TagTemplate(t) = t
-            {
-                for input in t.get_required_inputs()
-                {
-                    if template_inputs.contains(&input)
-                    {
-                        return Err(ParseError { string: s.to_string(), index_of_error: 0, error_type: ParseErrorType::Evaluation(EvalParseError::DuplicateTemplateTag(input)) })
-                    }
-                    else
-                    {
-                        template_inputs.insert(input);
-                    }
-                }
-            }
-        }
+        // // Error check, ensure distinct template inputs
+        // let mut template_inputs = HashSet::new();
+        // for t in res.iter()
+        // {
+        //     if let Token::TagTemplate(t) = t
+        //     {
+        //         for input in t.get_required_inputs()
+        //         {
+        //             if template_inputs.contains(&input)
+        //             {
+        //                 return Err(ParseError { string: s.to_string(), index_of_error: 0, error_type: ParseErrorType::Evaluation(EvalParseError::DuplicateTemplateTag(input)) })
+        //             }
+        //             else
+        //             {
+        //                 template_inputs.insert(input);
+        //             }
+        //         }
+        //     }
+        // }
 
         Ok(res)
     }
@@ -1450,7 +1534,7 @@ pub mod tokenize
 #[cfg(test)]
 mod unit_tests
 {
-    use crate::api::data::{evaltree::EvalTree, tag::Tag, context::Context};
+    use crate::api::data::{context::Context, evaltree::{EvalNode, EvalTree, OperandNode, OperationNode}, tag::Tag};
 
     #[test]
     fn equation_test_1()
@@ -1492,5 +1576,36 @@ mod unit_tests
 
         ctx.set_attribute(&Tag::from_str("Test").unwrap(), 3.0).unwrap();
         assert!(!tree.eval_as_bool(ctx).unwrap());
+    }
+
+    #[test]
+    fn equation_template_1()
+    {
+        let mut tree = EvalTree::from_str("1.0 == tag.[template]").unwrap();
+        assert!(tree.is_template());
+        tree.insert_template_input("template", &Tag::from_str("simple test").unwrap());
+        assert!(!tree.is_template());
+        assert!(tree.root.eq(&EvalNode::Operation(OperationNode::Equal(Box::new(EvalNode::Operand(OperandNode::ExplicitNumber(1.0))), Box::new(EvalNode::Operand(OperandNode::ReferencedTag(Tag::from_str("tag.simple test").unwrap())))))));
+    }
+
+    #[test]
+    fn equation_template_2()
+    {
+        let mut tree = EvalTree::from_str("1.0 == [starting].tag.[template]").unwrap();
+        assert!(tree.is_template());
+        tree.insert_template_input("template", &Tag::from_str("test").unwrap());
+        tree.insert_template_input("starting", &Tag::from_str("simple").unwrap());
+        assert!(!tree.is_template());
+        assert!(tree.root.eq(&EvalNode::Operation(OperationNode::Equal(Box::new(EvalNode::Operand(OperandNode::ExplicitNumber(1.0))), Box::new(EvalNode::Operand(OperandNode::ReferencedTag(Tag::from_str("simple.tag.test").unwrap())))))));
+    }
+
+    #[test]
+    fn equation_template_3()
+    {
+        let mut tree = EvalTree::from_str("lhs.[template] == rhs.[template]").unwrap();
+        assert!(tree.is_template());
+        tree.insert_template_input("template", &Tag::from_str("simple test").unwrap());
+        assert!(!tree.is_template());
+        assert!(tree.root.eq(&EvalNode::Operation(OperationNode::Equal(Box::new(EvalNode::Operand(OperandNode::ReferencedTag(Tag::from_str("lhs.simple test").unwrap()))), Box::new(EvalNode::Operand(OperandNode::ReferencedTag(Tag::from_str("rhs.simple test").unwrap())))))));
     }
 }
