@@ -9,9 +9,9 @@ The architecture for this project has several API layers that build ontop of one
 ┌──────────┐          
 │Database  ├─┐        
 ├──────────┤ │        
-│Display   ├─┤        
+│Permission├─┤ 
 ├──────────┤ │        
-│Permission├─┤        
+│Display   ├─┤        
 ├──────────┼ │┌──────┐
 │Wiki      ├─┼►Parse │
 ├──────────┤ │└──────┘
