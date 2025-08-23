@@ -35,12 +35,15 @@ fn app() -> Html {
                         --text-medium-faint: ${text_medium_faint};
                         --text-major-faint: ${text_major_faint};
                         --text-max-faint: ${text_max_faint};
+
+                        --secondary-50: ${secondary_50};
                     }
                 "#, 
                 text=theme.text, text_accent=theme.text_accent, background=theme.background,
                 primary=theme.primary, secondary=theme.secondary, accent=theme.accent,
                 text_minor_faint=theme.text_minor_faint, text_medium_faint=theme.text_medium_faint,
-                text_major_faint=theme.text_major_faint, text_max_faint=theme.text_major_faint
+                text_major_faint=theme.text_major_faint, text_max_faint=theme.text_major_faint,
+                secondary_50=theme.secondary_50
             )} />
             <Router/>
         </>

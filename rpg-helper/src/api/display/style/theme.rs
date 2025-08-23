@@ -27,6 +27,8 @@ pub struct Theme
     pub text_medium_faint: Color,
     pub text_major_faint: Color,
     pub text_max_faint: Color,
+
+    pub secondary_50: Color,
 }
 
 impl Theme
@@ -55,6 +57,8 @@ impl Theme
                 text_medium_faint: Color::rgba(58, 54, 54, 0.60),
                 text_major_faint: Color::rgba(58, 54, 54, 0.50),
                 text_max_faint: Color::rgba(58, 54, 54, 0.35),
+
+                secondary_50: Color::rgb(222, 214, 204)
             }
         );
 

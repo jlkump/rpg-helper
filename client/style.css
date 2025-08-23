@@ -111,47 +111,59 @@ h6
     list-style: none;
 }
 
-.navbar .menu li
-{
-    position: relative;
-}
-
-
 .navbar .menu li a
 {
     text-decoration: none;
+
     font-size: 1.3rem;
     font-weight: 500;
+    
     padding: 3px 20px;
-    border-radius: 4px;
-    border: 2px solid transparent;
-    transition: all 0.3s ease;
-    white-space: nowrap;
-    cursor: pointer;
-}
 
-.navbar .menu li.dropdown .dropdown-menu li a
-{
     color: var(--text);
+    border-radius: 4px;
+    border: 3px solid transparent;
     background-color: transparent;
+    
+    cursor: pointer;
+    white-space: nowrap;
+    
+    transition: all 0.3s ease;
 }
 
 .navbar .menu li:hover a,
-.navbar .menu li.dropdown .dropdown-menu li:hover a
+.navbar .menu .dropdown li:hover a
 {
-    color: var(--text-accent);
-    background-color: var(--primary);
+    /* color: var(--text-accent); */
+    /* background-color: var(--primary); */
+    color: var(--primary);
+    border: 3px solid var(--primary);
 }
 
-.navbar .menu li.dropdown .dropdown-menu
+.navbar .menu .dropdown
+{
+    position: relative;
+    display: none;
+}
+
+.navbar .menu .dropdown li a
+{
+    color: var(--text);
+    background-color: var(--secondary);
+}
+
+
+
+.navbar .menu .dropdown .dropdown-menu
 {
     transition: max-height 0.15s cubic-bezier(0.55, 0.8, 0.68, 0.91), padding 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91);
 
     display: flex;
     padding: 0;
     position: absolute;
+    align-items: start;
 
-    top: 30px;
+    top: 6px;
     left: 0;
     
     flex-direction: column;
@@ -161,23 +173,25 @@ h6
     gap: 1rem;
     padding: 0px;
 
-    background-color: var(--secondary);
-
     max-height: 0;
 }
 
-@media (min-width: 881px)
+@media (min-width: 931px)
 {
-    .navbar .menu li:hover.dropdown .dropdown-menu
+    .navbar .menu .dropdown
+    {
+        display: flex;
+    }
+
+    .navbar .menu .dropdown-button:hover .dropdown-menu
     {
         transition: max-height 0.65s cubic-bezier(0.55, 0.8, 0.68, 0.91), padding 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91);
     
-        border: 3px solid var(--primary);
+        /* border: 3px solid var(--primary); */
         max-height: 550px;
         padding: 10px;
     }
 }
-
 
 .nav-toggle
 {
@@ -198,7 +212,7 @@ h6
     transition: all 0.3s ease-in-out;
 }
 
-@media (max-width: 880px)
+@media (max-width: 930px)
 {
     .navbar .menu
     {
@@ -264,6 +278,7 @@ h6
         border-left: 0;
         padding-left: 0;
         padding-right: 0;
+        background-color: var(--secondary);
     }
 
     .navbar .menu li.dropdown.focused .dropdown-menu

@@ -35,7 +35,7 @@ pub fn navbar(props: &Props) -> Html
     {
         <nav class={classes!("navbar", props.class.clone())} style={props.style.clone()}>
             <span class={"content-container"}>
-                <Link<Route> classes={"logo"} to={Route::Home}><img src="/assets/Dice RPG Icon.svg"/>{"RPG Helper"}</Link<Route>>
+                <Link<Route> classes={"logo"} to={Route::Home}><img src="/assets/RPG-Helper-Logo.svg"/>{"RPG Helper"}</Link<Route>>
                 <button class={if *active { "nav-toggle active" } else { "nav-toggle" }} {onclick}>
                     <span class="bar"></span>
                     <span class="bar"></span>
@@ -44,18 +44,14 @@ pub fn navbar(props: &Props) -> Html
                 <ul class={if *active { "menu active" } else { "menu" }}>
                     <li><a>{"Dashboard"}</a></li>
                     <NavbarDropdown dropdown_name={"Play"}>
-                        <ul class={"dropdown-menu"}>
-                            <li><a>{"Host Game"}</a></li>
-                            <li><a>{"Join Game"}</a></li>
-                        </ul>
+                        <li><a>{"Host Game"}</a></li>
+                        <li><a>{"Join Game"}</a></li>
                     </NavbarDropdown>
                     <NavbarDropdown dropdown_name={"Tools"}>
-                        <ul class={"dropdown-menu"}>
-                            <li><a>{"Character Creator"}</a></li>
-                            <li><a>{"Ruleset Creator"}</a></li>
-                            <li><a>{"Theme Editor"}</a></li>
-                            <li><Link<ToolsRoute> to={ToolsRoute::DisplayEditor} >{"Display Editor"}</Link<ToolsRoute>></li>
-                        </ul>
+                        <li><a>{"Character Creator"}</a></li>
+                        <li><a>{"Ruleset Creator"}</a></li>
+                        <li><a>{"Theme Editor"}</a></li>
+                        <li><Link<ToolsRoute> to={ToolsRoute::DisplayEditor} >{"Display Editor"}</Link<ToolsRoute>></li>
                     </NavbarDropdown>
                     <li><a>{"About"}</a></li>
                 </ul>
@@ -81,14 +77,11 @@ fn nav_dropdown_menu(props: &DropdownProps) -> Html
 {
     let fctx = use_focus();
 
-    let c = if fctx.get_focus() == Some(props.dropdown_name.as_str())
+    let mut class = "dropdown".to_string();
+    if fctx.get_focus() == Some(&props.dropdown_name)
     {
-        "dropdown focused"
+        class.push_str(" focused");
     }
-    else
-    {
-        "dropdown"
-    };
 
     let onclick =
     {
@@ -98,9 +91,15 @@ fn nav_dropdown_menu(props: &DropdownProps) -> Html
 
     html!
     {
-        <li class={c}>
-            <a {onclick}>{props.dropdown_name.clone()}</a>
-            {props.children.clone()}
-        </li>
+        <>
+            <li class="dropdown-button">
+                <a {onclick}>{props.dropdown_name.clone()}</a>
+                <span {class}>
+                    <ul class={"dropdown-menu"}>
+                        {props.children.clone()}
+                    </ul>
+                </span>
+            </li>
+        </>
     }
 }
