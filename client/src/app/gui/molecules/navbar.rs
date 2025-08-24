@@ -18,29 +18,25 @@ pub fn navbar(props: &Props) -> Html
     let active = use_state(|| false);
 
     let fctx = use_focus();
-    let onclick = 
-    {
-        let active = active.clone();
-        Callback::from(
-            move |_|
-            {
-                active.set(!*active);
-                fctx.clear_focus();
-            }
-        )
-    };
+    // let onclick = 
+    // {
+    //     let active = active.clone();
+    //     Callback::from(
+    //         move |_|
+    //         {
+    //             active.set(!*active);
+    //             fctx.clear_focus();
+    //         }
+    //     )
+    // };
 
 
     html!
     {
         <nav class={classes!("navbar", props.class.clone())} style={props.style.clone()}>
-            <span class={"content-container"}>
+            <span class="left">
                 <Link<Route> classes={"logo"} to={Route::Home}><img src="/assets/RPG-Helper-Logo.svg"/>{"RPG Helper"}</Link<Route>>
-                <button class={if *active { "nav-toggle active" } else { "nav-toggle" }} {onclick}>
-                    <span class="bar"></span>
-                    <span class="bar"></span>
-                    <span class="bar"></span>
-                </button>
+                <div style="height: 75%; border-left: 3px solid var(--text-default-25); margin-left: 1rem; margin-right: 1rem; border-radius: 4px;"></div>
                 <ul class={if *active { "menu active" } else { "menu" }}>
                     <li><a>{"Dashboard"}</a></li>
                     <NavbarDropdown dropdown_name={"Play"}>
@@ -56,6 +52,23 @@ pub fn navbar(props: &Props) -> Html
                     <li><a>{"About"}</a></li>
                 </ul>
             </span>
+
+
+            <ul class="profile">
+                <li><a>{"Sign Up"}</a></li>
+                <li class="login"><a>{"Login"}</a></li>
+            </ul>
+            // <span class={"content-container"}>
+
+            //     // <div style="width: 64px; height: 64px; border: 4px solid black; border-radius: 100%;"></div>
+
+            //     // <button class={if *active { "nav-toggle active" } else { "nav-toggle" }} {onclick}>
+            //     //     <span class="bar"></span>
+            //     //     <span class="bar"></span>
+            //     //     <span class="bar"></span>
+            //     // </button>
+
+            // </span>
         </nav>
     }
 }
@@ -93,7 +106,7 @@ fn nav_dropdown_menu(props: &DropdownProps) -> Html
     {
         <>
             <li class="dropdown-button">
-                <a {onclick}>{props.dropdown_name.clone()}</a>
+                <a {onclick}>{props.dropdown_name.clone()}<i class="fa-solid fa-chevron-down" style="font-size: 14px; margin-left: 3px;"></i></a>
                 <span {class}>
                     <ul class={"dropdown-menu"}>
                         {props.children.clone()}

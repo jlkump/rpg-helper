@@ -160,6 +160,23 @@ impl Color
         }
     }
 
+    /// Blends the color of self with other with the following equation:
+    /// self * alpha + other * (1.0 - alpha).
+    /// 
+    /// Expects alpha to be [0.0, 1.0]
+    pub fn blend_with(&self, other: &Self, alpha: f32) -> Self
+    {
+        let (l_r, l_g, l_b) = self.to_rgb();
+        let (l_r, l_g, l_b) = (l_r as f32, l_g as f32, l_b as f32);
+        let (r_r, r_g, r_b) = other.to_rgb();
+        let (r_r, r_g, r_b) = (r_r as f32, r_g as f32, r_b as f32);
+        let minus_alpha = 1.0 - alpha;
+        let r = (l_r * alpha + r_r * minus_alpha).round() as u8;
+        let g = (l_g * alpha + r_g * minus_alpha).round() as u8;
+        let b = (l_b * alpha + r_b * minus_alpha).round() as u8;
+        Color::rgb(r, g, b)
+    }
+
     pub fn from_str(s: &str) -> Result<Color, DisplayError>
     {
         let s = s.trim();
@@ -277,6 +294,14 @@ impl Display for Color
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
     {
         write!(f, "{}", self.to_string())
+    }
+}
+
+impl Default for Color
+{
+    fn default() -> Self
+    {
+        Color::rgb(255, 255, 255)
     }
 }
 

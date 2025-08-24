@@ -13,6 +13,11 @@ html, body
     color: var(--text);
 }
 
+ul, ol
+{
+    margin: 0;
+}
+
 h1, h2, h3, h4, h5, h6
 {
     font-family: "Macondo", cursive;
@@ -50,7 +55,7 @@ h6
 
 .navbar
 {
-    height: 80px;
+    height: 60px;
     width: 100%;
 
     top: 0;
@@ -59,36 +64,50 @@ h6
 
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     flex-direction: row;
     flex-wrap: nowrap;
+
     z-index: 999;
 
-    background: var(--secondary);
-    border-bottom: 3px solid var(--primary);
+    color: var(--text-default-50);
+    background: var(--paper);
+    font-size: 1.15rem;
+    font-weight: 500;
+    
+    box-shadow: 0px 4px 4px var(--text-default-25);
 
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10 and IE 11 */
     user-select: none; /* Standard syntax */
 }
 
-.navbar .content-container
+.navbar .left
 {
+    float: left;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding: 0 2rem;
-    max-width: 1600px;
+    height: 100%;
 }
 
 .navbar .logo
 {
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 600;
     cursor: pointer;
+
+    height: 100%;
+
     display: flex;
     align-items: center;
+
+    text-decoration: none;
+    color: var(--primary);
+    font-family: "Macondo", cursive;
+    font-weight: 600;
+    font-style: normal;
+
+    margin-left: 1rem;
 }
 
 .navbar .logo img
@@ -97,73 +116,92 @@ h6
     margin-right: 5px;
 }
 
-.navbar a.logo
-{
-    text-decoration: none;
-    color: var(--text);
-}
-
 .navbar .menu
 {
     display: flex;
-    text-align: center;
-    gap: 1.5rem;
+    align-items: center;
+    padding: 0;
+
+    gap: 1rem;
     list-style: none;
+    height: 100%;
 }
 
-.navbar .menu li a
+.navbar li
+{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+}
+
+.navbar li a
 {
     text-decoration: none;
-
-    font-size: 1.3rem;
-    font-weight: 500;
-    
-    padding: 3px 20px;
-
-    color: var(--text);
-    border-radius: 4px;
-    border: 3px solid transparent;
-    background-color: transparent;
-    
     cursor: pointer;
     white-space: nowrap;
-    
-    transition: all 0.3s ease;
+    transition: all 0.15s ease;
+    padding: 0 1rem 0 1rem;
+    position: relative;
 }
 
-.navbar .menu li:hover a,
+.navbar li a::after
+{
+    position: absolute;
+    content: "";
+    top: 100%;
+    left: 10%;
+    width: 80%;
+    height: 3px;
+    background: var(--paper);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.25s, background 0.25s;
+}
+
+.navbar li:hover a,
 .navbar .menu .dropdown li:hover a
 {
-    /* color: var(--text-accent); */
-    /* background-color: var(--primary); */
-    color: var(--primary);
-    border: 3px solid var(--primary);
+    color: var(--text-default);
+}
+
+.navbar li:hover a::after,
+.navbar .menu .dropdown li:hover a::after
+{
+    background: var(--primary);
+    transform: scaleX(1);
+    transform-origin: left;
 }
 
 .navbar .menu .dropdown
 {
-    position: relative;
+    position: absolute;
+    bottom: 0;
     display: none;
 }
 
 .navbar .menu .dropdown li a
 {
-    color: var(--text);
-    background-color: var(--secondary);
+    color: var(--text-default-50);
 }
 
-
+.navbar .menu .dropdown li a::after
+{
+    background: var(--paper);
+    transform: scaleX(0);
+    transform-origin: right;
+}
 
 .navbar .menu .dropdown .dropdown-menu
 {
     transition: max-height 0.15s cubic-bezier(0.55, 0.8, 0.68, 0.91), padding 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91);
 
     display: flex;
-    padding: 0;
     position: absolute;
     align-items: start;
 
-    top: 6px;
+    top: 0;
     left: 0;
     
     flex-direction: column;
@@ -174,6 +212,9 @@ h6
     padding: 0px;
 
     max-height: 0;
+
+    background-color: var(--paper-75);
+    box-shadow: 4px 4px 4px var(--text-default-25);
 }
 
 @media (min-width: 931px)
@@ -186,10 +227,8 @@ h6
     .navbar .menu .dropdown-button:hover .dropdown-menu
     {
         transition: max-height 0.65s cubic-bezier(0.55, 0.8, 0.68, 0.91), padding 0.25s cubic-bezier(0.55, 0.8, 0.68, 0.91);
-    
-        /* border: 3px solid var(--primary); */
+        padding: 10px 0px 10px 0px;
         max-height: 550px;
-        padding: 10px;
     }
 }
 
@@ -210,6 +249,31 @@ h6
     margin: 5px auto;
     background-color: var(--text);
     transition: all 0.3s ease-in-out;
+}
+
+.navbar .profile
+{
+    float: right;
+
+    display: flex;
+    align-items: center;
+    text-align: center;
+
+    list-style: none;
+    height: 100%;
+
+    padding-left: 1rem;
+    padding-right: 2rem;
+}
+
+.navbar .profile li.login a
+{
+    color: var(--tertiary);
+}
+
+.navbar .profile li:hover.login a
+{
+    color: var(--secondary);
 }
 
 @media (max-width: 930px)
