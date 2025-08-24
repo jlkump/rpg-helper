@@ -1,4 +1,6 @@
-use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}, DataType};
+use std::collections::HashSet;
+
+use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet, TagTemplate}, DataType};
 
 use serde::{Deserialize, Serialize};
 
@@ -436,6 +438,42 @@ impl From<&AttributeSet> for Context
         }
         res
     }
+}
+
+/// A context template is used to provide a collection of
+/// templates that are needed to be filled out. Once they are,
+/// a context can be created.
+/// 
+/// A context template contains a sub-context which holds the
+/// values of the non-templated values. This allows for partial
+/// evaluation of the context. However, this should only be used
+/// in the process of building a context.
+/// 
+/// This is used in the RPG layer to construct schemas for Events
+/// as well as templates for character presets.
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct ContextTemplate
+{
+    ctx: Context,
+    templates: HashSet<Template>,
+}
+
+impl ContextTemplate
+{
+    pub fn get_partial_context(&self) -> &Context
+    {
+        &self.ctx
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
+enum Template
+{
+    Attribute,
+    Conditional,
+    Equation,
+    Modifier,
+    Tag(TagTemplate),
 }
 
 /// Used to filter a context

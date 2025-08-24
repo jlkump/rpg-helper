@@ -1,7 +1,7 @@
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use crate::app::gui::pages::{editor::display::DisplayEditor, general::home::HomePage};
+use crate::app::gui::pages::{editor::{display::DisplayEditor, ruleset::RulesetEditor}, general::home::HomePage};
 
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum Route
@@ -26,6 +26,8 @@ fn switch(route: Route) -> Html
 #[derive(Clone, Routable, PartialEq)]
 pub(crate) enum ToolsRoute
 {
+    #[at("/tools/RulesetEditor")]
+    RulesetEditor,
     #[at("/tools/DisplayEditor")]
     DisplayEditor,
 }
@@ -34,6 +36,7 @@ fn switch_tools(route: ToolsRoute) -> Html
 {
     match route
     {
+        ToolsRoute::RulesetEditor => html! { <RulesetEditor/> },
         ToolsRoute::DisplayEditor => html! { <DisplayEditor/> },
     }
 }

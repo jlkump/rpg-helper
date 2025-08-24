@@ -436,13 +436,13 @@ impl Index<&str> for TagSet
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 pub struct TagTemplate
 {
     decomposed_tag: Vec<TagTemplateSubtag>,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 enum TagTemplateSubtag
 {
     Literal(String),

@@ -45,7 +45,7 @@ pub fn navbar(props: &Props) -> Html
                     </NavbarDropdown>
                     <NavbarDropdown dropdown_name={"Tools"}>
                         <li><a>{"Character Creator"}</a></li>
-                        <li><a>{"Ruleset Creator"}</a></li>
+                        <li><Link<ToolsRoute> to={ToolsRoute::RulesetEditor} >{"Ruleset Creator"}</Link<ToolsRoute>></li>
                         <li><a>{"Theme Editor"}</a></li>
                         <li><Link<ToolsRoute> to={ToolsRoute::DisplayEditor} >{"Display Editor"}</Link<ToolsRoute>></li>
                     </NavbarDropdown>

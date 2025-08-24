@@ -45,7 +45,7 @@ fn inner_base_page(props: &Props) -> Html
             .fullpage-container
             {
                 width: 100%; 
-                height: calc(100vh - 83px);
+                height: calc(100vh - 60px);
             }
         "#
     );
