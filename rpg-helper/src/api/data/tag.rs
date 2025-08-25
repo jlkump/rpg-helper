@@ -186,6 +186,36 @@ impl Tag
         }
     }
 
+    /// Suffix a tag with another suffix
+    /// Ex:
+    ///     "Name Of Spell".add_suffix("Burning Hands") -> "Name Of Spell.Burning Hands"
+    pub fn add_suffix(&self, suffix: &Tag) -> Tag
+    {
+        let mut final_string = self.name.clone();
+        final_string.push('.');
+        final_string.push_str(&suffix.name);
+        Tag { name: final_string }
+    }
+
+    pub fn has_suffix(&self, suffix: &str) -> bool
+    {
+        if self.name.len() > suffix.len()
+        {
+            if let Some(i) = self.name.find(suffix)
+            {
+                self.name.ends_with(suffix) && self.name.chars().nth(i) == Some('.')
+            }
+            else
+            {
+                false
+            }
+        }
+        else
+        {
+            self.name.ends_with(suffix)
+        }
+    }
+
     /// Removes all sub-tags in a tag.
     /// Ex:
     ///     ability.spell.Name Of Spell.Exp -> ability
@@ -1299,6 +1329,15 @@ mod unit_tests
     {
         let t = Tag::from_str("first.second.third").unwrap();
         assert_eq!(t.remove_prefix_by_count(3), None);
+    }
+
+    /// Test removing simple suffix
+    #[test]
+    fn tag_suffix_1()
+    {
+        let pre = Tag::from_str("ability.spell.Name Of Spell").unwrap();
+        let suf = Tag::from_str("Burning Hands").unwrap();
+        assert_eq!(&pre.add_suffix(&suf).name, "ability.spell.Name Of Spell.Burning Hands");
     }
 
     /// Ensure count subtags method works as expected

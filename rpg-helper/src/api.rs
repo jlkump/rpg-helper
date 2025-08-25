@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::error::DataError, parse::ParseError};
+use crate::api::{data::error::DataError};
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+struct ParseError {}
 
 pub mod data;
 pub mod database;
 pub mod display;
-pub mod parse;
+// pub mod parse;
 pub mod permission;
 pub mod rpg;
 pub mod wiki;

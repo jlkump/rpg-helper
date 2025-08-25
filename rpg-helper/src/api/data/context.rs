@@ -202,17 +202,12 @@ impl Context
     pub fn set_modifier(&mut self, m: Modifier) -> Result<Option<Modifier>, DataError>
     {
         self.ensure_target_modifier(&m.name)?;
-        let old = self.modifiers.get_modifier(&m.name).cloned();
-        if old.is_some() 
-        {
-            self.modifiers.remove_modifier(&m.name);
-        }
-        else
+
+        if !self.has_modifier(&m.name)
         {
             self.general_tags.add_tag(&m.name);
         }
-        self.modifiers.add_modifier(m);
-        Ok(old)
+        Ok(self.modifiers.set_modifier(m))
     }
 
     pub fn remove_modifier(&mut self, t: &Tag) -> Result<Option<Modifier>, DataError>
@@ -455,7 +450,7 @@ impl From<&AttributeSet> for Context
 pub struct ContextTemplate
 {
     ctx: Context,
-    templates: HashSet<Template>,
+    templates: Vec<Template>,
 }
 
 impl ContextTemplate
@@ -466,12 +461,12 @@ impl ContextTemplate
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 enum Template
 {
     Attribute,
-    Conditional,
-    Equation,
+    Conditional(Conditional),
+    Equation(Equation),
     Modifier,
     Tag(TagTemplate),
 }
