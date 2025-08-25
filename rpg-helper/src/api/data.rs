@@ -9,6 +9,7 @@ pub mod evaltree;
 pub mod equation;
 pub mod modifier;
 pub mod tag;
+pub mod template;
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum DataType

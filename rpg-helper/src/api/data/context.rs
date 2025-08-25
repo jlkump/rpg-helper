@@ -450,7 +450,7 @@ impl From<&AttributeSet> for Context
 pub struct ContextTemplate
 {
     ctx: Context,
-    templates: Vec<Template>,
+    templates: Vec<TemplateValue>,
 }
 
 impl ContextTemplate
@@ -462,7 +462,7 @@ impl ContextTemplate
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-enum Template
+enum TemplateValue
 {
     Attribute,
     Conditional(Conditional),

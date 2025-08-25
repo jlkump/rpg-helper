@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::{HashMap, HashSet}, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
 use std::ops::Index;
 
-use crate::api::data::error::{ParseError, ParseErrorType, TagParseError, TemplateError};
+use crate::api::data::{error::{ParseError, ParseErrorType, TagParseError, TemplateError}, template::Template};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 pub struct Tag
@@ -579,12 +579,20 @@ impl TagTemplate
         Ok(TagTemplate { decomposed_tag })
     }
 
+    pub fn into_tag(&self) -> Result<Tag, TemplateError>
+    {
+        self.attempt_complete()
+    }
+
     fn is_valid_tag_char(c: char) -> bool
     {
         Tag::is_valid_tag_char(c) || c == '[' || c == ']'
     }
+}
 
-    pub fn get_required_inputs(&self) -> Vec<String>
+impl Template<Tag> for TagTemplate
+{
+    fn get_required_inputs(&self) -> HashSet<String>
     {
         self.decomposed_tag.clone().into_iter().filter_map(|st|
             if let TagTemplateSubtag::Subtag(s) = st
@@ -604,7 +612,7 @@ impl TagTemplate
     /// 
     /// If the template value provided was the last required input,
     /// the tag created is returned.
-    pub fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Tag>
+    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Tag>
     {
         self.decomposed_tag = self.decomposed_tag.clone().into_iter().map(|t|
             match &t
@@ -622,7 +630,7 @@ impl TagTemplate
             }
         ).collect();
 
-        match self.into_tag()
+        match self.attempt_complete()
         {
             Ok(t) => Some(t),
             Err(_) => None,
@@ -631,7 +639,7 @@ impl TagTemplate
 
     /// Inserts the mapping of templated subtags to tag values.
     /// Expected only to fail if there is a template subtag missing a tag value.
-    pub fn into_tag(&self) -> Result<Tag, TemplateError>
+    fn attempt_complete(&self) -> Result<Tag, TemplateError>
     {
         let full_subtags = self.decomposed_tag.iter().map(|e|
             match e
