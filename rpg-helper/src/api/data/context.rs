@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::api::data::{attribute::{AttributeSet, AttributeTemplate}, conditional::{Conditional, ConditionalSet, ConditionalTemplate}, effect::Effect, equation::{Equation, EquationSet, EquationTemplate}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet, ModifierTemplate}, tag::{Tag, TagSet, TagTemplate}, DataType};
+use crate::api::data::{attribute::{Attribute, AttributeSet, AttributeTemplate}, conditional::{Conditional, ConditionalSet, ConditionalTemplate}, effect::Effect, equation::{Equation, EquationSet, EquationTemplate}, error::{ConflictError, DataError, TemplateError}, modifier::{Modifier, ModifierSet, ModifierTemplate}, tag::{Tag, TagSet, TagTemplate}, template::Template, DataType};
 
 use serde::{Deserialize, Serialize};
 
@@ -440,7 +440,7 @@ impl From<&AttributeSet> for Context
 pub struct ContextTemplate
 {
     ctx: Context,
-    templates: Vec<TemplateValue>,
+    templates: Vec<TemplateValue>,  // Ensure all template values provided are truly template values (they have required inputs). Otherwise, the state of this context template will be invalid.
 }
 
 impl ContextTemplate
@@ -448,6 +448,128 @@ impl ContextTemplate
     pub fn get_partial_context(&self) -> &Context
     {
         &self.ctx
+    }
+}
+
+impl Template<Context> for ContextTemplate
+{
+    fn get_required_inputs(&self) -> HashSet<String>
+    {
+        let mut result = HashSet::new();
+        for t in self.templates.iter()
+        {
+            result.extend(t.get_required_inputs());
+        }
+        result
+    }
+
+    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Context>
+    {
+        let mut completed = vec![];
+        for t in self.templates.iter_mut()
+        {
+            match t
+            {
+                TemplateValue::Attribute(attribute_template) =>
+                if let Some(a) = attribute_template.insert_template_value(input_name, input_value)
+                {
+                    completed.push(CompletedValue::Attribute(a));
+                },
+                TemplateValue::Conditional(conditional_template) =>
+                if let Some(c) = conditional_template.insert_template_value(input_name, input_value)
+                {
+                    completed.push(CompletedValue::Conditional(c));
+                },
+                TemplateValue::Equation(equation_template) =>
+                if let Some(e) = equation_template.insert_template_value(input_name, input_value)
+                {
+                    completed.push(CompletedValue::Equation(e));
+                },
+                TemplateValue::Modifier(modifier_template) =>
+                if let Some(m) = modifier_template.insert_template_value(input_name, input_value)
+                {
+                    completed.push(CompletedValue::Modifier(m));
+                },
+                TemplateValue::Tag(tag_template) =>
+                if let Some(t) = tag_template.insert_template_value(input_name, input_value)
+                {
+                    completed.push(CompletedValue::Tag(t));
+                },
+            }
+        }
+
+        self.templates = self.templates.clone().into_iter().filter(|t| !t.is_complete()).collect();
+
+        for c in completed
+        {
+            // Currently doing nothing with errors (might need to do something in the future
+            // errors can definitely happen). Best solution would be to undo the template insertion.
+            let _ = match c
+            {
+                CompletedValue::Attribute(attribute) =>
+                if let Err(e) = self.ctx.set_attribute(attribute.get_name(), attribute.get_value())
+                { 
+                    Some(e)
+                }
+                else
+                {
+                    None
+                },
+                CompletedValue::Conditional(conditional) => 
+                if let Err(e) = self.ctx.set_conditional(conditional)
+                {
+                    Some(e)
+                }
+                else
+                {
+                    None
+                },
+                CompletedValue::Equation(equation) => 
+                if let Err(e) = self.ctx.set_equation(equation)
+                {
+                    Some(e)
+                }
+                else
+                {
+                    None
+                },
+                CompletedValue::Modifier(modifier) =>
+                if let Err(e) = self.ctx.set_modifier(modifier)
+                {
+                    Some(e)
+                }
+                else
+                {
+                    None
+                },
+                CompletedValue::Tag(tag) => 
+                {
+                    self.ctx.state_tags.add_tag(&tag);
+                    None
+                },
+            };
+        }
+
+        if self.templates.is_empty()
+        {
+            Some(self.ctx.clone())
+        }
+        else
+        {
+            None
+        }
+    }
+
+    fn attempt_complete(&self) -> Result<Context, super::error::TemplateError>
+    {
+        if self.templates.is_empty()
+        {
+            Ok(self.ctx.clone())
+        }
+        else
+        {
+            Err(TemplateError::MissingTemplateValues(self.get_required_inputs().into_iter().collect()))
+        }
     }
 }
 
@@ -459,6 +581,36 @@ enum TemplateValue
     Equation(EquationTemplate),
     Modifier(ModifierTemplate),
     Tag(TagTemplate),
+}
+
+impl TemplateValue
+{
+    fn get_required_inputs(&self) -> HashSet<String>
+    {
+        match self
+        {
+            TemplateValue::Attribute(attribute_template) => attribute_template.get_required_inputs(),
+            TemplateValue::Conditional(conditional_template) => conditional_template.get_required_inputs(),
+            TemplateValue::Equation(equation_template) => equation_template.get_required_inputs(),
+            TemplateValue::Modifier(modifier_template) => modifier_template.get_required_inputs(),
+            TemplateValue::Tag(tag_template) => tag_template.get_required_inputs(),
+        }
+    }
+
+    fn is_complete(&self) -> bool
+    {
+        self.get_required_inputs().is_empty()
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+enum CompletedValue
+{
+    Attribute(Attribute),
+    Conditional(Conditional),
+    Equation(Equation),
+    Modifier(Modifier),
+    Tag(Tag),
 }
 
 /// Used to filter a context
