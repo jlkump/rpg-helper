@@ -256,6 +256,7 @@ impl IntoIterator for ModifierSet
     }
 }
 
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct ModifierTemplate
 {
     name_template: Templated<TagTemplate, Tag>,

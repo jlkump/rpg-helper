@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::api::data::{attribute::AttributeSet, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet, TagTemplate}, DataType};
+use crate::api::data::{attribute::{AttributeSet, AttributeTemplate}, conditional::{Conditional, ConditionalSet, ConditionalTemplate}, effect::Effect, equation::{Equation, EquationSet, EquationTemplate}, error::{ConflictError, DataError}, modifier::{Modifier, ModifierSet, ModifierTemplate}, tag::{Tag, TagSet, TagTemplate}, DataType};
 
 use serde::{Deserialize, Serialize};
 
@@ -454,10 +454,10 @@ impl ContextTemplate
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 enum TemplateValue
 {
-    Attribute,
-    Conditional(Conditional),
-    Equation(Equation),
-    Modifier,
+    Attribute(AttributeTemplate),
+    Conditional(ConditionalTemplate),
+    Equation(EquationTemplate),
+    Modifier(ModifierTemplate),
     Tag(TagTemplate),
 }
 
