@@ -9,6 +9,8 @@
 - [x] Create template modifiers
 - [ ] Template effects? Nah, effects can be built from templated values where needed.
             - Actually maybe. It might be useful to have a clearly defined template effect data type
+- [ ] Complete a simple Date and Date Schema creator
+    - This will ensure the design for basic schemas works.
 - [ ] Create events from event schema
 
 ## Rulesets

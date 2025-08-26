@@ -1,8 +1,9 @@
 use std::{cmp::Ordering, collections::HashSet, rc::Rc};
 
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{attribute::AttributeSet, context::Context, equation::Equation, tag::Tag}, rpg::event::{Event, EventInterval}};
+use crate::api::{data::{attribute::AttributeSet, context::Context, equation::Equation, error::ParseError, tag::Tag}, rpg::event::{Event, EventInterval}};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Timeline
@@ -72,23 +73,20 @@ impl PartialOrd for Date
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering>
     {
-        let lhs_prefix = match Tag::from_str("lhs")
-        {
-            Ok(tag) => tag,
-            Err(_) => return None,
-        };
+        static LHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("lhs"));
+        static RHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("rhs"));
 
-        let rhs_prefix = match Tag::from_str("rhs")
+        let (lhs_prefix, rhs_prefix) = match (&*LHS, &*RHS)
         {
-            Ok(tag) => tag,
-            Err(_) => return None,
+            (Ok(lhs), Ok(rhs)) => (lhs, rhs),
+            _ => return None,
         };
 
         // Doing some cloning, but attribute sets on dates are typically very small so doesn't really matter
-        let ctx = self.values.clone().add_prefix(&lhs_prefix);
+        let ctx = self.values.clone().add_prefix(lhs_prefix);
         if let Ok(date_val) = self.ordering.eval(&(&ctx).into())
         { 
-            let ctx = other.values.clone().add_prefix(&rhs_prefix);
+            let ctx = other.values.clone().add_prefix(rhs_prefix);
             if let Ok(other_date_val) = other.ordering.eval(&(&ctx).into())
             {
                 if date_val < other_date_val
