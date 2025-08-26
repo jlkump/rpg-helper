@@ -7,16 +7,16 @@ use crate::api::data::tag::Tag;
 /// A name is the most basic wiki abstraction.
 /// It maps a tag to a display name, a string value.
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct NameSet
+pub struct NameRegistry
 {
     names: HashMap<Tag, String>,
 }
 
-impl NameSet
+impl NameRegistry
 {
-    pub fn new() -> NameSet
+    pub fn new() -> NameRegistry
     {
-        NameSet { names: HashMap::new() }
+        NameRegistry { names: HashMap::new() }
     }
 
     /// Defines how a tag should be displayed in a wiki note or page,

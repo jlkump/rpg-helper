@@ -1,4 +1,4 @@
-use crate::api::data::{context::Context, error::DataError, tag::{Tag, TagTemplate}, template::{Template, Templated}};
+use crate::api::data::{context::Context, error::{DataError, TemplateError}, tag::{Tag, TagTemplate}, template::{Template, Templated}};
 
 use std::collections::{HashMap, HashSet};
 
@@ -270,8 +270,11 @@ impl ModifierTemplate
     {
         todo!()
     }
+}
 
-    pub fn get_required_inputs(&self) -> HashSet<String>
+impl Template<Modifier> for ModifierTemplate
+{
+    fn get_required_inputs(&self) -> HashSet<String>
     {
         let mut result = self.name_template.get_required_inputs();
         result.extend(self.target_template.get_required_inputs());
@@ -281,7 +284,7 @@ impl ModifierTemplate
     }
 
     /// Inserts given tag value into all matching template inputs
-    pub fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Modifier>
+    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Modifier>
     {
         self.name_template.insert_template_value(input_name, input_value);
         self.target_template.insert_template_value(input_name, input_value);
@@ -304,6 +307,28 @@ impl ModifierTemplate
             _ => None,
         }
     }
+    
+    fn attempt_complete(&self) -> Result<Modifier, super::error::TemplateError>
+    {
+        match (self.name_template.as_complete(), self.target_template.as_complete(), self.condition_template.as_complete(), self.change_template.as_complete())
+        {
+            (
+                Some(name),
+                Some(target),
+                Some(condition),
+                Some(change),
+            ) => Ok(Modifier
+            {
+                name: name.clone(),
+                target: target.clone(),
+                condition: condition.clone(),
+                change: change.clone(),
+            }),
+            _ => Err(TemplateError::MissingTemplateValues(self.get_required_inputs().into_iter().collect()))
+        }
+    }
+
+    
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
@@ -318,42 +343,84 @@ impl Template<ModifierTarget> for ModifierTargetTemplate
 {
     fn get_required_inputs(&self) -> HashSet<String>
     {
-        todo!()
+        match self
+        {
+            ModifierTargetTemplate::Single(tag_template) | ModifierTargetTemplate::MatchingEnd(tag_template) | ModifierTargetTemplate::MatchingStart(tag_template) => tag_template.get_required_inputs(),
+        }
     }
 
     fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<ModifierTarget>
     {
-        todo!()
+        // A closure to make the mapping from the template to true value easier and cleaner
+        // Takes the value of self and outputs the tag template inner value combined with a fn that converts
+        // a tag to a ModifierTarget (which is simply the enum without the parentheses [Very cool, I did not know that was possible]).
+        let (tag_template, wrapper): (&mut TagTemplate, fn(Tag) -> ModifierTarget) = match self
+        {
+            ModifierTargetTemplate::Single(t) => (t, ModifierTarget::Single),
+            ModifierTargetTemplate::MatchingEnd(t) => (t, ModifierTarget::MatchingEnd),
+            ModifierTargetTemplate::MatchingStart(t) => (t, ModifierTarget::MatchingStart),
+        };
+        tag_template.insert_template_value(input_name, input_value).map(wrapper)
     }
 
     fn attempt_complete(&self) -> Result<ModifierTarget, super::error::TemplateError>
     {
-        todo!()
+        let (tag_template, wrapper): (&TagTemplate, fn(Tag) -> ModifierTarget) = match self
+        {
+            ModifierTargetTemplate::Single(t) => (t, ModifierTarget::Single),
+            ModifierTargetTemplate::MatchingEnd(t) => (t, ModifierTarget::MatchingEnd),
+            ModifierTargetTemplate::MatchingStart(t) => (t, ModifierTarget::MatchingStart),
+        };
+        tag_template.attempt_complete().map(wrapper)
     }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 enum ModifierChangeTemplate
 {
-    Single(TagTemplate),
-    MatchingEnd(TagTemplate),
-    MatchingStart(TagTemplate),
+    BasicValue(f32),
+    FromOtherValue(TagTemplate),
 }
 
 impl Template<ModifierChange> for ModifierChangeTemplate
 {
     fn get_required_inputs(&self) -> HashSet<String>
     {
-        todo!()
+        match self
+        {
+            ModifierChangeTemplate::BasicValue(_) => HashSet::new(),
+            ModifierChangeTemplate::FromOtherValue(tag_template) => tag_template.get_required_inputs(),
+        }
     }
 
     fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<ModifierChange>
     {
-        todo!()
+        match self
+        {
+            ModifierChangeTemplate::BasicValue(v) => Some(ModifierChange::BasicValue(*v)),
+            ModifierChangeTemplate::FromOtherValue(tag_template) =>
+            if let Some(tag) = tag_template.insert_template_value(input_name, input_value)
+            {
+                Some(ModifierChange::FromOtherValue(tag))
+            }
+            else
+            {
+                None
+            },
+        }
     }
 
     fn attempt_complete(&self) -> Result<ModifierChange, super::error::TemplateError>
     {
-        todo!()
+        match self
+        {
+            ModifierChangeTemplate::BasicValue(v) => Ok(ModifierChange::BasicValue(*v)),
+            ModifierChangeTemplate::FromOtherValue(tag_template) =>
+            match tag_template.attempt_complete()
+            {
+                Ok(tag) => Ok(ModifierChange::FromOtherValue(tag)),
+                Err(e) => Err(e),
+            },
+        }
     }
 }

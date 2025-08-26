@@ -1,10 +1,10 @@
-use crate::api::data::tag::Tag;
+use crate::api::data::{tag::{Tag, TagTemplate}, template::Template};
 
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize, Clone)]
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Attribute
 {
     name: Tag,
@@ -115,5 +115,49 @@ impl IntoIterator for AttributeSet
     fn into_iter(self) -> Self::IntoIter
     {
         self.attributes.into_iter()
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct AttributeTemplate
+{
+    name_template: TagTemplate,
+    default_value: f32,
+}
+
+impl AttributeTemplate
+{
+    pub fn new(name_template: TagTemplate, default_value: f32) -> AttributeTemplate
+    {
+        AttributeTemplate { name_template, default_value }
+    }
+}
+
+impl Template<Attribute> for AttributeTemplate
+{
+    fn get_required_inputs(&self) -> std::collections::HashSet<String>
+    {
+        self.name_template.get_required_inputs()
+    }
+
+    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Attribute>
+    {
+        if let Some(name) = self.name_template.insert_template_value(input_name, input_value)
+        {
+            Some(Attribute { name, value: self.default_value })
+        }
+        else
+        {
+            None
+        }
+    }
+
+    fn attempt_complete(&self) -> Result<Attribute, super::error::TemplateError>
+    {
+        match self.name_template.attempt_complete()
+        {
+            Ok(t) => Ok(Attribute { name: t, value: self.default_value }),
+            Err(e) => Err(e),
+        }
     }
 }

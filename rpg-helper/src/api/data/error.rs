@@ -13,7 +13,10 @@ pub enum DataError
     Template(TemplateError),
     Tokenization(TokenizationError),
     Syntax(Token),
-    CtxInsertTemplate,              // A context can not contain a templated equation,  conditional, or tag
+    /// A template string can not be provided for non-template values
+    /// and vice versa. This is used in conditional and equation construction
+    /// to ensure valid state of conditionals and equations.
+    StringInputInvalid(String),
 }
 
 impl DataError
@@ -155,5 +158,13 @@ impl From<TokenizationError> for DataError
     fn from(value: TokenizationError) -> Self
     {
         DataError::Tokenization(value)
+    }
+}
+
+impl From<TemplateError> for DataError
+{
+    fn from(value: TemplateError) -> Self
+    {
+        DataError::Template(value)    
     }
 }

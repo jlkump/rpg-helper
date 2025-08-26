@@ -1275,6 +1275,15 @@ mod unit_tests
         assert_eq!(tag, Tag::from_str("first.inserted.other.Long Tag").unwrap());
     }
 
+    /// Creating a template that contains no template values.
+    /// This is expected to succeed.
+    #[test]
+    fn tag_template_7()
+    {
+        let temp = TagTemplate::from_str("no template.tag").unwrap();
+        assert!(temp.get_required_inputs().is_empty());
+    }
+
     /// Test no-subtags method
     /// Expects no change to the tag
     #[test]

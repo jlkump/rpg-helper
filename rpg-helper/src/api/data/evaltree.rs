@@ -116,7 +116,7 @@ impl EvalTree
     /// EvalTree::from_str("3 + 4*10 / 5").to_expression_str() => "3 + 4 * 10 / 5"
     /// EvalTree::from_str("3 + 4^10 / 5").to_expression_str() => "3 + pow(4, 10) / 5"
     /// EvalTree::from_str("(3 + 4)^10 / 5").to_expression_str() => "pow(3 + 4, 10) / 5"
-    pub fn to_expression_str(&self) -> String
+    pub fn to_expression_string(&self) -> String
     {
         todo!()
     }
@@ -958,21 +958,28 @@ pub(super) mod parse
     }
 
     /// Check if the input `string` has balanced brackets.
-    pub fn brackets_are_balanced(string: &str) -> Result<(), ParseError> {
+    pub fn brackets_are_balanced(string: &str) -> Result<(), ParseError>
+    {
         let mut brackets: Vec<char> = vec![];
-        for (i, c) in string.chars().enumerate() {
-            match Bracket::from_char(c) {
-                Some(Bracket::Open(char_bracket)) => {
+        for (i, c) in string.chars().enumerate()
+        {
+            match Bracket::from_char(c)
+            {
+                Some(Bracket::Open(char_bracket)) =>
+                {
                     brackets.push(char_bracket);
                 }
-                Some(Bracket::Close(char_close_bracket)) => {
-                    if brackets.pop() != Some(char_close_bracket) {
+                Some(Bracket::Close(char_close_bracket)) =>
+                {
+                    if brackets.pop() != Some(char_close_bracket)
+                    {
                         return Err(ParseError::new(string.to_string(), i, ParseErrorType::Evaluation(EvalParseError::MissingParentheses)));
                     }
                 }
                 _ => {}
             }
         }
+
         if brackets.is_empty()
         {
             Ok(())
@@ -984,24 +991,31 @@ pub(super) mod parse
     }
 
     #[derive(Debug, Default, Clone)]
-    struct ParenPair {
+    struct ParenPair
+    {
         left_pa: Option<usize>,
         min_op: Option<i32>,
         left_op: Option<i32>,
         is_method: bool,
     }
 
-    impl ParenPair {
-        fn new(left_pa: Option<usize>, is_method: bool) -> ParenPair {
-            ParenPair {
+    impl ParenPair
+    {
+        fn new(left_pa: Option<usize>, is_method: bool) -> ParenPair
+        {
+            ParenPair
+            {
                 left_pa,
                 is_method,
                 min_op: None,
                 left_op: None,
             }
         }
-        fn new_empty() -> ParenPair {
-            ParenPair {
+
+        fn new_empty() -> ParenPair
+        {
+            ParenPair
+            {
                 left_pa: None,
                 min_op: None,
                 left_op: None,
@@ -1423,6 +1437,8 @@ pub mod tokenize
             }
         }
 
+        // Removed error check because duplicate template inputs are A-O.K.
+
         // // Error check, ensure distinct template inputs
         // let mut template_inputs = HashSet::new();
         // for t in res.iter()
@@ -1607,5 +1623,13 @@ mod unit_tests
         tree.insert_template_input("template", &Tag::from_str("simple test").unwrap());
         assert!(!tree.is_template());
         assert!(tree.root.eq(&EvalNode::Operation(OperationNode::Equal(Box::new(EvalNode::Operand(OperandNode::ReferencedTag(Tag::from_str("lhs.simple test").unwrap()))), Box::new(EvalNode::Operand(OperandNode::ReferencedTag(Tag::from_str("rhs.simple test").unwrap())))))));
+    }
+
+    /// Strangely formatted equation tag templates.
+    /// Expected to fail at parsing tag template
+    #[test]
+    fn equation_template_4()
+    {
+        assert!(EvalTree::from_str("lhs.[template.value] == rhs.[template]").is_err());
     }
 }

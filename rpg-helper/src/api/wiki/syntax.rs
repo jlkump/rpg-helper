@@ -19,7 +19,7 @@ pub enum Inline
     Bold(Vec<Inline>),
     Italic(Vec<Inline>),
     Code(String),
-    TagReference(Tag),
+    TagReference(TagRef),
     ImageReference(ImageRef),
     PageReference(PageRef),
 }
@@ -38,14 +38,20 @@ pub enum ListType
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct PageRef
+pub struct TagRef
 {
-    name: String,
-    page_id: Tag,
+
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct ImageRef
 {
 
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct PageRef
+{
+    name: String,
+    page_id: Tag,
 }

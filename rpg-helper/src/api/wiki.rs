@@ -25,3 +25,8 @@ pub struct Wiki
 {
 
 }
+
+// Localization?
+// It would be nice to map text based on a given localization file
+// but this is definitely a long-term stretch goal. For now, localization
+// can be done by creating separate wikis.
