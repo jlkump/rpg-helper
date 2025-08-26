@@ -151,9 +151,9 @@ impl Template<Conditional> for ConditionalTemplate
         result
     }
 
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Conditional>
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Conditional>
     {
-        self.name_template.insert_template_value(input_name, input_value);
+        self.name_template.fill_template_value(input_name, input_value);
         self.ast.insert_template_input(input_name, input_value);
         
 

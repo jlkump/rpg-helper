@@ -142,6 +142,11 @@ impl Character
         let mut final_data = self.data.clone();
         final_data.ctx.layer_context(&self.context_data)?;
 
+        // We create an empty timeline context which will be used
+        // as a "scratch pad" of sorts for events.
+        // This is useful for values such as the progress of completion for
+        // a crafting of an item.
+
         for e in self.timeline.iter()
         {
             if e.date <= self.current_date

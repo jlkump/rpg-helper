@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{error::TemplateError, tag::Tag};
+use crate::api::data::{attribute::AttributeTemplate, conditional::ConditionalTemplate, equation::EquationTemplate, error::TemplateError, modifier::ModifierTemplate, tag::{Tag, TagTemplate}};
 
 /// Used to indicate that a struct is a template struct.
 /// Mainly useful for the Templated enum such that
@@ -12,11 +12,19 @@ pub trait Template<T>
 {
     fn get_required_inputs(&self) -> HashSet<String>;
 
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<T>;
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<T>;
 
     fn attempt_complete(&self) -> Result<T, TemplateError>;
+
+    fn is_complete(&self) -> bool
+    {
+        self.get_required_inputs().is_empty()
+    }
 }
 
+/// Encapsulation of a possible value that can be either a template or completed value
+/// Implements some helper functionality to allow for easily inserting template
+/// values until the template is complete.
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub enum Templated<T, C>
 where 
@@ -35,11 +43,11 @@ where
     /// If this templated value is still a template
     /// this will attempt to insert the given template value
     /// Otherwise, this will be a no-op
-    pub fn insert_template_value(&mut self, input_name: &str, input_value: &Tag)
+    pub fn fill_template_value(&mut self, input_name: &str, input_value: &Tag)
     {
         if let Templated::Template(t) = self
         {
-            if let Some(v) = t.insert_template_value(input_name, input_value)
+            if let Some(v) = t.fill_template_value(input_name, input_value)
             {
                 *self = Templated::Complete(v);
             }
@@ -132,6 +140,45 @@ where
         {
             Templated::Template(t) => Some(t),
             Templated::Complete(_) => None,
+        }
+    }
+}
+
+/// Simple Enum wrapper for all possible template values in this api layer
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub enum TemplateValue
+{
+    Attribute(AttributeTemplate),
+    Conditional(ConditionalTemplate),
+    Equation(EquationTemplate),
+    Modifier(ModifierTemplate),
+    Tag(TagTemplate),
+}
+
+impl TemplateValue
+{
+    /// Simply calls get_required_inputs on the inner value
+    pub fn get_required_inputs(&self) -> HashSet<String>
+    {
+        match self
+        {
+            TemplateValue::Attribute(attribute_template) => attribute_template.get_required_inputs(),
+            TemplateValue::Conditional(conditional_template) => conditional_template.get_required_inputs(),
+            TemplateValue::Equation(equation_template) => equation_template.get_required_inputs(),
+            TemplateValue::Modifier(modifier_template) => modifier_template.get_required_inputs(),
+            TemplateValue::Tag(tag_template) => tag_template.get_required_inputs(),
+        }
+    }
+
+    pub fn is_complete(&self) -> bool
+    {
+        match self
+        {
+            TemplateValue::Attribute(attribute_template) => attribute_template.is_complete(),
+            TemplateValue::Conditional(conditional_template) => conditional_template.is_complete(),
+            TemplateValue::Equation(equation_template) => equation_template.is_complete(),
+            TemplateValue::Modifier(modifier_template) => modifier_template.is_complete(),
+            TemplateValue::Tag(tag_template) => tag_template.is_complete(),
         }
     }
 }

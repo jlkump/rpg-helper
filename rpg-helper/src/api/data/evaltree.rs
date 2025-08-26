@@ -647,7 +647,7 @@ impl EvalNode
             {
                 OperandNode::TagTemplate(tag_template) =>
                 {
-                    if let Some(tag) = tag_template.insert_template_value(s, t)
+                    if let Some(tag) = tag_template.fill_template_value(s, t)
                     {
                         match value_hint
                         {

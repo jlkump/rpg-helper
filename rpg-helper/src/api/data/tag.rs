@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use std::ops::Index;
 
-use crate::api::data::{error::{ParseError, ParseErrorType, TagParseError, TemplateError}, template::Template};
+use crate::api::data::{error::{ParseError, ParseErrorType, TagParseError, TemplateError}, template::{Template, Templated}};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 pub struct Tag
@@ -479,14 +479,53 @@ enum TagTemplateSubtag
     Subtag(String),
 }
 
+impl TagTemplateSubtag
+{
+    fn is_literal(&self) -> bool
+    {
+        match self
+        {
+            TagTemplateSubtag::Literal(_) => true,
+            TagTemplateSubtag::Subtag(_) => false,
+        }
+    }
+}
+
 impl TagTemplate
 {
+    /// Convention for a template's `new` method
+    /// is to return a Templated result of
+    /// either the template value or the finished
+    /// value if the template is already complete.
+    pub fn new(s: &str) -> Result<Templated<TagTemplate, Tag>, ParseError>
+    {
+        match Self::from_str(s)
+        {
+            Ok(t) => Ok(Templated::Template(t)),
+            Err(e) =>
+            {
+                if e.error_type == ParseErrorType::Tag(TagParseError::MissingTemplate)
+                {
+                    if let Ok(t) = Tag::from_str(s)
+                    {
+                        return Ok(Templated::Complete(t));
+                    }
+                }
+                Err(e)
+            },
+        }
+    }
+
     /// Given a string, constructs a TagTemplate
     /// Expects to find at least one template value, indicated by a subtag surrounded
     /// by "[]". Also expects each template identifier to be unique
     /// 
     /// Ex:
     ///     "tag.test.[template].value"
+    /// 
+    /// Unless you know the given string is garanteed to have
+    /// a template value, it is better to call `new`,
+    /// as it ensures a template tag is in a valid state.
     pub fn from_str(s: &str) -> Result<TagTemplate, ParseError>
     {
         // Initial error check to ensure not empty
@@ -576,7 +615,14 @@ impl TagTemplate
             }
         }
 
-        Ok(TagTemplate { decomposed_tag })
+        if decomposed_tag.iter().all(|tok| tok.is_literal())
+        {
+            Err(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::MissingTemplate)))
+        }
+        else
+        {
+            Ok(TagTemplate { decomposed_tag })
+        }
     }
 
     pub fn into_tag(&self) -> Result<Tag, TemplateError>
@@ -612,7 +658,7 @@ impl Template<Tag> for TagTemplate
     /// 
     /// If the template value provided was the last required input,
     /// the tag created is returned.
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Tag>
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Tag>
     {
         self.decomposed_tag = self.decomposed_tag.clone().into_iter().map(|t|
             match &t
@@ -1248,7 +1294,7 @@ mod unit_tests
     fn tag_template_4()
     {
         let mut temp = TagTemplate::from_str("simple.[template]").unwrap();
-        temp.insert_template_value("template", &Tag::from_str("inserted").unwrap());
+        temp.fill_template_value("template", &Tag::from_str("inserted").unwrap());
         let tag = temp.into_tag().unwrap();
         assert_eq!(tag, Tag::from_str("simple.inserted").unwrap());
     }
@@ -1258,8 +1304,8 @@ mod unit_tests
     fn tag_template_5()
     {
         let mut temp = TagTemplate::from_str("[simple].[template]").unwrap();
-        temp.insert_template_value("template", &Tag::from_str("inserted").unwrap());
-        temp.insert_template_value("simple", &Tag::from_str("first").unwrap());
+        temp.fill_template_value("template", &Tag::from_str("inserted").unwrap());
+        temp.fill_template_value("simple", &Tag::from_str("first").unwrap());
         let tag = temp.into_tag().unwrap();
         assert_eq!(tag, Tag::from_str("first.inserted").unwrap());
     }
@@ -1269,19 +1315,27 @@ mod unit_tests
     fn tag_template_6()
     {
         let mut temp = TagTemplate::from_str("[simple].[template]").unwrap();
-        temp.insert_template_value("template", &Tag::from_str("inserted.other. Long Tag").unwrap());
-        temp.insert_template_value("simple", &Tag::from_str("first").unwrap());
+        temp.fill_template_value("template", &Tag::from_str("inserted.other. Long Tag").unwrap());
+        temp.fill_template_value("simple", &Tag::from_str("first").unwrap());
         let tag = temp.into_tag().unwrap();
         assert_eq!(tag, Tag::from_str("first.inserted.other.Long Tag").unwrap());
     }
 
     /// Creating a template that contains no template values.
-    /// This is expected to succeed.
+    /// This is expected to fail.
     #[test]
     fn tag_template_7()
     {
-        let temp = TagTemplate::from_str("no template.tag").unwrap();
-        assert!(temp.get_required_inputs().is_empty());
+        let temp = TagTemplate::from_str("no template.tag");
+        if let Err(e) = temp
+        {
+            assert_eq!(e.error_type, ParseErrorType::Tag(TagParseError::MissingTemplate));
+            assert_eq!(e.string, "no template.tag");
+        }
+        else
+        {
+            panic!("Succeeded in creating a template of a non templatable string.")
+        }
     }
 
     /// Test no-subtags method

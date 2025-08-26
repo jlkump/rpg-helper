@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::HashSet, rc::Rc};
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{attribute::AttributeSet, equation::Equation, tag::Tag}, rpg::event::{Event, EventInterval}};
+use crate::api::{data::{attribute::AttributeSet, context::Context, equation::Equation, tag::Tag}, rpg::event::{Event, EventInterval}};
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Timeline
