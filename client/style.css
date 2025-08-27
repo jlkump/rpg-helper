@@ -13,6 +13,34 @@ html, body
     color: var(--text);
 }
 
+.courier-prime-regular
+{
+  font-family: "Courier Prime", monospace;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.courier-prime-bold
+{
+  font-family: "Courier Prime", monospace;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.courier-prime-regular-italic
+{
+  font-family: "Courier Prime", monospace;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.courier-prime-bold-italic
+{
+  font-family: "Courier Prime", monospace;
+  font-weight: 700;
+  font-style: italic;
+}
+
 ul, ol
 {
     margin: 0;
@@ -91,14 +119,15 @@ hr
 
 input
 {
-    font-family: "Winky Sans", sans-serif;
-    font-weight: 500;
+    font-family: "Courier Prime", monospace;
+    font-weight: 400;
     font-style: normal;
     font-size: 18px;
     background-color: var(--paper-50);
-    border: 0;
+    border: 2px solid var(--paper-75);
     padding: 4px;
     padding-left: 10px;
+    width: calc(100% - 14px);
 }
 
 input:focus
@@ -107,6 +136,12 @@ input:focus
     outline: none;
     outline-width: 0;
     background-color: var(--paper-75);
+    border: 2px solid var(--primary);
+}
+
+.temp-in:focus
+{
+    border: 2px solid var(--text-primary);
 }
 
 
