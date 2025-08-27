@@ -12,6 +12,10 @@
 - [ ] Complete a simple Date and Date Schema creator
     - This will ensure the design for basic schemas works.
     - [x] Style chosen for input
+    - [ ] Create basic input types
+        - [ ] Text (single line) input
+        - [ ] Equation input (long line, scrollable, plain code text) (autocomplete tags for the future)
+        - [ ] List input
 - [ ] Create events from event schema
 
 ## Rulesets
