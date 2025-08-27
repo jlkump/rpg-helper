@@ -38,6 +38,8 @@ fn app() -> Html {
                         --text-tertiary: ${text_tertiary};
                         --text-accent: ${text_accent};
 
+                        --drop-shadow: ${drop_shadow};
+
                         --paper-75: ${paper_75};
                         --paper-50: ${paper_50};
                         --paper-25: ${paper_25};
@@ -83,6 +85,8 @@ fn app() -> Html {
                 secondary=theme.secondary, tertiary=theme.tertiary, accent=theme.accent,
                 text_default=theme.text_default, text_primary=theme.text_primary, text_secondary=theme.text_secondary,
                 text_tertiary=theme.text_tertiary, text_accent=theme.text_accent,
+
+                drop_shadow=theme.drop_shadow,
 
                 paper_75=theme.paper_75, paper_50=theme.paper_50, paper_25=theme.paper_25,
                 primary_75=theme.primary_75, primary_50=theme.primary_50, primary_25=theme.primary_25,

@@ -31,6 +31,8 @@ pub struct Theme
     pub text_tertiary: Color,  // Text ontop of a secondary bg
     pub text_accent: Color,     // Text ontop of an accent bg
 
+    pub drop_shadow: Color,
+
     // Advanced color variants, blends with the background color
     pub paper_75: Color,
     pub paper_50: Color,
@@ -140,6 +142,8 @@ impl Theme
                     text_tertiary: Color::rgb(211, 146, 24),
                     text_accent: Color::rgba(36, 34, 34, 1.0),
                     
+                    drop_shadow: Color::rgba(36, 34, 34, 0.35),
+
                     paper_75: Color::default(),
                     paper_50: Color::default(),
                     paper_25: Color::default(),

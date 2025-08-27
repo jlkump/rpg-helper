@@ -11,6 +11,7 @@
             - Actually maybe. It might be useful to have a clearly defined template effect data type
 - [ ] Complete a simple Date and Date Schema creator
     - This will ensure the design for basic schemas works.
+    - [x] Style chosen for input
 - [ ] Create events from event schema
 
 ## Rulesets

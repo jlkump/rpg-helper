@@ -13,7 +13,7 @@ pub struct Props
     #[prop_or_default]
     pub class: Classes,
     #[prop_or_default]
-    pub style: Option<AttrValue>,
+    pub style: AttrValue,
 }
 
 #[function_component(BasePage)]
@@ -22,7 +22,7 @@ pub fn base_page(props: &Props) -> Html
     html!
     {
         <FocusProvider>
-            <InnerBasePage children={props.children.clone()} class={props.class.clone()} style={props.class.clone()} />
+            <InnerBasePage children={props.children.clone()} class={props.class.clone()} style={props.style.clone()} />
         </FocusProvider>
     }
 }
@@ -46,6 +46,7 @@ fn inner_base_page(props: &Props) -> Html
             {
                 width: 100%; 
                 height: calc(100vh - 60px);
+                padding: 10px;
             }
         "#
     );
@@ -68,9 +69,11 @@ fn inner_base_page(props: &Props) -> Html
     let fctx = use_focus();
     html!
     {
-        <div class={classes!(inner, props.class.clone())} style={props.style.clone()}>
+        <div class={inner}>
             <Navbar />
-            {props.children.clone()}
+            <div class={classes!("fullpage-container", props.class.clone())} style={props.style.clone()}>
+                {props.children.clone()}
+            </div>
             <div class={"page"} onclick={Callback::from(move |_| { fctx.clear_focus(); })}></div>
             <div class={cs} style="display: flex;">
                 <div style="display: flex; flex-direction: column;">

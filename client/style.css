@@ -1,7 +1,7 @@
 html, body
 {
     font-family: "Winky Sans", sans-serif;
-    font-weight: 500;
+    font-weight: 400;
     font-style: normal;
 
     font-size: 18px;
@@ -20,38 +20,95 @@ ul, ol
 
 h1, h2, h3, h4, h5, h6
 {
-    font-family: "Macondo", cursive;
-    font-weight: 600;
-    font-style: normal;
-    font-size: 48px;
+    /* font-family: "Macondo", cursive;
+    font-style: normal; */
+    font-weight: 400;
     margin: 0px;
 }
 
 h1
 {
-    font-size: 72px;
+    font-size: 48px;
+    color: var(--primary);
 }
 
-h3, h4, h5, h6
+h2
 {
-    font-weight: 400;
-    color: var(--text-minor-faint);
+    font-size: 32px;
+    color: var(--secondary);
 }
 
-h4
+h3
 {
-    color: var(--text-medium-faint);
+    font-size: 24px;
+    color: var(--tertiary);
 }
 
-h5
+form
 {
-    color: var(--text-major-faint);
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
 }
 
-h6
+label
 {
-    color: var(--text-max-faint);
+    display: flex;
+    align-items: center;
+
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10 and IE 11 */
+    user-select: none; /* Standard syntax */
 }
+
+label i
+{
+    opacity: 50%;
+    transition: opacity 0.2s ease;
+    cursor: help;
+    margin-left: auto;
+    font-size: 16px;
+}
+
+label i:hover
+{
+    opacity: 100%;
+}
+
+hr
+{
+    width: 100%;
+    height: 4px;
+    margin-top: 2px;
+
+    background-color: var(--text-default-25);
+    border: 0;
+
+    border-radius: 4px;
+    outline: none;
+    box-shadow: none;
+}
+
+input
+{
+    font-family: "Winky Sans", sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    font-size: 18px;
+    background-color: var(--paper-50);
+    border: 0;
+    padding: 4px;
+    padding-left: 10px;
+}
+
+input:focus
+{
+    border: 0;
+    outline: none;
+    outline-width: 0;
+    background-color: var(--paper-75);
+}
+
 
 .navbar
 {
@@ -75,7 +132,7 @@ h6
     font-size: 1.15rem;
     font-weight: 500;
     
-    box-shadow: 0px 4px 4px var(--text-default-25);
+    box-shadow: 0px 4px 4px var(--drop-shadow);
 
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10 and IE 11 */
@@ -217,7 +274,7 @@ h6
     max-height: 0;
 
     background-color: var(--paper-75);
-    box-shadow: 4px 4px 4px var(--text-default-25);
+    box-shadow: 4px 4px 4px var(--drop-shadow);
 
     cursor: auto;
 }

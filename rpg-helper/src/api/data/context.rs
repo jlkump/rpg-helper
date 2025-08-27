@@ -413,6 +413,19 @@ impl From<&AttributeSet> for Context
     }
 }
 
+impl From<AttributeSet> for Context
+{
+    fn from(value: AttributeSet) -> Self
+    {
+        let mut res = Context::new();
+        for (t, a) in value.into_iter()
+        {
+            let _ = res.set_attribute(&t, a.get_value());
+        }
+        res
+    }
+}
+
 /// A context template is used to provide a collection of
 /// templates that are needed to be filled out. Once they are,
 /// a context can be created.
