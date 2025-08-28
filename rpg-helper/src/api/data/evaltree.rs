@@ -1085,10 +1085,13 @@ pub(super) mod parse
                         if let Some(min_prec) = top.min_op
                         {
                             // Look to next right operation (if it exists)
-                            let right: Option<&Operation> = tokens.iter().filter_map(|t| t.as_operation()).next();
+                            let right = tokens.iter().enumerate().find(|(oi, t)|
+                            {
+                                t.as_operation().is_some() && *oi > i
+                            }).map(|(_, t)| t.as_operation());
 
                             // Check right precedence and keep parentheses if needed
-                            if let Some(r_op) = right
+                            if let Some(Some(r_op)) = right
                             {
                                 if min_prec < r_op.get_precedence()
                                 {
@@ -1628,6 +1631,28 @@ mod unit_tests
 
         ctx.set_attribute(&Tag::from_str("Test").unwrap(), 3.0).unwrap();
         assert!(!tree.eval_as_bool(ctx).unwrap());
+    }
+
+    #[test]
+    fn op_prio_test_1()
+    {
+        let tree = EvalTree::from_str("1.0 + 4.0 ^ 2").unwrap();
+        assert_eq!(tree.eval_as_num(&Context::new()).unwrap(), 17.0);
+    }
+
+    #[test]
+    fn op_prio_test_2()
+    {
+        let tree = EvalTree::from_str("(1.0 + 4.0) ^ 2").unwrap();
+        assert_eq!(tree.eval_as_num(&Context::new()).unwrap(), 25.0);
+    }
+
+    #[test]
+    fn op_prio_test_3()
+    {
+        let tree = EvalTree::from_str("(1.0 + 4.0) ^ 2 / 2").unwrap();
+        println!("{}", tree);
+        assert_eq!(tree.eval_as_num(&Context::new()).unwrap(), 12.5);
     }
 
     #[test]
