@@ -24,9 +24,19 @@ impl Conditional
         Ok(Conditional { name, equation_string: equation.to_string(), ast })
     }
 
+    pub fn eval(&self, ctx: &Context) -> Result<bool, DataError>
+    {
+        self.ast.eval_as_bool(ctx)
+    }
+
     pub fn get_equation_string(&self) -> String
     {
         self.equation_string.clone()
+    }
+
+    pub fn check_only_allowed_tags(&self, allowed_tags: &Vec<Tag>) -> Result<(), Templated<TagTemplate, Tag>>
+    {
+        self.ast.check_only_allowed_tags(allowed_tags)
     }
 }
 
@@ -57,7 +67,7 @@ impl ConditionalSet
     {
         if let Some(c) = self.conditionals.get(conditional_name)
         {
-            c.ast.eval_as_bool(ctx)
+            c.eval(ctx)
         }
         else
         {

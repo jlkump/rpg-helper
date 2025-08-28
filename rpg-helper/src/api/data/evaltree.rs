@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{context::Context, error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}, template::Template};
+use crate::api::data::{context::Context, error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}, template::{Template, Templated}};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -90,6 +90,14 @@ impl EvalTree
     pub fn insert_template_input(&mut self, s: &str, t: &Tag)
     {
         self.root.recursive_insert_template_input(s, t, ExpectedResult::Unknown);
+    }
+
+    /// Used to check that this equation only contains tags in the given list.
+    /// This method will fail if any tag is found that is not in the list
+    /// or if any tags in the tree are a template tag.
+    pub fn check_only_allowed_tags(&self, allowed_tags: &Vec<Tag>) -> Result<(), Templated<TagTemplate, Tag>>
+    {
+        self.root.recursive_check_only_allowed_tags(allowed_tags)
     }
 
     /// Constructs a full abstract syntax tree from the given string.
@@ -685,6 +693,34 @@ impl EvalNode
                 return op.get_children().iter().any(|c| c.recursive_check_contains_template())
             },
         }
+    }
+
+    fn recursive_check_only_allowed_tags(&self, allowed_tags: &Vec<Tag>) -> Result<(), Templated<TagTemplate, Tag>>
+    {
+        match self
+        {
+            EvalNode::Operand(op) =>
+            {
+                match op
+                {
+                    OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) =>
+                    if !allowed_tags.contains(tag)
+                    {
+                        return Err(Templated::Complete(tag.clone()));
+                    },
+                    OperandNode::TagTemplate(temp) =>
+                    {
+                        return Err(Templated::Template(temp.clone()));
+                    },
+                    _ => (),
+                }
+            },
+            EvalNode::Operation(op) =>
+            {
+                op.get_children().iter().try_for_each(|c| c.recursive_check_only_allowed_tags(allowed_tags))?;
+            },
+        }
+        Ok(())
     }
 
     fn expected_result(&self) -> ExpectedResult

@@ -1,10 +1,15 @@
+use std::{cell::RefCell, rc::Rc};
+
+use rpg_helper::api::data::tag::Tag;
 use yew::prelude::*;
 
-use crate::app::gui::pages::{editor::editor_bar::EditorBar, BasePage};
+use crate::app::gui::{atoms::input::equation_input::EquationInput, pages::{editor::editor_bar::EditorBar, BasePage}};
 
 #[function_component(RulesetEditor)]
 pub fn ruleset_editor() -> Html
 {
+    let equation_id = Rc::new(RefCell::new(Tag::from_str("test.equation").unwrap()));
+    let allowed = Rc::new(RefCell::new(vec![Tag::from_str("lhs.Year").unwrap(), Tag::from_str("rhs.Year").unwrap()]));
     html!
     {
         <BasePage style="display: flex; align-items: center; flex-direction: column;">
@@ -29,10 +34,8 @@ pub fn ruleset_editor() -> Html
                 <h1>{"Header 1"}</h1>
                 <hr/>
                 <label>{"Equation"}<i class="fa-solid fa-circle-question"></i></label>
-                <input class="" type="text" placeholder="Year"/>
-
-                <label>{"Equation"}<i class="fa-solid fa-circle-question"></i></label>
-                <input class="temp-in" style="color: var(--text-primary); background-color: var(--primary);" type="text" placeholder="Alt Year"/>
+                <EquationInput allowed_tag_values={allowed} {equation_id} />
+                // <input class="temp-in" style="color: var(--text-primary); background-color: var(--primary);" type="text" placeholder="Alt Year"/>
                 <p>
                     {"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."}
                 </p>

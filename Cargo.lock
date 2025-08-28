@@ -975,6 +975,7 @@ dependencies = [
  "serde_json",
  "stylist",
  "wasm-logger",
+ "web-sys",
  "yew",
  "yew-router",
  "yewdux",

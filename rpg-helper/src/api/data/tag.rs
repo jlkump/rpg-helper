@@ -732,6 +732,29 @@ impl Template<Tag> for TagTemplate
     }
 }
 
+impl Display for TagTemplate
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        let result_string = self.decomposed_tag.iter().map(|tok|
+        {
+            match tok
+            {
+                TagTemplateSubtag::Literal(l) => l.to_string(),
+                TagTemplateSubtag::Subtag(s) => format!("[{}]", s),
+            }
+        }).fold(String::new(), |mut f, tok|
+        {
+            f.push_str(&tok);
+            f.push('.');
+            f
+        });
+        let result = &result_string[..result_string.len()];
+
+        write!(f, "{}", result)
+    }
+}
+
 #[cfg(test)]
 mod unit_tests 
 {

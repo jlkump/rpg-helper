@@ -33,6 +33,11 @@ impl Equation
     {
         self.equation_string.clone()
     }
+
+    pub fn check_only_allowed_tags(&self, allowed_tags: &Vec<Tag>) -> Result<(), Templated<TagTemplate, Tag>>
+    {
+        self.ast.check_only_allowed_tags(allowed_tags)
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
