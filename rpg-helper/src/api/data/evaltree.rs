@@ -118,63 +118,55 @@ impl EvalTree
     /// EvalTree::from_str("(3 + 4)^10 / 5").to_expression_str() => "pow(3 + 4, 10) / 5"
     pub fn to_expression_string(&self) -> String
     {
-        let mut result = String::new();
-        
-        match &self.root 
+        String::from(match &self.root 
         {
             EvalNode::Operation(operation_node) => 
             {
-                
+
                 let mut v: Vec<String> = Vec::new();
-                for (_i, n) in operation_node.get_children().iter().enumerate() {
+                for (_i, n) in operation_node.get_children().iter().enumerate() 
+                {
                     v.push(EvalTree{ root: *(*n).clone() }.to_expression_string());
                 }
 
-                match operation_node.get_operation() {
+                match operation_node.get_operation() 
+                {
                     // 1 Child Operations
-                    Operation::Negate => result = String::from("-(".to_owned() + v.get(0).expect("") + ")"),
-                    Operation::Sqrt => result = String::from("sqrt(".to_owned() + v.get(0).expect("") + ")"),
-                    Operation::Not => result = String::from("!(".to_owned() + v.get(0).expect("") + ")"),
-                    Operation::Round => result = String::from("round(".to_owned() + v.get(0).expect("") + ")"),
-                    Operation::RoundDown => result = String::from("rounddown(".to_owned() + v.get(0).expect("") + ")"),
-                    Operation::RoundUp => result = String::from("roundup(".to_owned() + v.get(0).expect("") + ")"),
+                    Operation::Negate =>                "-(".to_owned() + v.get(0).expect("") + ")",
+                    Operation::Sqrt =>               "sqrt(".to_owned() + v.get(0).expect("") + ")",
+                    Operation::Not =>                   "!(".to_owned() + v.get(0).expect("") + ")",
+                    Operation::Round =>             "round(".to_owned() + v.get(0).expect("") + ")",
+                    Operation::RoundDown =>     "rounddown(".to_owned() + v.get(0).expect("") + ")",
+                    Operation::RoundUp =>         "roundup(".to_owned() + v.get(0).expect("") + ")",
                     // 2 Child Operations
-                    Operation::Add => result = String::from(v.get(0).expect("").to_owned() + " + " + v.get(1).expect("")),
-                    Operation::Subtract => result = String::from(v.get(0).expect("").to_owned() + " - " + v.get(1).expect("")),
-                    Operation::Multiply => result = String::from(v.get(0).expect("").to_owned() + " * " + v.get(1).expect("")),
-                    Operation::Divide => result = String::from(v.get(0).expect("").to_owned() + " / " + v.get(1).expect("")),
-                    Operation::Equal => result = String::from(v.get(0).expect("").to_owned() + " == " + v.get(1).expect("")),
-                    Operation::NotEqual => result = String::from(v.get(0).expect("").to_owned() + " != " + v.get(1).expect("")),
-                    Operation::LessThan => result = String::from(v.get(0).expect("").to_owned() + " < " + v.get(1).expect("")),
-                    Operation::LessThanEq => result = String::from(v.get(0).expect("").to_owned() + " <= " + v.get(1).expect("")),
-                    Operation::GreaterThan => result = String::from(v.get(0).expect("").to_owned() + " > " + v.get(1).expect("")),
-                    Operation::GreaterThanEq => result = String::from(v.get(0).expect("").to_owned() + " >= " + v.get(1).expect("")),
-                    Operation::Or => result = String::from(v.get(0).expect("").to_owned() + " || " + v.get(1).expect("")),
-                    Operation::And => result = String::from(v.get(0).expect("").to_owned() + " && " + v.get(1).expect("")),
-                    // 2 Child function operations
-                    Operation::PowMethod => result = String::from("pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")"),
-                    Operation::PowSymbol => result = String::from("pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")"),
-                    Operation::Range => result = String::from("range(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")"),
+                    Operation::Add =>           v.get(0).expect("").to_owned() + " + "  + v.get(1).expect(""),
+                    Operation::Subtract =>      v.get(0).expect("").to_owned() + " - "  + v.get(1).expect(""),
+                    Operation::Multiply =>      v.get(0).expect("").to_owned() + " * "  + v.get(1).expect(""),
+                    Operation::Divide =>        v.get(0).expect("").to_owned() + " / "  + v.get(1).expect(""),
+                    Operation::Equal =>         v.get(0).expect("").to_owned() + " == " + v.get(1).expect(""),
+                    Operation::NotEqual =>      v.get(0).expect("").to_owned() + " != " + v.get(1).expect(""),
+                    Operation::LessThan =>      v.get(0).expect("").to_owned() + " < "  + v.get(1).expect(""),
+                    Operation::LessThanEq =>    v.get(0).expect("").to_owned() + " <= " + v.get(1).expect(""),
+                    Operation::GreaterThan =>   v.get(0).expect("").to_owned() + " > "  + v.get(1).expect(""),
+                    Operation::GreaterThanEq => v.get(0).expect("").to_owned() + " >= " + v.get(1).expect(""),
+                    Operation::Or =>            v.get(0).expect("").to_owned() + " || " + v.get(1).expect(""),
+                    Operation::And =>           v.get(0).expect("").to_owned() + " && " + v.get(1).expect(""),
+                    // 2 Child function operatio
+                    Operation::PowMethod =>       "pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")",
+                    Operation::PowSymbol =>       "pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")",
+                    Operation::Range =>         "range(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")",
                     // 3 Child Operations
-                    Operation::Ternary => result = String::from(v.get(0).expect("").to_owned() + " ? " + v.get(1).expect("") + " : " + v.get(2).expect("")),
-                };
+                    Operation::Ternary =>       v.get(0).expect("").to_owned() + " ? " + v.get(1).expect("") + " : " + v.get(2).expect(""),
+                }
             },
-            // Think this is working except the tags
             EvalNode::Operand(operand_node) =>  
-            match operand_node {
-                OperandNode::ExplicitNumber(n) => result = n.to_string(),
-                OperandNode::ExplicitBool(b) => result = b.to_string(),
-                // OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) => format!("{}", tag.to_str()),
-                // OperandNode::TagTemplate(template) => format!("{:?}", template)
-                // Not sure what these two represent, for now just discarding lol
-                _ => ()
+            match operand_node 
+            {
+                OperandNode::ExplicitNumber(n) => n.to_string(),
+                OperandNode::ExplicitBool(b) => b.to_string(),
+                _ => "".to_string()
             }
-
-            // Similar in "impl std::fmt::Display for EvalNode", extract from there?
-        }
-
-        result
-
+        })
     }
 }
 
