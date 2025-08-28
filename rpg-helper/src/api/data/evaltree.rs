@@ -118,7 +118,63 @@ impl EvalTree
     /// EvalTree::from_str("(3 + 4)^10 / 5").to_expression_str() => "pow(3 + 4, 10) / 5"
     pub fn to_expression_string(&self) -> String
     {
-        todo!()
+        let mut result = String::new();
+        
+        match &self.root 
+        {
+            EvalNode::Operation(operation_node) => 
+            {
+                
+                let mut v: Vec<String> = Vec::new();
+                for (_i, n) in operation_node.get_children().iter().enumerate() {
+                    v.push(EvalTree{ root: *(*n).clone() }.to_expression_string());
+                }
+
+                match operation_node.get_operation() {
+                    // 1 Child Operations
+                    Operation::Negate => result = String::from("-(".to_owned() + v.get(0).expect("") + ")"),
+                    Operation::Sqrt => result = String::from("sqrt(".to_owned() + v.get(0).expect("") + ")"),
+                    Operation::Not => result = String::from("!(".to_owned() + v.get(0).expect("") + ")"),
+                    Operation::Round => result = String::from("round(".to_owned() + v.get(0).expect("") + ")"),
+                    Operation::RoundDown => result = String::from("rounddown(".to_owned() + v.get(0).expect("") + ")"),
+                    Operation::RoundUp => result = String::from("roundup(".to_owned() + v.get(0).expect("") + ")"),
+                    // 2 Child Operations
+                    Operation::Add => result = String::from(v.get(0).expect("").to_owned() + " + " + v.get(1).expect("")),
+                    Operation::Subtract => result = String::from(v.get(0).expect("").to_owned() + " - " + v.get(1).expect("")),
+                    Operation::Multiply => result = String::from(v.get(0).expect("").to_owned() + " * " + v.get(1).expect("")),
+                    Operation::Divide => result = String::from(v.get(0).expect("").to_owned() + " / " + v.get(1).expect("")),
+                    Operation::Equal => result = String::from(v.get(0).expect("").to_owned() + " == " + v.get(1).expect("")),
+                    Operation::NotEqual => result = String::from(v.get(0).expect("").to_owned() + " != " + v.get(1).expect("")),
+                    Operation::LessThan => result = String::from(v.get(0).expect("").to_owned() + " < " + v.get(1).expect("")),
+                    Operation::LessThanEq => result = String::from(v.get(0).expect("").to_owned() + " <= " + v.get(1).expect("")),
+                    Operation::GreaterThan => result = String::from(v.get(0).expect("").to_owned() + " > " + v.get(1).expect("")),
+                    Operation::GreaterThanEq => result = String::from(v.get(0).expect("").to_owned() + " >= " + v.get(1).expect("")),
+                    Operation::Or => result = String::from(v.get(0).expect("").to_owned() + " || " + v.get(1).expect("")),
+                    Operation::And => result = String::from(v.get(0).expect("").to_owned() + " && " + v.get(1).expect("")),
+                    // 2 Child function operations
+                    Operation::PowMethod => result = String::from("pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")"),
+                    Operation::PowSymbol => result = String::from("pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")"),
+                    Operation::Range => result = String::from("range(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")"),
+                    // 3 Child Operations
+                    Operation::Ternary => result = String::from(v.get(0).expect("").to_owned() + " ? " + v.get(1).expect("") + " : " + v.get(2).expect("")),
+                };
+            },
+            // Think this is working except the tags
+            EvalNode::Operand(operand_node) =>  
+            match operand_node {
+                OperandNode::ExplicitNumber(n) => result = n.to_string(),
+                OperandNode::ExplicitBool(b) => result = b.to_string(),
+                // OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) => format!("{}", tag.to_str()),
+                // OperandNode::TagTemplate(template) => format!("{:?}", template)
+                // Not sure what these two represent, for now just discarding lol
+                _ => ()
+            }
+
+            // Similar in "impl std::fmt::Display for EvalNode", extract from there?
+        }
+
+        result
+
     }
 }
 
@@ -1631,5 +1687,23 @@ mod unit_tests
     fn equation_template_4()
     {
         assert!(EvalTree::from_str("lhs.[template.value] == rhs.[template]").is_err());
+    }
+
+    #[test]
+    fn to_string_1()
+    {
+        assert_eq!(EvalTree::from_str("3 + 4*10 / 5").expect("AST constructor failed").to_expression_string(), "3 + 4 * 10 / 5");
+    }
+    #[test]
+    fn to_string_2()
+    {
+        assert_eq!(EvalTree::from_str("3 + 4^10 / 5").expect("AST constructor failed").to_expression_string(), "3 + pow(4, 10) / 5");
+    }
+    #[test]
+    fn to_string_3()
+    {
+        let temp: String = format!("{}", EvalTree::from_str("(3 + 4)^10 / 5").expect("")).to_string();
+        print!("{}", temp);
+        assert_eq!(EvalTree::from_str("(3 + 4)^10 / 5").expect("AST constructor failed").to_expression_string(), "pow(3 + 4, 10) / 5");
     }
 }
