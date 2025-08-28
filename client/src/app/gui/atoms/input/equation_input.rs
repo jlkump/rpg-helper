@@ -7,7 +7,7 @@ use yew::prelude::*;
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props
 {
-    pub equation_id: Rc<RefCell<Tag>>,
+    pub equation_id: Option<Rc<RefCell<Tag>>>,
     #[prop_or_default]
     pub default_value: AttrValue,
     #[prop_or_default]
@@ -58,45 +58,53 @@ pub fn equation_input(props: &Props) -> Html
                     }
                     else
                     {
-                        match Equation::new(e_id.as_ref().borrow().clone(), &input_string)
+                        if let Some(equation_id) = e_id.as_ref()
                         {
-                            Ok(equation) => 
+                            match Equation::new(equation_id.borrow().clone(), &input_string)
                             {
-                                if let Some(limited) = allowed.clone()
+                                Ok(equation) => 
                                 {
-                                    match equation.check_only_allowed_tags(&*limited.borrow())
+                                    if let Some(limited) = allowed.clone()
                                     {
-                                        Ok(_) => 
+                                        match equation.check_only_allowed_tags(&*limited.borrow())
                                         {
-                                            // TODO: Correct input with the equation string we construct
-                                            handle_equation_complete(equation, &callback, &error_message);
-                                        },
-                                        Err(e) =>
-                                        {
-                                            match e
+                                            Ok(_) => 
                                             {
-                                                rpg_helper::api::data::template::Templated::Template(t) =>
+                                                // TODO: Correct input with the equation string we construct
+                                                handle_equation_complete(equation, &callback, &error_message);
+                                            },
+                                            Err(e) =>
+                                            {
+                                                match e
                                                 {
-                                                    error_message.set(Some(format!("Found invalid tag template value: {}", t)));
-                                                },
-                                                rpg_helper::api::data::template::Templated::Complete(t) =>
-                                                {
-                                                    error_message.set(Some(format!("Found invalid tag value: {}", t)));
-                                                },
-                                            }
-                                        },
+                                                    rpg_helper::api::data::template::Templated::Template(t) =>
+                                                    {
+                                                        error_message.set(Some(format!("Found invalid tag template value: {}", t)));
+                                                    },
+                                                    rpg_helper::api::data::template::Templated::Complete(t) =>
+                                                    {
+                                                        error_message.set(Some(format!("Found invalid tag value: {}", t)));
+                                                    },
+                                                }
+                                            },
+                                        }
                                     }
-                                }
-                                else
+                                    else
+                                    {
+                                        handle_equation_complete(equation, &callback, &error_message);
+                                    }
+                                },
+                                Err(e) =>
                                 {
-                                    handle_equation_complete(equation, &callback, &error_message);
-                                }
-                            },
-                            Err(e) =>
-                            {
-                                log::warn!("Failed to parse equation: {:?}", e);
-                                error_message.set(Some(format!("{:?}", e)));
-                            },
+                                    log::warn!("Failed to parse equation: {:?}", e);
+                                    error_message.set(Some(format!("{:?}", e)));
+                                },
+                            }
+                        }
+                        else
+                        {
+                            log::warn!("Attempt input equation without input.");
+                            error_message.set(Some(format!("Equation input requires valid tag id.")));
                         }
                     }
                     value.set(AttrValue::from(input_string));

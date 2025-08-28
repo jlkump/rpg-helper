@@ -105,9 +105,10 @@ label i:hover
 
 hr
 {
-    width: 100%;
+    width: calc(100% - 2rem);
     height: 4px;
     margin-top: 2px;
+    margin: 0.5rem 1rem 0.5rem 1rem;
 
     background-color: var(--text-default-25);
     border: 0;
@@ -115,6 +116,19 @@ hr
     border-radius: 4px;
     outline: none;
     box-shadow: none;
+}
+
+hr.left
+{
+    width: calc(100% - 1rem);
+    margin-left: 0;
+}
+
+hr.full
+{
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 input
