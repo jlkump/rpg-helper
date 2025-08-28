@@ -9,7 +9,7 @@ pub struct Props
 {
     pub equation_id: Rc<RefCell<Tag>>,
     #[prop_or_default]
-    pub default_value: Option<AttrValue>,
+    pub default_value: AttrValue,
     #[prop_or_default]
     pub class: Classes,
     #[prop_or_default]
@@ -22,12 +22,6 @@ pub struct Props
     pub onchange: Callback<Equation>,
     #[prop_or_default]
     pub allowed_tag_values: Option<Rc<RefCell<Vec<Tag>>>>,
-}
-
-fn handle_equation_complete(equation: Equation, callback: &Callback<Equation>, error_message: &UseStateHandle<Option<String>>)
-{
-    callback.emit(equation);
-    error_message.set(None);
 }
 
 /// This component handles user input for creation of an equation.
@@ -45,12 +39,14 @@ fn handle_equation_complete(equation: Equation, callback: &Callback<Equation>, e
 pub fn equation_input(props: &Props) -> Html
 {
     let error_message = use_state(|| None);
+    let value = use_state(|| props.default_value.clone());
     let onchange = 
     {
         let e_id = props.equation_id.clone();
         let callback = props.onchange.clone();
         let error_message = error_message.clone();
         let allowed = props.allowed_tag_values.clone();
+        let value = value.clone();
         Callback::from(move |e: Event|
             {
                 if let Some(target) = e.target()
@@ -103,6 +99,7 @@ pub fn equation_input(props: &Props) -> Html
                             },
                         }
                     }
+                    value.set(AttrValue::from(input_string));
                 }
             }
         )
@@ -117,6 +114,7 @@ pub fn equation_input(props: &Props) -> Html
                 style={props.style.clone()}
                 name={props.name.clone()}
                 placeholder={props.placeholder.clone()}
+                value={&*value}
                 {onchange}
             />
             if let Some(message) = &*error_message
@@ -125,4 +123,10 @@ pub fn equation_input(props: &Props) -> Html
             }
         </>
     }
+}
+
+fn handle_equation_complete(equation: Equation, callback: &Callback<Equation>, error_message: &UseStateHandle<Option<String>>)
+{
+    callback.emit(equation);
+    error_message.set(None);
 }
