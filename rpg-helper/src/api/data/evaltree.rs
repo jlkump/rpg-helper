@@ -172,7 +172,7 @@ impl EvalTree
                 OperandNode::ExplicitNumber(n) => n.to_string(),
                 OperandNode::ExplicitBool(b) => b.to_string(),
                 OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) => format!("{}", tag.to_str()),
-                OperandNode::TagTemplate(template) => format!("{:?}", template),
+                OperandNode::TagTemplate(template) => format!("{}", template),
             }
         })
     }
@@ -1747,16 +1747,28 @@ mod unit_tests
     {
         assert_eq!(EvalTree::from_str("3 + 4*10 / 5").expect("AST constructor failed").to_expression_string(), "3 + 4 * 10 / 5");
     }
+
     #[test]
     fn to_string_2()
     {
         assert_eq!(EvalTree::from_str("3 + 4^10 / 5").expect("AST constructor failed").to_expression_string(), "3 + pow(4, 10) / 5");
     }
+
     #[test]
     fn to_string_3()
     {
         let temp: String = format!("{}", EvalTree::from_str("(3 + 4)^10 / 5").expect("")).to_string();
         print!("{}", temp);
         assert_eq!(EvalTree::from_str("(3 + 4)^10 / 5").expect("AST constructor failed").to_expression_string(), "pow(3 + 4, 10) / 5");
+    }
+
+    #[test]
+    fn to_string_4()
+    {
+        // Tree structures are different, thus different evaluation
+        assert_ne!(EvalTree::from_str("rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)").unwrap(), EvalTree::from_str("rounddown(sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1/2)").unwrap());
+
+        // Should be the same string inputed
+        assert_eq!(EvalTree::from_str("rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)").expect("AST constructor failed").to_expression_string(), "rounddown((sqrt(8 * Ability.Magic Theory.Exp / 5 + 1)-1)/2)");
     }
 }
