@@ -171,6 +171,8 @@ impl EvalTree
             {
                 OperandNode::ExplicitNumber(n) => n.to_string(),
                 OperandNode::ExplicitBool(b) => b.to_string(),
+                OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) => format!("{}", tag.to_str()),
+                OperandNode::TagTemplate(template) => format!("{:?}", template),
                 _ => "".to_string()
             }
         })
