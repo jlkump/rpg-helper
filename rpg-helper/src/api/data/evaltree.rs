@@ -122,7 +122,6 @@ impl EvalTree
         {
             EvalNode::Operation(operation_node) => 
             {
-
                 let mut v: Vec<String> = Vec::new();
                 for (_i, n) in operation_node.get_children().iter().enumerate() 
                 {
@@ -151,7 +150,7 @@ impl EvalTree
                     Operation::GreaterThanEq => v.get(0).expect("").to_owned() + " >= " + v.get(1).expect(""),
                     Operation::Or =>            v.get(0).expect("").to_owned() + " || " + v.get(1).expect(""),
                     Operation::And =>           v.get(0).expect("").to_owned() + " && " + v.get(1).expect(""),
-                    // 2 Child function operatio
+                    // 2 Child function operations
                     Operation::PowMethod =>       "pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")",
                     Operation::PowSymbol =>       "pow(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")",
                     Operation::Range =>         "range(".to_owned() + v.get(0).expect("") + ", " + v.get(1).expect("") + ")",
