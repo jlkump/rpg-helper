@@ -140,9 +140,9 @@ impl Template<Attribute> for AttributeTemplate
         self.name_template.get_required_inputs()
     }
 
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Attribute>
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Attribute>
     {
-        if let Some(name) = self.name_template.insert_template_value(input_name, input_value)
+        if let Some(name) = self.name_template.fill_template_value(input_name, input_value)
         {
             Some(Attribute { name, value: self.default_value })
         }

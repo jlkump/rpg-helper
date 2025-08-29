@@ -267,9 +267,24 @@ pub struct ModifierTemplate
 
 impl ModifierTemplate
 {
-    pub fn new() -> Self
+    pub fn new(name: Templated<TagTemplate, Tag>, target: Templated<ModifierTargetTemplate, ModifierTarget>, condition: Templated<TagTemplate, Tag>, change: Templated<ModifierChangeTemplate, ModifierChange>) -> Templated<ModifierTemplate, Modifier>
     {
-        todo!()
+        match (name, target, condition, change)
+        {
+            (
+                Templated::Complete(name),
+                Templated::Complete(target),
+                Templated::Complete(condition),
+                Templated::Complete(change),
+            ) =>
+            {
+                Templated::Complete(Modifier::new(name, target, condition, change))
+            },
+            (name_template, target_template, condition_template, change_template) =>
+            {
+                Templated::Template(ModifierTemplate { name_template, target_template, condition_template, change_template })
+            }
+        }
     }
 }
 
@@ -285,12 +300,12 @@ impl Template<Modifier> for ModifierTemplate
     }
 
     /// Inserts given tag value into all matching template inputs
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Modifier>
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Modifier>
     {
-        self.name_template.insert_template_value(input_name, input_value);
-        self.target_template.insert_template_value(input_name, input_value);
-        self.condition_template.insert_template_value(input_name, input_value);
-        self.change_template.insert_template_value(input_name, input_value);
+        self.name_template.fill_template_value(input_name, input_value);
+        self.target_template.fill_template_value(input_name, input_value);
+        self.condition_template.fill_template_value(input_name, input_value);
+        self.change_template.fill_template_value(input_name, input_value);
 
         match (&self.name_template, &self.target_template, &self.condition_template, &self.change_template)
         {
@@ -333,7 +348,7 @@ impl Template<Modifier> for ModifierTemplate
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-enum ModifierTargetTemplate
+pub enum ModifierTargetTemplate
 {
     Single(TagTemplate),
     MatchingEnd(TagTemplate),
@@ -350,7 +365,7 @@ impl Template<ModifierTarget> for ModifierTargetTemplate
         }
     }
 
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<ModifierTarget>
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<ModifierTarget>
     {
         // A closure to make the mapping from the template to true value easier and cleaner
         // Takes the value of self and outputs the tag template inner value combined with a fn that converts
@@ -361,7 +376,7 @@ impl Template<ModifierTarget> for ModifierTargetTemplate
             ModifierTargetTemplate::MatchingEnd(t) => (t, ModifierTarget::MatchingEnd),
             ModifierTargetTemplate::MatchingStart(t) => (t, ModifierTarget::MatchingStart),
         };
-        tag_template.insert_template_value(input_name, input_value).map(wrapper)
+        tag_template.fill_template_value(input_name, input_value).map(wrapper)
     }
 
     fn attempt_complete(&self) -> Result<ModifierTarget, super::error::TemplateError>
@@ -377,7 +392,7 @@ impl Template<ModifierTarget> for ModifierTargetTemplate
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-enum ModifierChangeTemplate
+pub enum ModifierChangeTemplate
 {
     BasicValue(f32),
     FromOtherValue(TagTemplate),
@@ -394,13 +409,13 @@ impl Template<ModifierChange> for ModifierChangeTemplate
         }
     }
 
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<ModifierChange>
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<ModifierChange>
     {
         match self
         {
             ModifierChangeTemplate::BasicValue(v) => Some(ModifierChange::BasicValue(*v)),
             ModifierChangeTemplate::FromOtherValue(tag_template) =>
-            if let Some(tag) = tag_template.insert_template_value(input_name, input_value)
+            if let Some(tag) = tag_template.fill_template_value(input_name, input_value)
             {
                 Some(ModifierChange::FromOtherValue(tag))
             }

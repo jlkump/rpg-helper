@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::api::data::{attribute::{Attribute, AttributeSet, AttributeTemplate}, conditional::{Conditional, ConditionalSet, ConditionalTemplate}, effect::Effect, equation::{Equation, EquationSet, EquationTemplate}, error::{ConflictError, DataError, TemplateError}, modifier::{Modifier, ModifierSet, ModifierTemplate}, tag::{Tag, TagSet, TagTemplate}, template::Template, DataType};
+use crate::api::data::{attribute::{Attribute, AttributeSet}, conditional::{Conditional, ConditionalSet}, effect::Effect, equation::{Equation, EquationSet}, error::{ConflictError, DataError, TemplateError}, modifier::{Modifier, ModifierSet}, tag::{Tag, TagSet}, template::{Template, TemplateValue}, DataType};
 
 use serde::{Deserialize, Serialize};
 
@@ -74,39 +74,44 @@ impl Context
         self.has_attribute(value_name) || self.has_equation(value_name)
     }
 
+    /// Used to setup some state of the context
+    /// For example, Spell.Range.Personal
+    /// is a state of an ability context. This method
+    /// can be used to explicitly set that value.
+    /// 
+    /// For characters, in general, it is preferable
+    /// to use effects to modify state of their contexts.
+    pub fn add_explicit_tag(&mut self, tag: &Tag)
+    {
+        self.state_tags.add_tag(tag);
+    }
+
+    /// Used to remove some state of the context
+    /// For example, Spell.Range.Personal
+    /// is a state of an ability context. This method
+    /// can be used to explicitly remove that value.
+    /// 
+    /// For characters, in general, it is preferable
+    /// to use effects to modify state of their contexts.
+    pub fn remove_explicit_tag(&mut self, tag: &Tag)
+    {
+        self.state_tags.remove_tag(tag);
+    }
+
     /// Creates a new context that combines this context plus another context.
     /// If there are conflicting keys, the values of "other" are perfered
     /// over self
     pub fn layer_context(&mut self, other: &Self) -> Result<(), DataError>
     {
-        // Insert all rhs values (overriding our own in the case of conflict)
-        // Attributes
-        for (tag, atr) in other.atrs.iter()
-        {
-            self.set_attribute(tag, atr.get_value())?;
-        }
-
-        // Modifiers
-        for  (_, modifier) in other.modifiers.iter()
-        {
-            self.set_modifier(modifier.clone())?;
-        }
-
-        // Equations
-        for  (_, equation) in other.equations.iter()
-        {
-            self.set_equation(equation.clone())?;
-        }
-
-        // Conditionals
-        for  (_, conditional) in other.conditionals.iter()
-        {
-            self.set_conditional(conditional.clone())?;
-        }
-
-        // State tags
+        // For every value in other, set the value inside self.
+        // This overrides any conflicts in self with the value of other.
+        // (try_for_each is used as we could fail to set a value. Thus, we return that error.
+        //  We discard previous values with an empty map)
+        other.atrs.iter().try_for_each(|(tag, atr)| self.set_attribute(tag, atr.get_value()).map(|_| ()))?;
+        other.modifiers.iter().try_for_each(|(_, modifier)| self.set_modifier(modifier.clone()).map(|_| ()))?;
+        other.equations.iter().try_for_each(|(_, equation)| self.set_equation(equation.clone()).map(|_| ()))?;
+        other.conditionals.iter().try_for_each(|(_, conditional)| self.set_conditional(conditional.clone()).map(|_| ()))?;
         self.state_tags = self.state_tags.layer(&other.state_tags);
-
         Ok(())
     }
 
@@ -387,27 +392,10 @@ impl Context
     {
         let mut result = Self::new();
         result.state_tags = raw.state_tags;
-
-        for (_, a) in raw.atrs
-        {
-            result.set_attribute(a.get_name(), a.get_value())?;
-        }
-
-        for (_, m) in raw.modifiers
-        {
-            result.set_modifier(m)?;
-        }
-
-        for (_, e) in raw.equations
-        {
-            result.set_equation(e)?;
-        }
-
-        for (_, c) in raw.conditionals
-        {
-            result.set_conditional(c)?;
-        }
-
+        raw.atrs.into_iter().try_for_each(|(_, a)| result.set_attribute(a.get_name(), a.get_value()).map(|_| ()))?;
+        raw.modifiers.into_iter().try_for_each(|(_, m)| result.set_modifier(m).map(|_| ()))?;
+        raw.equations.into_iter().try_for_each(|(_, e)| result.set_equation(e).map(|_| ()))?;
+        raw.conditionals.into_iter().try_for_each(|(_, c)| result.set_conditional(c).map(|_| ()))?;
         Ok(result)
     }
 }
@@ -418,6 +406,19 @@ impl From<&AttributeSet> for Context
     {
         let mut res = Context::new();
         for (t, a) in value.iter()
+        {
+            let _ = res.set_attribute(&t, a.get_value());
+        }
+        res
+    }
+}
+
+impl From<AttributeSet> for Context
+{
+    fn from(value: AttributeSet) -> Self
+    {
+        let mut res = Context::new();
+        for (t, a) in value.into_iter()
         {
             let _ = res.set_attribute(&t, a.get_value());
         }
@@ -449,6 +450,28 @@ impl ContextTemplate
     {
         &self.ctx
     }
+
+    pub fn get_partial_context_mut(&mut self) -> &mut Context
+    {
+        &mut self.ctx
+    }
+
+    pub fn insert_template(&mut self, template: TemplateValue)
+    {
+        self.templates.push(template);
+    }
+
+    pub fn remove_template(&mut self, index: usize) -> Option<TemplateValue>
+    {
+        if index < self.templates.len()
+        {
+            Some(self.templates.remove(index))
+        }
+        else
+        {
+            None
+        }
+    }
 }
 
 impl Template<Context> for ContextTemplate
@@ -463,101 +486,46 @@ impl Template<Context> for ContextTemplate
         result
     }
 
-    fn insert_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Context>
+    fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Context>
     {
-        let mut completed = vec![];
-        for t in self.templates.iter_mut()
-        {
-            match t
+        let completed: Vec<CompletedValue> = self.templates.iter_mut()
+            .filter_map(|t| match t
             {
-                TemplateValue::Attribute(attribute_template) =>
-                if let Some(a) = attribute_template.insert_template_value(input_name, input_value)
-                {
-                    completed.push(CompletedValue::Attribute(a));
-                },
-                TemplateValue::Conditional(conditional_template) =>
-                if let Some(c) = conditional_template.insert_template_value(input_name, input_value)
-                {
-                    completed.push(CompletedValue::Conditional(c));
-                },
-                TemplateValue::Equation(equation_template) =>
-                if let Some(e) = equation_template.insert_template_value(input_name, input_value)
-                {
-                    completed.push(CompletedValue::Equation(e));
-                },
-                TemplateValue::Modifier(modifier_template) =>
-                if let Some(m) = modifier_template.insert_template_value(input_name, input_value)
-                {
-                    completed.push(CompletedValue::Modifier(m));
-                },
-                TemplateValue::Tag(tag_template) =>
-                if let Some(t) = tag_template.insert_template_value(input_name, input_value)
-                {
-                    completed.push(CompletedValue::Tag(t));
-                },
-            }
-        }
+                TemplateValue::Attribute(tmp) => 
+                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Attribute),
+                TemplateValue::Conditional(tmp) => 
+                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Conditional),
+                TemplateValue::Equation(tmp) => 
+                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Equation),
+                TemplateValue::Modifier(tmp) => 
+                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Modifier),
+                TemplateValue::Tag(tmp) => 
+                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Tag),
+            })
+            .collect();
 
-        self.templates = self.templates.clone().into_iter().filter(|t| !t.is_complete()).collect();
+        // Get rid of everything that was completed
+        self.templates.retain(|t| !t.is_complete());
 
+        // Apply completed values to context
         for c in completed
         {
-            // Currently doing nothing with errors (might need to do something in the future
-            // errors can definitely happen). Best solution would be to undo the template insertion.
+            // Currently ignoring errors
             let _ = match c
             {
-                CompletedValue::Attribute(attribute) =>
-                if let Err(e) = self.ctx.set_attribute(attribute.get_name(), attribute.get_value())
-                { 
-                    Some(e)
-                }
-                else
+                CompletedValue::Attribute(attr) => self.ctx.set_attribute(attr.get_name(), attr.get_value()),
+                CompletedValue::Conditional(cond) => self.ctx.set_conditional(cond).map(|_| None),
+                CompletedValue::Equation(eq) => self.ctx.set_equation(eq).map(|_| None),
+                CompletedValue::Modifier(modif) => self.ctx.set_modifier(modif).map(|_| None),
+                CompletedValue::Tag(tag) =>
                 {
-                    None
-                },
-                CompletedValue::Conditional(conditional) => 
-                if let Err(e) = self.ctx.set_conditional(conditional)
-                {
-                    Some(e)
-                }
-                else
-                {
-                    None
-                },
-                CompletedValue::Equation(equation) => 
-                if let Err(e) = self.ctx.set_equation(equation)
-                {
-                    Some(e)
-                }
-                else
-                {
-                    None
-                },
-                CompletedValue::Modifier(modifier) =>
-                if let Err(e) = self.ctx.set_modifier(modifier)
-                {
-                    Some(e)
-                }
-                else
-                {
-                    None
-                },
-                CompletedValue::Tag(tag) => 
-                {
-                    self.ctx.state_tags.add_tag(&tag);
-                    None
+                    self.ctx.add_explicit_tag(&tag);
+                    Ok(None)
                 },
             };
         }
 
-        if self.templates.is_empty()
-        {
-            Some(self.ctx.clone())
-        }
-        else
-        {
-            None
-        }
+        self.templates.is_empty().then(|| self.ctx.clone())
     }
 
     fn attempt_complete(&self) -> Result<Context, super::error::TemplateError>
@@ -570,36 +538,6 @@ impl Template<Context> for ContextTemplate
         {
             Err(TemplateError::MissingTemplateValues(self.get_required_inputs().into_iter().collect()))
         }
-    }
-}
-
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-enum TemplateValue
-{
-    Attribute(AttributeTemplate),
-    Conditional(ConditionalTemplate),
-    Equation(EquationTemplate),
-    Modifier(ModifierTemplate),
-    Tag(TagTemplate),
-}
-
-impl TemplateValue
-{
-    fn get_required_inputs(&self) -> HashSet<String>
-    {
-        match self
-        {
-            TemplateValue::Attribute(attribute_template) => attribute_template.get_required_inputs(),
-            TemplateValue::Conditional(conditional_template) => conditional_template.get_required_inputs(),
-            TemplateValue::Equation(equation_template) => equation_template.get_required_inputs(),
-            TemplateValue::Modifier(modifier_template) => modifier_template.get_required_inputs(),
-            TemplateValue::Tag(tag_template) => tag_template.get_required_inputs(),
-        }
-    }
-
-    fn is_complete(&self) -> bool
-    {
-        self.get_required_inputs().is_empty()
     }
 }
 

@@ -131,6 +131,8 @@ pub enum TagParseError
     SubTagEmpty,
     InvalidCharacter,
     FirstTagNumeric,
+    /// When constructing a template tag, we need at least one template insertable location
+    MissingTemplate,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]

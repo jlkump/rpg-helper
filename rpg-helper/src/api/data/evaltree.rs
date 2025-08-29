@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::api::data::{context::Context, error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}, template::Template};
+use crate::api::data::{context::Context, error::{DataError, TokenizationError}, evaltree::{parse::remove_parentheses, tokenize::Token}, tag::{Tag, TagTemplate}, template::{Template, Templated}};
 
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub enum EvalError
@@ -90,6 +90,14 @@ impl EvalTree
     pub fn insert_template_input(&mut self, s: &str, t: &Tag)
     {
         self.root.recursive_insert_template_input(s, t, ExpectedResult::Unknown);
+    }
+
+    /// Used to check that this equation only contains tags in the given list.
+    /// This method will fail if any tag is found that is not in the list
+    /// or if any tags in the tree are a template tag.
+    pub fn check_only_allowed_tags(&self, allowed_tags: &Vec<Tag>) -> Result<(), Templated<TagTemplate, Tag>>
+    {
+        self.root.recursive_check_only_allowed_tags(allowed_tags)
     }
 
     /// Constructs a full abstract syntax tree from the given string.
@@ -694,7 +702,7 @@ impl EvalNode
             {
                 OperandNode::TagTemplate(tag_template) =>
                 {
-                    if let Some(tag) = tag_template.insert_template_value(s, t)
+                    if let Some(tag) = tag_template.fill_template_value(s, t)
                     {
                         match value_hint
                         {
@@ -732,6 +740,34 @@ impl EvalNode
                 return op.get_children().iter().any(|c| c.recursive_check_contains_template())
             },
         }
+    }
+
+    fn recursive_check_only_allowed_tags(&self, allowed_tags: &Vec<Tag>) -> Result<(), Templated<TagTemplate, Tag>>
+    {
+        match self
+        {
+            EvalNode::Operand(op) =>
+            {
+                match op
+                {
+                    OperandNode::ReferencedValue(tag) | OperandNode::ReferencedCondition(tag) | OperandNode::ReferencedTag(tag) =>
+                    if !allowed_tags.contains(tag)
+                    {
+                        return Err(Templated::Complete(tag.clone()));
+                    },
+                    OperandNode::TagTemplate(temp) =>
+                    {
+                        return Err(Templated::Template(temp.clone()));
+                    },
+                    _ => (),
+                }
+            },
+            EvalNode::Operation(op) =>
+            {
+                op.get_children().iter().try_for_each(|c| c.recursive_check_only_allowed_tags(allowed_tags))?;
+            },
+        }
+        Ok(())
     }
 
     fn expected_result(&self) -> ExpectedResult
@@ -1096,10 +1132,13 @@ pub(super) mod parse
                         if let Some(min_prec) = top.min_op
                         {
                             // Look to next right operation (if it exists)
-                            let right: Option<&Operation> = tokens.iter().filter_map(|t| t.as_operation()).next();
+                            let right = tokens.iter().enumerate().find(|(oi, t)|
+                            {
+                                t.as_operation().is_some() && *oi > i
+                            }).map(|(_, t)| t.as_operation());
 
                             // Check right precedence and keep parentheses if needed
-                            if let Some(r_op) = right
+                            if let Some(Some(r_op)) = right
                             {
                                 if min_prec < r_op.get_precedence()
                                 {
@@ -1639,6 +1678,28 @@ mod unit_tests
 
         ctx.set_attribute(&Tag::from_str("Test").unwrap(), 3.0).unwrap();
         assert!(!tree.eval_as_bool(ctx).unwrap());
+    }
+
+    #[test]
+    fn op_prio_test_1()
+    {
+        let tree = EvalTree::from_str("1.0 + 4.0 ^ 2").unwrap();
+        assert_eq!(tree.eval_as_num(&Context::new()).unwrap(), 17.0);
+    }
+
+    #[test]
+    fn op_prio_test_2()
+    {
+        let tree = EvalTree::from_str("(1.0 + 4.0) ^ 2").unwrap();
+        assert_eq!(tree.eval_as_num(&Context::new()).unwrap(), 25.0);
+    }
+
+    #[test]
+    fn op_prio_test_3()
+    {
+        let tree = EvalTree::from_str("(1.0 + 4.0) ^ 2 / 2").unwrap();
+        println!("{}", tree);
+        assert_eq!(tree.eval_as_num(&Context::new()).unwrap(), 12.5);
     }
 
     #[test]
