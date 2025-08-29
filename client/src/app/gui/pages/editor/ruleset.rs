@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use rpg_helper::api::data::tag::Tag;
 use yew::prelude::*;
 
-use crate::app::gui::{atoms::input::equation_input::EquationInput, pages::{editor::editor_bar::EditorBar, BasePage}};
+use crate::app::gui::{atoms::input::{equation_input::EquationInput, tag_input::TagInput}, pages::{editor::editor_bar::EditorBar, BasePage}};
 
 #[function_component(RulesetEditor)]
 pub fn ruleset_editor() -> Html
@@ -25,7 +25,8 @@ pub fn ruleset_editor() -> Html
                             <label>{"Ordering Equation"}<i class="fa-solid fa-circle-question"></i></label>
                             <EquationInput allowed_tag_values={allowed} equation_id={equation_id} default_value={"(rhs.Year - lhs.Year) * 365"} placeholder="Ex: (rhs.Year - lhs.Year) * 365"/>
                             <label>{"Required Values"}<i class="fa-solid fa-circle-question"></i></label>
-                            <input class="" type="text" placeholder="Year"/>
+                            <TagInput default_value={"Year"} placeholder="Tag.Value"/>
+
                         </form>
                     </div>
                 </div>
