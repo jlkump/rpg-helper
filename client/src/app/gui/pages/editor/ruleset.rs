@@ -1,9 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rpg_helper::api::data::tag::Tag;
+use rpg_helper::api::{data::tag::Tag, rpg::timeline::DateSpec};
 use yew::prelude::*;
 
-use crate::app::gui::{atoms::input::{equation_input::EquationInput, tag_input::TagInput}, pages::{editor::editor_bar::EditorBar, BasePage}};
+use crate::app::gui::{atoms::input::{equation_input::EquationInput, tag_input::TagInput}, pages::{editor::editor_bar::EditorBar, BasePage}, organisms::input::date_spec_editor::DateSpecEditor};
 
 #[function_component(RulesetEditor)]
 pub fn ruleset_editor() -> Html
@@ -11,7 +11,8 @@ pub fn ruleset_editor() -> Html
     let equation_id = Rc::new(RefCell::new(Tag::from_str("test.equation").unwrap()));
     let allowed = Rc::new(RefCell::new(vec![Tag::from_str("lhs.Year").unwrap(), Tag::from_str("rhs.Year").unwrap()]));
     
-    
+    let date_spec = DateSpec::default();
+    let onchange = Callback::from(|_: DateSpec| {});
     html!
     {
         <BasePage style="display: flex; align-items: center; flex-direction: column;">
@@ -21,15 +22,7 @@ pub fn ruleset_editor() -> Html
             <div style="display: flex; justify-content: space-around;">
                 <div style="display: flex; flex-direction: column; align-items: center;">
                     <div style="background-color: var(--paper-25); padding: 10px; margin: 4px; box-shadow: 0px 4px 4px var(--drop-shadow); width: 20vw;">
-                        <form>
-                            <h3>{"Date"}</h3>
-                            <hr class="full"/>
-                            <label>{"Ordering Equation"}<i class="fa-solid fa-circle-question"></i></label>
-                            <EquationInput allowed_tag_values={allowed} equation_id={equation_id} default_value={"(rhs.Year - lhs.Year) * 365"} placeholder="Ex: (rhs.Year - lhs.Year) * 365"/>
-                            <label>{"Required Values"}<i class="fa-solid fa-circle-question"></i></label>
-                            <TagInput default_value={"Year"} placeholder="Tag.Value"/>
-
-                        </form>
+                        <DateSpecEditor current={date_spec} {onchange}/>
                     </div>
                 </div>
                 <div>

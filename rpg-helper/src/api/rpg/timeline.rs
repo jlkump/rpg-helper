@@ -51,11 +51,53 @@ impl Timeline
     }
 }
 
+static LHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("lhs"));
+static RHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("rhs"));
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct DateSpec
 {
     pub ordering: Equation,
     pub required_values: HashSet<Tag>,
+}
+
+impl DateSpec
+{
+    pub fn new(ordering: Equation, required_values: HashSet<Tag>) -> DateSpec
+    {
+        DateSpec { ordering, required_values }
+    }
+
+    pub fn get_ordering_lhs_tag() -> &'static Tag
+    {
+        match &*LHS
+        {
+            Ok(lhs) => lhs,
+            Err(e) => panic!("LHS tag of Date Spec is not valid!\nFailed with error: {:?}", e),
+        }
+    }
+
+    pub fn get_ordering_rhs_tag() -> &'static Tag
+    {
+        match &*RHS
+        {
+            Ok(rhs) => rhs,
+            Err(e) => panic!("RHS tag of Date Spec is not valid!\nFailed with error: {:?}", e),
+        }
+    }
+}
+
+impl Default for DateSpec
+{
+    /// Not my favorite thing to do right now, but we need a default for testing
+    fn default() -> Self
+    {
+        let mut required_values = HashSet::new();
+        required_values.insert(Tag::from_str("Year").unwrap());
+        required_values.insert(Tag::from_str("Month").unwrap());
+        required_values.insert(Tag::from_str("Day").unwrap());
+        Self { ordering: Equation::new(Tag::from_str("ordering").unwrap(), "(rhs.Year - lhs.Year) * 365 + (rhs.Month - lhs.Month) * 30 + (rhs.Day - lhs.Day)").unwrap(), required_values }
+    }
 }
 
 /// It might be good to define the date spec as
@@ -75,8 +117,7 @@ impl PartialOrd for Date
     {
         const EPSILON: f32 = 0.0000001;
 
-        static LHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("lhs"));
-        static RHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("rhs"));
+
 
         let (lhs_prefix, rhs_prefix) = match (&*LHS, &*RHS)
         {

@@ -1,5 +1,9 @@
-use rpg_helper::api::rpg::timeline::DateSpec;
+use std::{cell::RefCell, rc::Rc};
+
+use rpg_helper::api::{data::tag::Tag, rpg::timeline::DateSpec};
 use yew::prelude::*;
+
+use crate::app::gui::atoms::{input::{equation_input::EquationInput, tag_input::TagInput}, list::List};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props
@@ -24,7 +28,7 @@ pub struct Props
 /// If there is a discrepancy between the true value and the provided data value,
 /// then the "reset" button can be clicked to reset to the true data value.
 #[function_component(DateSpecEditor)]
-fn date_editor(props: &Props) -> Html
+pub fn date_editor(props: &Props) -> Html
 {
     let required = use_state(|| props.current.required_values.clone());
     let ordering = use_state(|| props.current.ordering.clone());
@@ -36,13 +40,45 @@ fn date_editor(props: &Props) -> Html
         let ordering = ordering.clone();
         Callback::from(move |_: MouseEvent|
         {
+            log::info!("Reset clicked!");
             required.set(current.required_values.clone());
             ordering.set(current.ordering.clone());
         })
     };
-    
+
+    let tag_to_html =
+    {
+        Callback::from(move |t: Tag|
+            {
+                log::info!("Updating tag to html: {}", t);
+                html!
+                {
+                    <TagInput default_value={t.to_string()} />
+                }
+            }
+        )
+    };
+
+    let data_ref: Vec<Tag> = (&*required).clone().into_iter().collect();
+    (&*required).iter().for_each(|t| log::info!("Current values: {}", t));
+    let allowed: Vec<Tag> = data_ref.iter().flat_map(|t| [t.add_prefix(DateSpec::get_ordering_lhs_tag()), t.add_prefix(DateSpec::get_ordering_rhs_tag())]).collect();
     html!
     {
-
+        <form>
+            <h3>{"Date"}</h3>
+            <hr class="full"/>
+            <List<Tag> data_to_html_panel={tag_to_html} data_ref={data_ref.clone()}>
+                <span>{"Required Values"}</span>
+            </List<Tag>>
+            <span>{"Ordering Equation"}</span>
+            <EquationInput 
+                equation_id={props.current.ordering.name.clone()} 
+                default_value={"(rhs.Year - lhs.Year) * 365 + (rhs.Month - lhs.Month) * 30 + (rhs.Day - lhs.Day)"}
+                name={props.current.ordering.name.to_string()}
+                placeholder={"(rhs.Year - lhs.Year) * 365"}
+                onchange={Callback::from(|e| { log::info!("New equation: {:?}", e)})}
+                allowed_tag_values={Rc::new(RefCell::new(allowed))}
+                 />
+        </form>
     }
 }

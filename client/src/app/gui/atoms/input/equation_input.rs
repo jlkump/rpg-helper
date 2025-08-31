@@ -7,7 +7,7 @@ use yew::prelude::*;
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props
 {
-    pub equation_id: Option<Rc<RefCell<Tag>>>,
+    pub equation_id: Option<Tag>,
     #[prop_or_default]
     pub default_value: AttrValue,
     #[prop_or_default]
@@ -60,7 +60,7 @@ pub fn equation_input(props: &Props) -> Html
                     {
                         if let Some(equation_id) = e_id.as_ref()
                         {
-                            match Equation::new(equation_id.borrow().clone(), &input_string)
+                            match Equation::new(equation_id.clone(), &input_string)
                             {
                                 Ok(equation) => 
                                 {
