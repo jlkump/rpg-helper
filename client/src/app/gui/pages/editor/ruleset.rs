@@ -10,6 +10,8 @@ pub fn ruleset_editor() -> Html
 {
     let equation_id = Rc::new(RefCell::new(Tag::from_str("test.equation").unwrap()));
     let allowed = Rc::new(RefCell::new(vec![Tag::from_str("lhs.Year").unwrap(), Tag::from_str("rhs.Year").unwrap()]));
+    
+    
     html!
     {
         <BasePage style="display: flex; align-items: center; flex-direction: column;">

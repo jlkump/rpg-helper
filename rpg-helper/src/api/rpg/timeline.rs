@@ -54,8 +54,8 @@ impl Timeline
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct DateSpec
 {
-    ordering: Equation,
-    required_values: HashSet<Tag>,
+    pub ordering: Equation,
+    pub required_values: HashSet<Tag>,
 }
 
 /// It might be good to define the date spec as
