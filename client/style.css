@@ -140,7 +140,6 @@ input
     background-color: var(--paper-50);
     border: 2px solid var(--paper-75);
     padding: 4px;
-    padding-left: 10px;
     width: calc(100% - 14px);
 
     color: var(--accent);

@@ -1,9 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rpg_helper::api::{data::tag::Tag, rpg::timeline::DateSpec};
+use rpg_helper::api::{data::tag::Tag, display::icon::Icon, rpg::timeline::DateSpec};
 use yew::prelude::*;
 
-use crate::app::gui::atoms::{input::{equation_input::EquationInput, tag_input::TagInput}, list::List};
+use crate::app::gui::atoms::{icon::IconHtml, input::{equation_input::EquationInput, tag_input::TagInput}, list::List};
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct Props
@@ -53,7 +53,7 @@ pub fn date_editor(props: &Props) -> Html
                 log::info!("Updating tag to html: {}", t);
                 html!
                 {
-                    <TagInput default_value={t.to_string()} />
+                    <TagInput default_value={t.to_string()} style="margin-top: 4px; margin-bottom: 4px;" />
                 }
             }
         )
@@ -68,7 +68,10 @@ pub fn date_editor(props: &Props) -> Html
             <h3>{"Date"}</h3>
             <hr class="full"/>
             <List<Tag> data_to_html_panel={tag_to_html} data_ref={data_ref.clone()}>
-                <span>{"Required Values"}</span>
+                <span style="display: flex;">{"Required Values"}<IconHtml icon={Icon::Help} style="margin-left: auto; font-size: 16px; align-self:center;"/></span>
+                <div>
+                    <IconHtml icon={Icon::Add} />
+                </div>
             </List<Tag>>
             <span>{"Ordering Equation"}</span>
             <EquationInput 
@@ -77,7 +80,7 @@ pub fn date_editor(props: &Props) -> Html
                 name={props.current.ordering.name.to_string()}
                 placeholder={"(rhs.Year - lhs.Year) * 365"}
                 onchange={Callback::from(|e| { log::info!("New equation: {:?}", e)})}
-                allowed_tag_values={Rc::new(RefCell::new(allowed))}
+                allowed_tag_values={allowed}
                  />
         </form>
     }

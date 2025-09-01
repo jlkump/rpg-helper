@@ -6,4 +6,5 @@ pub enum Icon
     Delete,
     Add,
     Edit,
+    Help,
 }

@@ -21,7 +21,7 @@ pub struct Props
     #[prop_or_default]
     pub onchange: Callback<Equation>,
     #[prop_or_default]
-    pub allowed_tag_values: Option<Rc<RefCell<Vec<Tag>>>>,
+    pub allowed_tag_values: Option<Vec<Tag>>,
 }
 
 /// This component handles user input for creation of an equation.
@@ -66,7 +66,7 @@ pub fn equation_input(props: &Props) -> Html
                                 {
                                     if let Some(limited) = allowed.clone()
                                     {
-                                        match equation.check_only_allowed_tags(&*limited.borrow())
+                                        match equation.check_only_allowed_tags(&limited)
                                         {
                                             Ok(_) => 
                                             {

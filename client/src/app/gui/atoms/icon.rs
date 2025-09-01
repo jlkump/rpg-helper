@@ -10,7 +10,7 @@ pub struct Props
     #[prop_or_default]
     pub style: AttrValue,
     #[prop_or_default]
-    pub onclick: Callback<MouseEvent>,
+    pub onclick: Option<Callback<MouseEvent>>,
     #[prop_or_default]
     pub disabled: bool,
 }
@@ -40,5 +40,6 @@ fn icon_to_class_str(icon: &Icon) -> &'static str
         Icon::Delete => "fa-regular fa-trash-can",
         Icon::Add => "fa-regular fa-square-plus",
         Icon::Edit => "fa-solid fa-pen-to-square",
+        Icon::Help => "fa-solid fa-circle-question",
     }
 }
