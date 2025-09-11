@@ -39,7 +39,7 @@ pub fn searchbar(props: &Props) -> Html
                 style="border: none; background: none;"
                 name={props.name.clone()}
                 placeholder={props.placeholder.clone()}
-                // {onchange}
+                // onchang={props.onchange.clone()}
             />
         </div>
     }

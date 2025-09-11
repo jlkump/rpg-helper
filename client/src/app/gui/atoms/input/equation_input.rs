@@ -2,6 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use rpg_helper::api::data::{equation::Equation, tag::Tag};
 use web_sys::{wasm_bindgen::JsCast, HtmlInputElement};
+use validator::ValidationErrors;
 use yew::prelude::*;
 
 #[derive(Properties, Clone, PartialEq)]
@@ -22,6 +23,10 @@ pub struct Props
     pub onchange: Callback<Equation>,
     #[prop_or_default]
     pub allowed_tag_values: Option<Vec<Tag>>,
+    #[prop_or_default]
+    pub node_ref: NodeRef,
+    #[prop_or_default]
+    pub errors: Rc<RefCell<ValidationErrors>>,
 }
 
 /// This component handles user input for creation of an equation.
@@ -124,7 +129,9 @@ pub fn equation_input(props: &Props) -> Html
                 placeholder={props.placeholder.clone()}
                 value={&*value}
                 {onchange}
+                ref={props.node_ref.clone()}
             />
+            // TODO: Use validation errors to communicate errors, don't display always all-the-time
             if let Some(message) = &*error_message
             {
                 <span class="input-error">{message}</span>

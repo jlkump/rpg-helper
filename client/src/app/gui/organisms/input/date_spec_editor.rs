@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::HashSet, ops::IndexMut, rc::Rc};
 
 use rpg_helper::api::{data::tag::Tag, display::icon::Icon, rpg::timeline::DateSpec};
+use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
 use crate::app::gui::atoms::{icon::IconHtml, input::{equation_input::EquationInput, searchbar::Searchbar, tag_input::TagInput}, list::List};
@@ -95,6 +96,18 @@ pub fn date_editor(props: &Props) -> Html
     log::info!("{}]", tag_set.iter().fold("Current values: [".to_string(), |mut s, t: &Tag| { s.push_str(&format!("{}, ", t.to_str())); s }));
 
 
+    let equation_node_ref = use_node_ref();
+    let clear_clicked =
+    {
+        let equation_node_ref = equation_node_ref.clone();
+        Callback::from(move |_|
+        {
+            if let Some(html) = equation_node_ref.cast::<HtmlInputElement>()
+            {
+                html.set_value("");
+            }
+        })
+    };
     let allowed: Vec<Tag> = tag_set.iter().flat_map(|t| [t.add_prefix(DateSpec::get_ordering_lhs_tag()), t.add_prefix(DateSpec::get_ordering_rhs_tag())]).collect();
 
     html!
@@ -122,8 +135,9 @@ pub fn date_editor(props: &Props) -> Html
                     placeholder={"(rhs.Year - lhs.Year) * 365"}
                     onchange={Callback::from(|e| { log::info!("New equation: {:?}", e)})}
                     allowed_tag_values={allowed}
+                    node_ref={equation_node_ref}
                     />
-                <IconHtml class="faint click" style="margin: 0 2px 0 2px;" icon={Icon::Clear} />
+                <IconHtml class="faint click" style="margin: 0 2px 0 2px;" icon={Icon::Clear} onclick={clear_clicked}/>
             </div>
         </form>
     }
