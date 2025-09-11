@@ -113,19 +113,19 @@ pub fn date_editor(props: &Props) -> Html
     html!
     {
         <form>
-            <h3>{"Date"}</h3>
+            <h3 class="inline-wrap">{"Date Spec"}<IconHtml class="help faint" icon={Icon::Help} /></h3>
             <hr class="full"/>
             <List<Tag> data_to_html_panel={tag_to_html} data_ref={tag_set.clone()}>
                 <span class="inline-wrap">
                     {"Required Values"}
-                    <IconHtml class="help faint" icon={Icon::Help} style="margin-left: 4px;" />
+                    <IconHtml class="help faint" icon={Icon::Help} />
                     <IconHtml class="click toolbar-button" style="margin-left: auto;" icon={Icon::Add} onclick={add_clicked} disabled={add_disabled} />
                     <IconHtml class="click toolbar-button" style="font-size: 16px;" icon={Icon::Reset} onclick={reset}/>
                 </span>
             </List<Tag>>
             <span class="inline-wrap">
                 {"Ordering Equation"}
-                <IconHtml class="help faint" icon={Icon::Help} style="margin-left: 4px;" />
+                <IconHtml class="help faint" icon={Icon::Help} />
             </span>
             <div class="inline-wrap">
                 <EquationInput 
