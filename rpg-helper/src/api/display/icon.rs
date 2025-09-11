@@ -7,4 +7,7 @@ pub enum Icon
     Add,
     Edit,
     Help,
+    Search,
+    Clear,
+    Reset,
 }

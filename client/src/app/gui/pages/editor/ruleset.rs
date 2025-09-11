@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use rpg_helper::api::{data::tag::Tag, rpg::timeline::DateSpec};
 use yew::prelude::*;
 
-use crate::app::gui::{atoms::input::{equation_input::EquationInput, tag_input::TagInput}, pages::{editor::editor_bar::EditorBar, BasePage}, organisms::input::date_spec_editor::DateSpecEditor};
+use crate::app::gui::{atoms::input::{equation_input::EquationInput, tag_input::TagInput}, molecules::tooltip::helper_tooltip::HelperTooltip, organisms::input::date_spec_editor::DateSpecEditor, pages::{editor::editor_bar::EditorBar, BasePage}};
 
 #[function_component(RulesetEditor)]
 pub fn ruleset_editor() -> Html
@@ -11,7 +11,7 @@ pub fn ruleset_editor() -> Html
     let equation_id = Rc::new(RefCell::new(Tag::from_str("test.equation").unwrap()));
     let allowed = Rc::new(RefCell::new(vec![Tag::from_str("lhs.Year").unwrap(), Tag::from_str("rhs.Year").unwrap()]));
     
-    let date_spec = DateSpec::default();
+    let date_spec = use_state(|| Rc::new(RefCell::new(DateSpec::default())));
     let onchange = Callback::from(|_: DateSpec| {});
     html!
     {
@@ -29,6 +29,7 @@ pub fn ruleset_editor() -> Html
                     <div style="background-color: var(--paper-25); padding: 10px; margin: 4px; max-width: 60vw; box-shadow: 0px 4px 4px var(--drop-shadow);">
                         <h1>{"Header 1"}</h1>
                         <hr/>
+                        <HelperTooltip>{"Tooltip Test"}</HelperTooltip>
                         <label>{"Equation"}<i class="fa-solid fa-circle-question"></i></label>
                         // <input class="temp-in" style="color: var(--text-primary); background-color: var(--primary);" type="text" placeholder="Alt Year"/>
                         <p>

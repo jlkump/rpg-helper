@@ -336,6 +336,14 @@ impl Display for Tag
     }
 }
 
+impl Default for Tag
+{
+    fn default() -> Self
+    {
+        Self { name: "None".to_string() }
+    }
+}
+
 /// Contains tags, which are string literals delinitated by '.'s
 /// 
 /// A tag can be made of smaller sub-tags, which are children to the

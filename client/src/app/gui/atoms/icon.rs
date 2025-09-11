@@ -20,16 +20,20 @@ pub fn icon_html(props: &Props) -> Html
 {
     let i_class = icon_to_class_str(&props.icon);
 
+    let additional = if props.disabled
+    {
+        "disabled icon"
+    }
+    else
+    {
+        "icon"
+    };
+
     html!
     {
-        if props.disabled
-        {
-            <i class={classes!(i_class, props.class.clone(), "disabled")} style={props.style.clone()}></i>
-        }
-        else
-        {
-            <i class={classes!(i_class, props.class.clone())} style={props.style.clone()} onclick={props.onclick.clone()}></i>
-        }
+        <span class={classes!(additional, props.class.clone())} style={props.style.clone()} onclick={if props.disabled { None } else { props.onclick.clone() }}>
+            <i class={i_class}></i>
+        </span>
     }
 }
 
@@ -41,5 +45,8 @@ fn icon_to_class_str(icon: &Icon) -> &'static str
         Icon::Add => "fa-regular fa-square-plus",
         Icon::Edit => "fa-solid fa-pen-to-square",
         Icon::Help => "fa-solid fa-circle-question",
+        Icon::Search => "fa-solid fa-magnifying-glass",
+        Icon::Clear => "fa-solid fa-xmark",
+        Icon::Reset => "fa-solid fa-arrow-rotate-left",
     }
 }

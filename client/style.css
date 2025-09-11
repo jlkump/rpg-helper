@@ -13,43 +13,10 @@ html, body
     color: var(--text);
 }
 
-.courier-prime-regular
-{
-  font-family: "Courier Prime", monospace;
-  font-weight: 400;
-  font-style: normal;
-}
-
-.courier-prime-bold
-{
-  font-family: "Courier Prime", monospace;
-  font-weight: 700;
-  font-style: normal;
-}
-
-.courier-prime-regular-italic
-{
-  font-family: "Courier Prime", monospace;
-  font-weight: 400;
-  font-style: italic;
-}
-
-.courier-prime-bold-italic
-{
-  font-family: "Courier Prime", monospace;
-  font-weight: 700;
-  font-style: italic;
-}
-
-ul, ol
-{
-    margin: 0;
-}
+ul, ol { margin: 0; }
 
 h1, h2, h3, h4, h5, h6
 {
-    /* font-family: "Macondo", cursive;
-    font-style: normal; */
     font-weight: 400;
     margin: 0px;
 }
@@ -79,28 +46,83 @@ form
     flex-wrap: wrap;
 }
 
-label
+.no-select
 {
-    display: flex;
-    align-items: center;
-
     -webkit-user-select: none; /* Safari */
     -ms-user-select: none; /* IE 10 and IE 11 */
     user-select: none; /* Standard syntax */
 }
 
-label i
+.icon
+{
+    align-self: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.icon.faint
 {
     opacity: 50%;
     transition: opacity 0.2s ease;
-    cursor: help;
-    margin-left: auto;
-    font-size: 16px;
 }
 
-label i:hover
+.icon.faint:hover
 {
     opacity: 100%;
+}
+
+.icon.help
+{
+    cursor: help;
+    font-size: 12px;
+}
+
+.icon.click
+{
+    cursor: pointer;
+    padding: 2px;
+}
+
+.inline-wrap
+{
+    display: flex;
+    align-items: center;
+}
+
+.toolbar-button
+{
+    color: var(--tertiary);
+
+    font-size: 18px;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    transition: 0.2s all ease;
+}
+
+.toolbar-button:hover:not(.disabled)
+{
+    color: var(--secondary);
+    background-color: var(--paper-75);
+}
+
+.icon.disabled
+{
+    cursor: auto;
+    color: var(--text-default-50);
+}
+
+label
+{
+    display: flex;
+    align-items: center;
+}
+
+label i
+{
+    margin-left: auto;
+    font-size: 16px;
 }
 
 hr
@@ -131,7 +153,7 @@ hr.full
     margin-right: 0;
 }
 
-input
+input, .input
 {
     font-family: "Courier Prime", monospace;
     font-weight: 500;
@@ -145,7 +167,7 @@ input
     color: var(--accent);
 }
 
-input:focus
+input:focus, .input:focus-within
 {
     border: 0;
     outline: none;
@@ -162,12 +184,6 @@ input:focus
     font-style: normal;
     font-size: 12px;
 }
-
-.temp-in:focus
-{
-    border: 2px solid var(--text-primary);
-}
-
 
 .navbar
 {
