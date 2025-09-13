@@ -22,7 +22,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{context::Context, effect::Effect, error::DataError, tag::Tag}, rpg::{ability::Ability, event::Event, timeline::{Date, Timeline}}};
+use crate::api::{data::{context::Context, effect::Effect, error::DataError, tag::Tag}, rpg::{ability::{Ability, AbilitySet}, event::Event, timeline::{Date, Timeline}}};
 
 // First todo:
 //      1. Parse json in order to import character data
@@ -84,7 +84,7 @@ struct CharacterState
 struct CharacterData
 {
     ctx: Context,
-    // abilities: Vec<Ability>,
+    abilities: AbilitySet,
     // inventory: Inventory,
 }
 

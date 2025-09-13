@@ -4,6 +4,7 @@ pub mod creation;
 pub mod dice;
 pub mod event;
 pub mod game;
+pub mod input;
 pub mod inventory;
 pub mod location;
 pub mod player;

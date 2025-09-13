@@ -33,14 +33,14 @@ impl DiceSet
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct DiceRollSpec
+pub struct DiceRoll
 {
     dice_to_roll: Vec<(Tag, i32)>,
 }
 
-impl DiceRollSpec
+impl DiceRoll
 {
-    pub fn roll_dice(&self, set: &DiceSet) -> Vec<DieRollResult>
+    pub fn roll_dice(&self, set: &DiceSet) -> DiceRollResult
     {
         let mut result = vec![];
         for (die, roll_count) in self.dice_to_roll.iter()
@@ -53,13 +53,63 @@ impl DiceRollSpec
                 }
             }
         } 
-        result
+        DiceRollResult::new(result)
     }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+pub struct DiceRollResult
+{
+    results: Vec<DieRollResult>
+}
+
+impl DiceRollResult
+{
+    fn new(results: Vec<DieRollResult>) -> Self
+    {
+        DiceRollResult { results }
+    }
+
+    pub fn process_result(by: DiceRollProcess) -> i32
+    {
+        todo!()
+    }
+}
+
+pub enum DiceRollProcess
+{
+    // Tends to be the default when rolling multiple dice
+    // just sum up the results
+    SumValues,
+    // DnD's Disadvantage
+    // take the least and use that value
+    Minimum,
+    // DnD's Advantage
+    // take the greatest and use that value
+    Maximum,
+    // Ars Magica's Botch Dice
+    CountFacesMatching(u16),
+    // We count only the dice matching the exact face rolled. 
+    SumFacesMatching(u16),
+    // Eldritch Horror's dice system.
+    // We count sum the results of the dice whose value is greater than the given value.
+    RestrictGreaterAndCount(i32),
+    // We count only the results of the dice whose value is less than the given value.
+    RestrictLessAndCount(i32),
+    // We sum only the greatest `x` dice together
+    // Some DnD damage abilities do this, where you take 
+    // the highest of some number of damage dice.
+    SumRestrictNextLargest(u32),
+    // Same as above, except we take the least `x` dice
+    // and sum them together
+    SumRestrictNextLowest(u32)
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct DieRoll
 {
+    // The type of die roll
+    // Ex: Stress Die, Normal Die, Botch Die, Exploding Die
     name: Tag,
     num_sides: u16,
     side_modifiers: HashMap<u16, DieModifier>,
@@ -118,15 +168,15 @@ impl DieRoll
                     }
                     else
                     {
-                        DieRollResult::new(self.name.clone(), side as i32)
+                        DieRollResult::new(self.name.clone(), side, side as i32)
                     }
                 },
-                DieModifier::MapValue(v) => DieRollResult::new(self.name.clone(), *v),
+                DieModifier::MapValue(v) => DieRollResult::new(self.name.clone(), side, *v),
             }
         }
         else
         {
-            DieRollResult::new(self.name.clone(), side as i32)
+            DieRollResult::new(self.name.clone(), side, side as i32)
         };
 
         // Perform a final operation 
@@ -165,15 +215,16 @@ impl DieRoll
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct DieRollResult
 {
-    pub spec: Tag,
+    pub t: Tag,
+    pub face_rolled: u16,
     pub roll_value: i32,
 }
 
 impl DieRollResult
 {
-    pub fn new(spec: Tag, value: i32) -> DieRollResult
+    pub fn new(t: Tag, face_rolled: u16, value: i32) -> DieRollResult
     {
-        DieRollResult { spec, roll_value: value }
+        DieRollResult { t, face_rolled, roll_value: value }
     }
 }
 
@@ -258,7 +309,7 @@ mod unit_tests
         assert_eq!(exploding_die.simulate_roll(&set, 10).unwrap().roll_value, 10);
 
         // Should've exploded
-        assert_eq!(stress_die.simulate_roll(&set, 1).unwrap().spec, exploding_die_tag);
+        assert_eq!(stress_die.simulate_roll(&set, 1).unwrap().t, exploding_die_tag);
     }
 
 

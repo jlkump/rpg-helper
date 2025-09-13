@@ -35,7 +35,7 @@ pub fn navbar(props: &Props) -> Html
     {
         <nav class={classes!("navbar", props.class.clone())} style={props.style.clone()}>
             <span class="left">
-                <Link<Route> classes={"logo"} to={Route::Home}><img src="/assets/RPG-Helper-Logo.svg"/>{"RPG Helper"}</Link<Route>>
+                <Link<Route> classes={"logo"} to={Route::Home}><img src="/assets/RPG-Helper-Logo.svg"/><p>{"RPG Helper"}</p></Link<Route>>
                 <div style="height: 75%; border-left: 3px solid var(--text-default-25); margin-left: 1rem; margin-right: 1rem; border-radius: 4px;"></div>
                 <ul class={if *active { "menu active" } else { "menu" }}>
                     <li><a>{"Dashboard"}</a></li>

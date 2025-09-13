@@ -488,19 +488,19 @@ impl Template<Context> for ContextTemplate
 
     fn fill_template_value(&mut self, input_name: &str, input_value: &Tag) -> Option<Context>
     {
-        let completed: Vec<CompletedValue> = self.templates.iter_mut()
+        let completed: Vec<CtxValue> = self.templates.iter_mut()
             .filter_map(|t| match t
             {
                 TemplateValue::Attribute(tmp) => 
-                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Attribute),
+                    tmp.fill_template_value(input_name, input_value).map(CtxValue::Attribute),
                 TemplateValue::Conditional(tmp) => 
-                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Conditional),
+                    tmp.fill_template_value(input_name, input_value).map(CtxValue::Conditional),
                 TemplateValue::Equation(tmp) => 
-                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Equation),
+                    tmp.fill_template_value(input_name, input_value).map(CtxValue::Equation),
                 TemplateValue::Modifier(tmp) => 
-                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Modifier),
+                    tmp.fill_template_value(input_name, input_value).map(CtxValue::Modifier),
                 TemplateValue::Tag(tmp) => 
-                    tmp.fill_template_value(input_name, input_value).map(CompletedValue::Tag),
+                    tmp.fill_template_value(input_name, input_value).map(CtxValue::Tag),
             })
             .collect();
 
@@ -513,11 +513,11 @@ impl Template<Context> for ContextTemplate
             // Currently ignoring errors
             let _ = match c
             {
-                CompletedValue::Attribute(attr) => self.ctx.set_attribute(attr.get_name(), attr.get_value()),
-                CompletedValue::Conditional(cond) => self.ctx.set_conditional(cond).map(|_| None),
-                CompletedValue::Equation(eq) => self.ctx.set_equation(eq).map(|_| None),
-                CompletedValue::Modifier(modif) => self.ctx.set_modifier(modif).map(|_| None),
-                CompletedValue::Tag(tag) =>
+                CtxValue::Attribute(attr) => self.ctx.set_attribute(attr.get_name(), attr.get_value()),
+                CtxValue::Conditional(cond) => self.ctx.set_conditional(cond).map(|_| None),
+                CtxValue::Equation(eq) => self.ctx.set_equation(eq).map(|_| None),
+                CtxValue::Modifier(modif) => self.ctx.set_modifier(modif).map(|_| None),
+                CtxValue::Tag(tag) =>
                 {
                     self.ctx.add_explicit_tag(&tag);
                     Ok(None)
@@ -542,7 +542,7 @@ impl Template<Context> for ContextTemplate
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-enum CompletedValue
+pub enum CtxValue
 {
     Attribute(Attribute),
     Conditional(Conditional),

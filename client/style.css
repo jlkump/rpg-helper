@@ -495,3 +495,11 @@ input:focus, .input:focus-within
         padding: 10px 0px 10px 0px;
     }
 }
+
+@media (max-width: 550px)
+{
+    .navbar .logo p
+    {
+        display: none;
+    }
+}

@@ -37,12 +37,25 @@ pub fn helper_tooltip(props: &Props) -> Html
                 max-height: 0;
                 max-width: 0;
                 transition: 0.2s all ease-out;
+                z-index: 10;
             }
 
             .tooltip.hover
             {
                 max-height: 250px;
                 max-width: 250px;
+            }
+
+            .click-outside
+            {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background-color: blue;
+                opacity: 10%;
+                z-index: 9;
             }
         "#
     };
@@ -66,11 +79,29 @@ pub fn helper_tooltip(props: &Props) -> Html
         })
     };
 
+    let forced_open = use_state(|| false);
+    let onclick =
+    {
+        let forced_open = forced_open.clone();
+        Callback::from(move |_|
+        {
+            log::info!("Forced tooltip open");
+            forced_open.set(!*forced_open);
+        })
+    };
+
+    //TODO: Onclick, set "forced open" and spawn an invisible div beneath the tooltip that fills the screen.
+    //      When that div is clicked, set "forced open" false
     html!
     {
-        <div {class} {onmouseenter} {onmouseleave}>
+        <div {class} {onmouseenter} {onmouseleave} {onclick}>
             {props.children.clone()}
-            <div class={ if *tooltip_open {"tooltip hover"} else {"tooltip"}}></div>
+            <div class={if *tooltip_open || *forced_open {"tooltip hover"} else {"tooltip"}}></div>
+            if *forced_open
+            {
+                <div class="click-outside"></div>
+            }
+            
         </div>
     }
 }

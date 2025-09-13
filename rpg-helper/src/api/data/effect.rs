@@ -17,3 +17,5 @@ pub enum Effect
     SetConditional(Conditional),
     SetModifier(Modifier),
 }
+
+// Effect Templating!! YAY!!!

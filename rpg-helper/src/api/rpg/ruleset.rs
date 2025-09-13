@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use crate::api::{data::tag::Tag, rpg::{creation::CharacterTemplate, dice::{DiceSet, DieRoll}, location::Location, timeline::DateSpec}};
+use crate::api::rpg::timeline::DateSpec;
 
 /// Contains:
 ///     - The templates for character creation
@@ -20,33 +18,4 @@ use crate::api::{data::tag::Tag, rpg::{creation::CharacterTemplate, dice::{DiceS
 pub struct Ruleset
 {
     date_spec: DateSpec,
-    die_rolls: DiceSet,
-    character_templates: HashMap<Tag, CharacterTemplate>,
-}
-
-impl Ruleset
-{
-    pub fn new() -> RulesetBuilder
-    {
-        todo!()
-    }
-
-    pub fn from_existing(ruleset: &Ruleset) -> RulesetBuilder
-    {
-        todo!()
-    }
-}
-
-pub struct RulesetBuilder
-{
-    date_spec: Option<DateSpec>,
-    character_templates: HashMap<Tag, CharacterTemplate>,
-}
-
-impl RulesetBuilder
-{
-    pub fn build(self) -> Ruleset
-    {
-        todo!()
-    }
 }
