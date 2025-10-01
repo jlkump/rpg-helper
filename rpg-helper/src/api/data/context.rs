@@ -20,7 +20,11 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Context
 {
-    general_tags: TagSet,
+    tags: TagSet,
+    /// Explicit tags are all the tags added directly through effects or through some higher
+    /// api layer management of tags. Most often, the track some boolean state of the ctx,
+    /// such as spell.range.voice or character.magus. The reason this is stored separately than
+    /// the tag set above is so, when we layer a ctx, we know which tags we need to add explicitly.
     state_tags: TagSet,
     atrs: AttributeSet,
     modifiers: ModifierSet,
@@ -35,8 +39,8 @@ impl Context
     pub fn new() -> Context
     {
         Context { 
-            general_tags: TagSet::new(), 
-            state_tags: TagSet::new(),          // State tags are only modified by effects (or changed by a context layer)
+            tags: TagSet::new(), 
+            state_tags: TagSet::new(),
             atrs: AttributeSet::new(), 
             modifiers: ModifierSet::new(),
             equations: EquationSet::new(),
@@ -46,7 +50,7 @@ impl Context
 
     pub fn has_tag(&self, t: &Tag) -> bool
     {
-        self.general_tags.has_tag(t) || self.state_tags.has_tag(t)
+        self.tags.has_tag(t) || self.state_tags.has_tag(t)
     }
 
     pub fn has_attribute(&self, attribute_name: &Tag) -> bool
@@ -83,6 +87,7 @@ impl Context
     /// to use effects to modify state of their contexts.
     pub fn add_explicit_tag(&mut self, tag: &Tag)
     {
+        self.tags.add_tag(tag);
         self.state_tags.add_tag(tag);
     }
 
@@ -95,6 +100,7 @@ impl Context
     /// to use effects to modify state of their contexts.
     pub fn remove_explicit_tag(&mut self, tag: &Tag)
     {
+        self.tags.remove_tag(tag);
         self.state_tags.remove_tag(tag);
     }
 
@@ -111,7 +117,14 @@ impl Context
         other.modifiers.iter().try_for_each(|(_, modifier)| self.set_modifier(modifier.clone()).map(|_| ()))?;
         other.equations.iter().try_for_each(|(_, equation)| self.set_equation(equation.clone()).map(|_| ()))?;
         other.conditionals.iter().try_for_each(|(_, conditional)| self.set_conditional(conditional.clone()).map(|_| ()))?;
-        self.state_tags = self.state_tags.layer(&other.state_tags);
+        other.state_tags.iter_primary_tags().for_each(|(t, i)|
+        {
+            for _ in 0..*i
+            {
+                self.add_explicit_tag(t);        
+            }
+        });
+        // self.state_tags = self.state_tags.layer(&other.state_tags);
         Ok(())
     }
 
@@ -157,6 +170,12 @@ impl Context
         }
     }
 
+    /// Gets all the tags contained in the ctx
+    pub fn get_tagset(&self) -> &TagSet
+    {
+        &self.tags
+    }
+
     /// Sets the value of an attribute directly. This should ONLY be
     /// used for initialization, as this circumvents the effect and modifier
     /// system.
@@ -176,7 +195,7 @@ impl Context
         }
         else
         {
-            self.general_tags.add_tag(t);
+            self.tags.add_tag(t);
             self.atrs.set_attribute(t, nv);
             Ok(None)
         }
@@ -193,7 +212,7 @@ impl Context
         self.ensure_target_attribute(t)?;
         if self.atrs.has_attribute(t)
         {
-            self.general_tags.remove_tag(t);
+            self.tags.remove_tag(t);
             Ok(self.atrs.remove_attribute(t).map(|a| a.get_value()))
         }
         else
@@ -210,7 +229,7 @@ impl Context
 
         if !self.has_modifier(&m.name)
         {
-            self.general_tags.add_tag(&m.name);
+            self.tags.add_tag(&m.name);
         }
         Ok(self.modifiers.set_modifier(m))
     }
@@ -220,7 +239,7 @@ impl Context
         self.ensure_target_modifier(&t)?;
         if self.has_modifier(t)
         {
-            self.general_tags.remove_tag(t);
+            self.tags.remove_tag(t);
             Ok(self.modifiers.remove_modifier(t))
         }
         else
@@ -240,7 +259,7 @@ impl Context
         }
         else
         {
-            self.general_tags.add_tag(&nv.name);
+            self.tags.add_tag(&nv.name);
             self.equations.set_equation(nv);
             Ok(None)
         }
@@ -257,7 +276,7 @@ impl Context
         self.ensure_target_equation(equation_name)?;
         if self.has_equation(equation_name)
         {
-            self.general_tags.remove_tag(equation_name);
+            self.tags.remove_tag(equation_name);
             Ok(self.equations.remove_equation(equation_name))
         }
         else
@@ -277,7 +296,7 @@ impl Context
         }
         else
         {
-            self.general_tags.add_tag(&nv.name);
+            self.tags.add_tag(&nv.name);
             self.conditionals.set_conditional(nv);
             Ok(None)
         }
@@ -294,7 +313,7 @@ impl Context
         self.ensure_target_conditional(conditional_name)?;
         if self.has_conditional(conditional_name)
         {
-            self.general_tags.remove_tag(conditional_name);
+            self.tags.remove_tag(conditional_name);
             Ok(self.conditionals.remove_conditional(conditional_name))
         }
         else
@@ -379,7 +398,7 @@ impl Context
     {
         RawContextData
         {
-            general_tags: self.general_tags.clone(),
+            general_tags: self.tags.clone(),
             state_tags: self.state_tags.clone(),
             atrs: self.atrs.clone(),
             modifiers: self.modifiers.clone(),

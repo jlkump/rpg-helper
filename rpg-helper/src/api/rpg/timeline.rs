@@ -1,14 +1,21 @@
-use std::{cmp::Ordering, collections::HashSet, rc::Rc};
+use std::{cmp::Ordering, collections::{HashMap, HashSet}, rc::Rc};
 
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{attribute::AttributeSet, context::Context, equation::Equation, error::ParseError, tag::Tag}, rpg::event::{Event, EventInterval}};
+use crate::api::{data::{attribute::AttributeSet, context::Context, equation::Equation, error::ParseError, tag::{Subtag, Tag}}, rpg::event::{Event}};
 
+/// A simple wrapper around an array of events
+/// When owned by a character, the timeline represents
+/// the local time experience of the character. Events
+/// do not have to be in chronoligical order by the date
+/// ordering (although the front-end client will facilitate
+/// the creation of events such that this is handled to avoid
+/// chronological errors).
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Timeline
 {
-    events: Vec<Event>,  // Events are kept in sorted order
+    events: Vec<Event>,
 }
 
 impl Timeline
@@ -16,7 +23,11 @@ impl Timeline
     pub fn add_event(&mut self, e: Event)
     {
         self.events.push(e);
-        self.events.sort_by(|l, r| l.partial_cmp(r).unwrap_or(Ordering::Equal));
+    }
+
+    pub fn insert_event(&mut self, index: usize, e: Event)
+    {
+        self.events.insert(index, e);
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Event>
@@ -29,128 +40,115 @@ impl Timeline
         self.events.iter_mut()
     }
 
-    /// Produces a sorted list of events which are grouped by
-    /// existing within the same interval identifier. The interval
-    /// identifier is provided.
-    pub fn split_by_interval(&self, interval: &EventInterval) -> Vec<(Tag, Vec<&Event>)>
+    pub fn group_by_time_context(&self) -> Vec<(Tag, Vec<&Event>)>
     {
         todo!()
     }
-
-    /// Add the events of both timelines together
-    /// Returns the resultant combination of events in a new timeline
-    pub fn combine(&self, other: &Self) -> Self
-    {
-        let mut result_events = self.events.clone();
-        for o in other.events.iter()
-        {
-            result_events.push(o.clone());
-        }
-        result_events.sort_by(|l, r| l.partial_cmp(r).unwrap_or(Ordering::Equal));
-        Timeline { events: result_events }
-    }
 }
 
-static LHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("lhs"));
-static RHS: Lazy<Result<Tag, ParseError>> = Lazy::new(|| Tag::from_str("rhs"));
-
+/// An identifier for determining what timeline a character exists on.
+/// This is used for determining event intervals and resource conflicts,
+/// as well as resource sharing. For example, a character can only share
+/// resources while in the same time context as another character.
+/// 
+/// The time context is simply a tag identifier.
+/// Examples:
+///     timeline.mundane
+///     timeline.fay
+///     timeline.heaven
+///     timeline.hell
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
-pub struct DateSpec
+pub enum TimeContext
 {
-    pub ordering: Equation,
-    pub required_values: HashSet<Tag>,
+    Calendar,
+    Temporary,
 }
 
-impl DateSpec
+/// Occurances (yearly, weekly, daily special events) are tracked on a calendar
+/// 
+/// A calendar is a collection of Days, which are grouped up as seen fit by the
+/// user creating a ruleset. The important thing is that days are given a u16 index
+/// in the array of Calendar days.
+/// 
+/// This allows an Event Interval for a Calendar context to be defined by an
+/// interval of days in a year [start, end).
+pub struct Calendar
 {
-    pub fn new(ordering: Equation, required_values: HashSet<Tag>) -> DateSpec
-    {
-        DateSpec { ordering, required_values }
-    }
-
-    pub fn get_ordering_lhs_tag() -> &'static Tag
-    {
-        match &*LHS
-        {
-            Ok(lhs) => lhs,
-            Err(e) => panic!("LHS tag of Date Spec is not valid!\nFailed with error: {:?}", e),
-        }
-    }
-
-    pub fn get_ordering_rhs_tag() -> &'static Tag
-    {
-        match &*RHS
-        {
-            Ok(rhs) => rhs,
-            Err(e) => panic!("RHS tag of Date Spec is not valid!\nFailed with error: {:?}", e),
-        }
-    }
+    time_ctx_id: Subtag,
+    days: Vec<Day>,
+    // This ctx is appended to the ruleset context with the prefix
+    // timeline.[time_ctx_id].*
+    // The current day and year are stored in:
+    // timeline.[time_ctx_id].year
+    // timeline.[time_ctx_id].day
+    // 
+    // The calendar can contain special events
+    // under timeline.[time_ctx_id].events
+    // which are a list of conditionals depending
+    // on the day and year value.
+    //
+    // These conditionals could be used for astronomical events, such as
+    // whether the moon is full, waning, waxing, etc. These can be read by
+    // locations and characters to be used for special abilities or resources
+    // that depend upon timing.
+    // 
+    // These conditionals can also be used to mark future story events? Maybe
+    ctx: Context,
+    intervals: Vec<EventInterval>,
 }
 
-impl Default for DateSpec
+pub struct Day
 {
-    /// Not my favorite thing to do right now, but we need a default for testing
-    fn default() -> Self
-    {
-        let mut required_values = HashSet::new();
-        required_values.insert(Tag::from_str("Year").unwrap());
-        required_values.insert(Tag::from_str("Month").unwrap());
-        required_values.insert(Tag::from_str("Day").unwrap());
-        Self { ordering: Equation::new(Tag::from_str("ordering").unwrap(), "(rhs.Year - lhs.Year) * 365 + (rhs.Month - lhs.Month) * 30 + (rhs.Day - lhs.Day)").unwrap(), required_values }
-    }
+    // A day could be conditional, such as the leap year day. Such a condition
+    // uses timeline.[time_ctx_id].year as the only accessible value
+    
+    name: Option<Subtag>,
 }
 
-/// It might be good to define the date spec as
-/// tag, a reference to the ordering equation.
-/// This way, a date could be a simple Copy value
-/// This works for now though.
-#[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
+/// The event interval is the range of time over which
+/// resources are limited. 
+/// 
+/// For example, ars magica lets players share books, but
+/// not during the same season. Thus, each season
+/// would be defined as an event interval and books as a
+/// resource would have a share limit of 1.
+/// 
+/// For this to work, an EventInterval compares two dates
+/// to see if the two dates are considered in the same event
+/// interval.
+pub struct EventInterval
+{
+    start: u16,
+    end: u16,
+}
+
+/// Dates are always measured in the context of a game, within a Time Context.
+/// The year value represents the time before or after the start date of the game.
+#[derive(Debug, Deserialize, PartialEq, Eq, Ord, Serialize, Clone, Copy)]
 pub struct Date
 {
-    ordering: Equation,
-    values: AttributeSet,
+    time_ctx_id: Subtag,
+    // The offset to the start year in the ruleset for the active game.
+    year: i16,
+    day: u16,
 }
 
+/// Ordering assumes that dates have a matching time context
+/// If this is not the case, then the partial order will return None
 impl PartialOrd for Date
 {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering>
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering>
     {
-        const EPSILON: f32 = 0.0000001;
+        // These dates exist in separate timeline contexts
+        // Comparing them is meaningless
+        if self.time_ctx_id != other.time_ctx_id { return None; }
 
-
-
-        let (lhs_prefix, rhs_prefix) = match (&*LHS, &*RHS)
+        // Order by year, then by day
+        match self.year.partial_cmp(&other.year)
         {
-            (Ok(lhs), Ok(rhs)) => (lhs, rhs),
-            _ => return None,
-        };
-
-        // Doing some cloning, but attribute sets on dates are typically very small so doesn't really matter
-        let mut ctx: Context = self.values.clone().add_prefix(lhs_prefix).into();
-        
-        if let Err(_) = ctx.layer_context(&other.values.clone().add_prefix(rhs_prefix).into())
-        {
-            return None;
+            Some(core::cmp::Ordering::Equal) => {}
+            ord => return ord,
         }
-
-        if let Ok(comparison_value) = self.ordering.eval(&ctx)
-        {
-            if comparison_value < EPSILON
-            {
-                Some(std::cmp::Ordering::Less)
-            }
-            else if comparison_value > EPSILON
-            {
-                Some(std::cmp::Ordering::Greater)
-            }
-            else
-            {
-                Some(std::cmp::Ordering::Equal)
-            }
-        }
-        else
-        {
-            None
-        }
+        self.day.partial_cmp(&other.day)
     }
 }

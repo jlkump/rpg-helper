@@ -84,7 +84,7 @@ struct CharacterState
 struct CharacterData
 {
     ctx: Context,
-    abilities: AbilitySet,
+    // abilities: AbilitySet,
     // inventory: Inventory,
 }
 

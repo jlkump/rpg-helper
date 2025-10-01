@@ -181,6 +181,14 @@ pub struct PickRootTag
     added_template_values: TemplateValue,
 }
 
+impl PickRootTag
+{
+    pub fn get_options(&self, prefix: &Tag, ctx: &Context) -> Vec<Tag>
+    {
+        ctx.get_tagset().get_matching_prefix(&self.suffix.add_prefix(prefix))
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct AbilityBuilder
 {

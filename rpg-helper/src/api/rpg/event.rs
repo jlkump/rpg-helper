@@ -80,43 +80,6 @@ impl EventSchema
 
 }
 
-/// The event interval is the range of time over which
-/// resources are limited. 
-/// 
-/// For example, ars magica lets players share books, but
-/// not during the same season. Thus, each season
-/// would be defined as an event interval and books as a
-/// resource would have a share limit of 1.
-/// 
-/// For this to work, an EventInterval compares two dates
-/// to see if the two dates are considered in the same event
-/// interval.
-pub struct EventInterval
-{
-    within_interval_condition: Conditional,
-}
-
-impl EventInterval
-{
-    /// Returns true if the given dates are within the same interval.
-    /// False otherwise.
-    pub fn check_within(&self, lhs: &Date, rhs: &Date) -> bool
-    {
-        todo!()
-    }
-
-    /// Gives the unique tag identifier for a given date within a given interval. 
-    /// For example, summer, fall, winter, or spring for seasonal intervals.
-    /// 
-    /// This is done by the mapping equation, which takes in a date,
-    /// and produces a integer value. This integer value
-    /// maps to a tag. 
-    pub fn interval_identifier(&self, d: &Date) -> Tag
-    {
-        todo!()
-    }
-}
-
 
 /// A resource is some set of values (in a ctx)
 /// that is available as a choice during the creation of

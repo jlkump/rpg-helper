@@ -1,14 +1,149 @@
-use std::{collections::{HashMap, HashSet}, fmt::Display};
+use std::{collections::{HashMap, HashSet}, fmt::Display, ops::Deref};
 
 use serde::{Deserialize, Serialize};
+use string_interner::{backend::StringBackend, symbol::{SymbolU16, SymbolU32}, StringInterner, Symbol};
 
 use std::ops::Index;
 
 use crate::api::data::{error::{ParseError, ParseErrorType, TagParseError, TemplateError}, template::{Template, Templated}};
 
+pub mod reserved
+{
+    use super::Subtag;
+
+    /// Comes from Claude b/c IDK how to do macros.
+    /// This seems correct, though I wouldn't be surprised if it caused some problems.
+    /// I have performed some basic tests and this seems to do as expected, so will be in
+    /// use until it breaks.
+    #[macro_export]
+    macro_rules! reserved_subtags
+    {
+        ($($name:ident = $str:expr),* $(,)?) =>
+        {
+            // Generate the constant array of strings
+            pub(super) const RESERVED_SUBTAG_STRINGS: &[&str] = &[ $($str),* ];
+            
+            // Generate static Subtag for each entry
+            reserved_subtags!(@generate_statics 0, $($name = $str),*);
+        };
+        
+        // Helper to generate static declarations with indices
+        (@generate_statics $index:expr, $name:ident = $str:expr) =>
+        {
+            pub static $name: once_cell::sync::Lazy<Subtag> = 
+                once_cell::sync::Lazy::new(||
+                {
+                    Subtag { intern_id: $index }
+                });
+        };
+        
+        (@generate_statics $index:expr, $name:ident = $str:expr, $($rest_name:ident = $rest_str:expr),+) =>
+        {
+            pub static $name: once_cell::sync::Lazy<Subtag> = 
+                once_cell::sync::Lazy::new(||
+                {
+                    Subtag { intern_id: $index }
+                });
+            
+            reserved_subtags!(@generate_statics $index + 1, $($rest_name = $rest_str),+);
+        };
+    }
+
+    // This is the set of tags which are pre-made and reserved
+    // to be a part of the tag registry. They are the first
+    // items in the registry before anything else is inserted and thus
+    // their intern id is always known.
+    // 
+    // By using this macro, these Subtags can be directly accessed
+    // in code without needing to use a TagRegistry.
+    reserved_subtags!
+    {
+        RESERVED = "reserved",
+        ABILITY = "ability",
+        // ITEM
+        TIMELINE = "timeline",
+    }
+}
+
+/// This is where all tags' string value equivalents are stored.
+/// In order to create a tag from a string, a registry must be made
+/// and used.
+/// 
+/// Likewise, when a tag needs to be displayed in a string format,
+/// a registry is required.
+/// 
+/// This complicates equation evaluation slightly, as now plain
+/// string tags in the equation may or may not be valid tags.
+#[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
+pub struct TagRegistry
+{
+    string_interner: StringInterner<StringBackend<SymbolU32>>,
+}
+
+impl TagRegistry
+{
+    pub fn new() -> TagRegistry
+    {
+        use reserved::RESERVED_SUBTAG_STRINGS;
+
+        TagRegistry { string_interner: RESERVED_SUBTAG_STRINGS.into_iter().collect::<StringInterner<StringBackend<SymbolU32>>>() }
+    }
+
+    pub fn get_or_register_tag(&mut self, tag: &str) -> Result<Tag, ParseError>
+    {
+        todo!()
+    }
+
+    pub fn get_or_register_subtag(&mut self, subtag: &str) -> Result<Subtag, ParseError>
+    {
+        todo!()
+    }
+
+    pub fn get_tag(&self, tag: &str) -> Option<Tag>
+    {
+        todo!()
+    }
+
+    pub fn get_subtag(&self, subtag: &str) -> Option<Subtag>
+    {
+        self.string_interner.get(subtag).map(|i| i.into())
+    }
+
+
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Copy, Hash)]
+pub struct Subtag
+{
+    intern_id: u32,
+}
+
+impl From<SymbolU32> for Subtag
+{
+    fn from(value: SymbolU32) -> Self
+    {
+        Subtag { intern_id: value.to_usize() as u32 }
+    }
+}
+
+/// Any subtag can be turned into a tag of length one
+impl Deref for Subtag
+{
+    type Target = Tag;
+
+    fn deref(&self) -> &Self::Target
+    {
+        todo!()
+    }
+}
+
+// TODO: A macro that creates a tag from a variable number of Subtags
+// tag_from_subtags!(TIMELINE, DEFAULT)
 #[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
 pub struct Tag
 {
+    // TODO: Rewrite Tags
+    // subtags: Vec<Subtag>,
     name: String,
 }
 
@@ -1527,4 +1662,44 @@ mod unit_tests
             assert!(result.contains(&e));
         }
     }
+
+    /// Test to ensure the interner uses usize indexes in order
+    #[test]
+    fn tag_intern_test()
+    {
+        use string_interner::{StringInterner, Symbol};
+
+        let mut interner = StringInterner::default();
+        let sym0 = interner.get_or_intern("Elephant");
+        let sym1 = interner.get_or_intern("Tiger");
+        let sym2 = interner.get_or_intern("Horse");
+        let sym3 = interner.get_or_intern("Tiger");
+
+        assert_eq!(sym0.to_usize(), 0);
+        assert_eq!(sym1.to_usize(), 1);
+        assert_eq!(sym2.to_usize(), 2);
+        assert_eq!(sym3.to_usize(), 1);
+    }
+
+    // Looks like the statics work, so I'll be using this for declaring tags
+    // #[test]
+    // fn tag_static_test_1()
+    // {
+    //     assert_eq!(RESERVED.intern_id, 0);
+    //     assert_eq!(DIE_ROLL.intern_id, 6);
+    // }
+
+    // #[test]
+    // fn tag_static_test_2()
+    // {
+    //     let mut interner = RESERVED_SUBTAG_STRINGS.into_iter().collect::<DefaultStringInterner>();
+    //     let sym0 = interner.get_or_intern("reserved");
+    //     let sym1 = interner.get_or_intern("die roll");
+    //     let sym2 = interner.get_or_intern("Horse");
+
+    //     assert_eq!(sym0.to_usize() as u32, RESERVED.intern_id);
+    //     assert_eq!(sym1.to_usize() as u32, DIE_ROLL.intern_id);
+    //     assert_eq!(sym2.to_usize(), RESERVED_SUBTAG_COUNT);
+
+    // }
 }

@@ -1,5 +1,3 @@
-use crate::api::rpg::timeline::DateSpec;
-
 /// Contains:
 ///     - The templates for character creation
 ///         A template for a character defines:
@@ -17,5 +15,7 @@ use crate::api::rpg::timeline::DateSpec;
 ///     - Pre-existing characters (like NPCs)
 pub struct Ruleset
 {
-    date_spec: DateSpec,
+    // Tag Registry
+    // Defined time contexts (including event intervals)
+    // Start date (and obviously the default time context)
 }
