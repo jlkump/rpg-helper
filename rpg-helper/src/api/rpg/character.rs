@@ -21,6 +21,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::api::{data::{context::Context, effect::Effect, error::DataError, tag::Tag}, rpg::{ability::{Ability, AbilitySet}, event::Event, timeline::{Date, Timeline}}};
 
@@ -47,6 +48,11 @@ use crate::api::{data::{context::Context, effect::Effect, error::DataError, tag:
 //                         "spec_tag", "item_count": "1", "item_context": {...}}],
 //          "equiped_items": ["cool_item_tag"],
 //      }    
+
+pub struct CharacterId
+{
+    uuid: Uuid,
+}
 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct Character

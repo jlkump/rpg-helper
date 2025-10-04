@@ -7,63 +7,7 @@ use std::ops::Index;
 
 use crate::api::data::{error::{ParseError, ParseErrorType, TagParseError, TemplateError}, template::{Template, Templated}};
 
-pub mod reserved
-{
-    use super::Subtag;
-
-    /// Comes from Claude b/c IDK how to do macros.
-    /// This seems correct, though I wouldn't be surprised if it caused some problems.
-    /// I have performed some basic tests and this seems to do as expected, so will be in
-    /// use until it breaks.
-    #[macro_export]
-    macro_rules! reserved_subtags
-    {
-        ($($name:ident = $str:expr),* $(,)?) =>
-        {
-            // Generate the constant array of strings
-            pub(super) const RESERVED_SUBTAG_STRINGS: &[&str] = &[ $($str),* ];
-            
-            // Generate static Subtag for each entry
-            reserved_subtags!(@generate_statics 0, $($name = $str),*);
-        };
-        
-        // Helper to generate static declarations with indices
-        (@generate_statics $index:expr, $name:ident = $str:expr) =>
-        {
-            pub static $name: once_cell::sync::Lazy<Subtag> = 
-                once_cell::sync::Lazy::new(||
-                {
-                    Subtag { intern_id: $index }
-                });
-        };
-        
-        (@generate_statics $index:expr, $name:ident = $str:expr, $($rest_name:ident = $rest_str:expr),+) =>
-        {
-            pub static $name: once_cell::sync::Lazy<Subtag> = 
-                once_cell::sync::Lazy::new(||
-                {
-                    Subtag { intern_id: $index }
-                });
-            
-            reserved_subtags!(@generate_statics $index + 1, $($rest_name = $rest_str),+);
-        };
-    }
-
-    // This is the set of tags which are pre-made and reserved
-    // to be a part of the tag registry. They are the first
-    // items in the registry before anything else is inserted and thus
-    // their intern id is always known.
-    // 
-    // By using this macro, these Subtags can be directly accessed
-    // in code without needing to use a TagRegistry.
-    reserved_subtags!
-    {
-        RESERVED = "reserved",
-        ABILITY = "ability",
-        // ITEM
-        TIMELINE = "timeline",
-    }
-}
+static TAG_DELIMITER: char = '.';
 
 /// This is where all tags' string value equivalents are stored.
 /// In order to create a tag from a string, a registry must be made
@@ -73,7 +17,11 @@ pub mod reserved
 /// a registry is required.
 /// 
 /// This complicates equation evaluation slightly, as now plain
-/// string tags in the equation may or may not be valid tags.
+/// string tags in the equation may or may not be valid tags registered
+/// in a registry >:(
+/// 
+/// On the upside, tags are more compact (as long as the tag was more than 4 characters)
+/// and more efficient in comparison and tag operations :D
 #[derive(Debug, Deserialize, PartialEq, Eq, Serialize, Clone)]
 pub struct TagRegistry
 {
@@ -82,299 +30,99 @@ pub struct TagRegistry
 
 impl TagRegistry
 {
+    /// Create a new empty tag registry. This is primarily used for testing,
+    /// as the rpg layer has a set of reserved subtags.
+    /// 
+    /// Thus, [`TagRegistry::new_with_reserved`] should be used intead.
     pub fn new() -> TagRegistry
     {
-        use reserved::RESERVED_SUBTAG_STRINGS;
-
-        TagRegistry { string_interner: RESERVED_SUBTAG_STRINGS.into_iter().collect::<StringInterner<StringBackend<SymbolU32>>>() }
+        TagRegistry { string_interner: StringInterner::new() }
     }
 
-    pub fn get_or_register_tag(&mut self, tag: &str) -> Result<Tag, ParseError>
-    {
-        todo!()
-    }
-
-    pub fn get_or_register_subtag(&mut self, subtag: &str) -> Result<Subtag, ParseError>
-    {
-        todo!()
-    }
-
-    pub fn get_tag(&self, tag: &str) -> Option<Tag>
-    {
-        todo!()
-    }
-
-    pub fn get_subtag(&self, subtag: &str) -> Option<Subtag>
-    {
-        self.string_interner.get(subtag).map(|i| i.into())
-    }
-
-
-}
-
-#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Copy, Hash)]
-pub struct Subtag
-{
-    intern_id: u32,
-}
-
-impl From<SymbolU32> for Subtag
-{
-    fn from(value: SymbolU32) -> Self
-    {
-        Subtag { intern_id: value.to_usize() as u32 }
-    }
-}
-
-/// Any subtag can be turned into a tag of length one
-impl Deref for Subtag
-{
-    type Target = Tag;
-
-    fn deref(&self) -> &Self::Target
-    {
-        todo!()
-    }
-}
-
-// TODO: A macro that creates a tag from a variable number of Subtags
-// tag_from_subtags!(TIMELINE, DEFAULT)
-#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
-pub struct Tag
-{
-    // TODO: Rewrite Tags
-    // subtags: Vec<Subtag>,
-    name: String,
-}
-
-impl Tag
-{
-    /// Alias for from_str(s)
-    pub fn new(s: &str) -> Result<Tag, ParseError>
-    {
-        Self::from_str(s)
-    }
-
-    /// Parse a string into the according tag.
+    /// Creates a new registry with some set of reserved subtags.
+    /// The order of the reserved subtags will be used for the creation
+    /// of the subtag ids. This allows a static time assumption of what
+    /// certain ids for subtags will be.
     /// 
-    /// Ex:
-    /// Ability.Magic Theory -> Ability.Magic Theory
-    /// Ability. Magic Theory . Speciality -> Ability.Magic Theory.Speciality
+    /// The reserved subtags are declared in each layer of the api, with the
+    /// highest layer's reserved tags being the ones that should be used
+    /// when that layer is included. I.E., if you use only the data layer,
+    /// then no tags are reserved.
+    pub fn new_with_reserved(reserved_subtags: &[&str]) -> TagRegistry
+    {
+        TagRegistry { string_interner: reserved_subtags.into_iter().collect::<StringInterner<StringBackend<SymbolU32>>>() }
+    }
+
+    /// Returns the tag value of a string if the string is formatted correctly as a tag.
+    /// Otherwise, returns the parse errors in the string.
     /// 
-    /// A tag can only contain alpha-numeric characters and
-    /// the first sub-tag must contain at least one non-numeric
-    /// character. Each subtag must also contain at least one character.
+    /// When called, each subtag (deliminated by '.') is checked to be contained
+    /// in the registry. If it is not present, the subtag is registered. All
+    /// registered subtags are then combined to create the final tag.
     /// 
-    /// Ex:
-    /// Ability.0 -> OK
-    /// 0.Ability -> NOT OK
-    /// Ability.Magic Theory!.Speciality -> NOT OK
-    pub fn from_str(s: &str) -> Result<Tag, ParseError>
+    /// If the string contains parse errors, then no new subtags are registered.
+    pub fn get_or_register_tag(&mut self, tag_str: &str) -> Result<Tag, ParseError>
     {
         // Initial error check to ensure not empty
-        if s.is_empty() || s.chars().all(char::is_whitespace)
-        {
-            return Err(ParseError::new(s.to_string(), s.len(), ParseErrorType::Tag(TagParseError::TagEmpty)));
-        }
-
-        // Check that the string only contains alpha-numeric values or '.'s
-        if !s.chars().all(|c| Self::is_valid_tag_char(c))
-        {
-            return Err(ParseError::new(s.to_string(), s.find(|c| !Self::is_valid_tag_char(c)).unwrap(), ParseErrorType::Tag(TagParseError::InvalidCharacter)));
-        }
+        Self::check_parse_error(tag_str, Self::is_valid_tag_char)?;
 
         // Ensure first sub-string is not just a number
-        let first_str = if let Some(f) = s.split('.').next()
-        {
-            f
-        }
-        else
-        {
-            s
-        };
+        // let first_str = if let Some(f) = s.split('.').next()
+        // {
+        //     f
+        // }
+        // else
+        // {
+        //     s
+        // };
 
-        if first_str.chars().all(|c| c.is_numeric() || c.is_whitespace())
-        {
-            return Err(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::FirstTagNumeric)));
-        }
+        // if first_str.chars().all(|c| c.is_numeric() || c.is_whitespace())
+        // {
+        //     return Err(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::FirstTagNumeric)));
+        // }
 
-        // Initialize empty result string
         // Loop through each substring s
-        //      Trim the outer white-space
-        //      Add to result string
-        //      Add '.' (if we are not the last value)
-        let mut name = String::new();
-        let mut it = s.split('.').peekable();
-        while let Some(sub) = it.next()
-        {
-            if sub.chars().all(char::is_whitespace)
-            {
-                return Err(ParseError::new(s.to_string(), s.find(sub).unwrap(), ParseErrorType::Tag(TagParseError::SubTagEmpty)))
-            }
-
-            name.push_str(sub.trim());
-            if it.peek().is_some()
-            {
-                name.push('.');
-            }
-        }
-
-        Ok(Tag { name })
+        //      Trim the outer white-space and make lowercase
+        //      Get or register 
+        let subtags = tag_str.split(TAG_DELIMITER).map(|substring| Subtag::from(self.string_interner.get_or_intern(substring.trim().to_lowercase()))).collect();
+        Ok(Tag { subtags })
     }
 
-    pub fn to_str(&self) -> &str
+    pub fn get_or_register_subtag(&mut self, subtag_str: &str) -> Result<Subtag, ParseError>
     {
-        &self.name
+        Self::check_parse_error(subtag_str, Self::is_valid_subtag_char)?;
+
+        Ok(self.string_interner.get_or_intern(subtag_str.trim().to_lowercase()).into())
     }
 
-    /// Removes the prefix of the tag up to the
-    /// matching given prefix.
-    /// 
-    /// Returns None if no match is found
-    /// Ex:
-    ///     remove_prefix(ability.spell.Name Of Spell, ability.spell)     -> Name Of Spell
-    ///     remove_prefix(ability.spell.Name Of Spell.Exp, ability.spell) -> Name Of Spell.Exp
-    pub fn remove_prefix(&self, prefix: &Tag) -> Option<Tag>
+    /// Retrieves the tag handle from a given string if it exists.
+    /// If the given string is poorly formatted, then a parse error is returned
+    pub fn get_tag(&self, tag_str: &str) -> Result<Option<Tag>, ParseError>
     {
-        if self.name.starts_with(&prefix.name)
-        {
-            // Calculate where to split: prefix length + potential dot
-            let prefix_len = prefix.name.len();
-            
-            if prefix_len >= self.name.len()
-            {
-                return None;
-            }
-            
-            // Check if there's a dot after the prefix
-            let remaining = if self.name.chars().nth(prefix_len) == Some('.')
-            {
-                &self.name[prefix_len + 1..]
-            }
-            else
-            {
-                return None;
-            };
-            
-            if remaining.is_empty()
-            {
-                None
-            }
-            else
-            {
-                Some(Tag { name: remaining.to_string() })
-            }
-        }
-        else
-        {
-            None
-        }
-    }
+        Self::check_parse_error(tag_str, Self::is_valid_tag_char)?;
 
-    pub fn remove_prefix_by_count(&self, count: usize) -> Option<Tag>
-    {
-        let mut iter = self.name.split('.').peekable();
-        for _ in 0..count
-        {
-            iter.next();
-        }
-
-        if iter.peek().is_none()
-        {
-            return None;
-        }
-        else
-        {
-            let mut result_string = String::new();
-            while let Some(st) = iter.next()
-            {
-                result_string.push_str(&st);
-                if iter.peek().is_some()
+        Ok(tag_str.split(TAG_DELIMITER)
+            .map(|substring| self.string_interner.get(substring))
+            .try_fold(vec![], |mut acc, subtag|
                 {
-                    result_string.push('.');
-                }
-            }
-            Some(Tag { name: result_string })
-        }
-    }
-    
-    /// Prefix a tag with another prefix
-    /// Ex:
-    ///     add_prefix(Name Of Spell, ability.spell) -> ability.spell.Name Of Spell
-    pub fn add_prefix(&self, prefix: &Tag) -> Tag
-    {
-        let mut final_string = prefix.name.clone();
-        final_string.push('.');
-        final_string.push_str(&self.name);
-        Tag { name: final_string }
+                    match subtag
+                    {
+                        Some(subtag) =>
+                        {
+                            acc.push(subtag.into());
+                            Some(acc)
+                        },
+                        None => None,
+                    }
+                })
+            .map(|subtags| Tag { subtags }))
     }
 
-    pub fn has_prefix(&self, prefix: &str) -> bool
+    pub fn get_subtag(&self, subtag_str: &str) -> Result<Option<Subtag>, ParseError>
     {
-        if self.name.len() > prefix.len()
-        {
-            self.name.starts_with(prefix) && self.name.chars().nth(prefix.len()) == Some('.') 
-        }
-        else
-        {
-            self.name.starts_with(prefix)
-        }
-    }
+        Self::check_parse_error(subtag_str, Self::is_valid_subtag_char)?;
 
-    /// Suffix a tag with another suffix
-    /// Ex:
-    ///     "Name Of Spell".add_suffix("Burning Hands") -> "Name Of Spell.Burning Hands"
-    pub fn add_suffix(&self, suffix: &Tag) -> Tag
-    {
-        let mut final_string = self.name.clone();
-        final_string.push('.');
-        final_string.push_str(&suffix.name);
-        Tag { name: final_string }
-    }
-
-    pub fn has_suffix(&self, suffix: &str) -> bool
-    {
-        if self.name.len() > suffix.len()
-        {
-            if let Some(i) = self.name.find(suffix)
-            {
-                self.name.ends_with(suffix) && self.name.chars().nth(i) == Some('.')
-            }
-            else
-            {
-                false
-            }
-        }
-        else
-        {
-            self.name.ends_with(suffix)
-        }
-    }
-
-    /// Removes all sub-tags in a tag.
-    /// Ex:
-    ///     ability.spell.Name Of Spell.Exp -> ability
-    ///     Name Of Spell.Exp               -> Name Of Spell
-    /// 
-    pub fn no_subtags(&self) -> Tag
-    {
-        if let Some(f) = self.name.split('.').next()
-        {
-            Tag { name: f.to_string() }
-        }
-        else
-        {
-            self.clone()
-        }
-    }
-
-    /// Returns the number of sub-tags in the tag
-    /// Ex:
-    ///     ability.spell.Name Of Spell -> 2
-    ///     ability                     -> 0
-    pub fn count_subtags(&self) -> usize
-    {
-        self.name.split('.').count() - 1
+        Ok(self.string_interner.get(subtag_str.trim().to_lowercase()).map(|i| i.into()))
     }
 
     pub fn find_all_parse_errors(s: &str) -> Result<(), Vec<ParseError>>
@@ -386,19 +134,19 @@ impl Tag
             return Err(res);
         }
 
-        let first_str = if s.contains('.')
-        {
-            s.split('.').next().unwrap()
-        }
-        else
-        {
-            s
-        };
+        // let first_str = if s.contains('.')
+        // {
+        //     s.split('.').next().unwrap()
+        // }
+        // else
+        // {
+        //     s
+        // };
 
-        if first_str.chars().all(char::is_numeric)
-        {
-            res.push(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::FirstTagNumeric)));
-        }
+        // if first_str.chars().all(char::is_numeric)
+        // {
+        //     res.push(ParseError::new(s.to_string(), s.len() - 1, ParseErrorType::Tag(TagParseError::FirstTagNumeric)));
+        // }
 
         for (i, c) in s.chars().enumerate()
         {
@@ -408,7 +156,7 @@ impl Tag
             }
         }
 
-        for sub in s.split('.')
+        for sub in s.split(TAG_DELIMITER)
         {
             if sub.chars().all(char::is_whitespace)
             {
@@ -426,48 +174,376 @@ impl Tag
         }
     }
 
+    // =============== Private Helpers ===================
+
     fn is_valid_tag_char(c: char) -> bool
     {
-        c.is_alphanumeric() || c == '.' || c.is_whitespace()
+        Self::is_valid_subtag_char(c) || c == TAG_DELIMITER
+    }
+    
+    fn is_valid_subtag_char(c: char) -> bool
+    {
+        c.is_alphanumeric() || c.is_whitespace()
     }
 
-
-    /// Given a tag, splits the literals into 
-    /// the sub-tag array. This is a help method
-    /// used by TagContainer to add and remove tags.
-    /// Ex:
-    /// Ability.Magic Theory -> ["Ability", "Ability.Magic Theory"]
-    /// Ability.Magic Theory.Speciality -> ["Ability", "Ability.Magic Theory", "Ability.Magic Theory.Speciality"]
-    fn split_to_subtags(&self) -> Vec<String>
+    fn check_parse_error<T: Fn(char) -> bool>(s: &str, valid: T) -> Result<(), ParseError>
     {
-        let mut res = vec![];
-        if self.name.contains('.')
+        // Initial error check to ensure not empty
+        if s.is_empty() || s.chars().all(char::is_whitespace)
         {
-            let mut cur = String::new();
+            return Err(ParseError::new(s.to_string(), s.len(), ParseErrorType::Tag(TagParseError::TagEmpty)));
+        }
 
-            let mut it = self.name.split('.').peekable();
-            while let Some(sub) = it.next()
+        // Check that the string only contains valid characters
+        if !s.chars().all(|c| valid(c))
+        {
+            return Err(ParseError::new(s.to_string(), s.find(|c| !valid(c)).unwrap(), ParseErrorType::Tag(TagParseError::InvalidCharacter)));
+        }
+
+        Ok(())
+    }
+}
+
+/// Subtags make up a larger part of a tag. As singular instances, they can be used as
+/// a unique string-based indentifier for a ruleset.
+/// 
+/// ## Restrictions
+/// The string of a subtag may only contain valid alphanumeric values.
+/// Unlike tags, subtags can not contain '.' delimiters.
+/// Capitalization does not affect the subtag value for comparisons.
+/// 
+/// **Examples**
+/// - `subtag`
+/// - `tag`
+/// - `a long subtag`
+/// - `MixeD CapItalIzaTioN`
+/// - `1 Numeric Value`
+/// - `50356`
+/// 
+/// **Counter Examples**
+/// - `a.multivalue.tag`
+/// - `non alphanumeric! "tag" values`
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Copy, Hash)]
+pub struct Subtag
+{
+    intern_id: SymbolU32,
+}
+
+impl Subtag
+{
+    pub(crate) fn reserved_new(id: u32) -> Subtag
+    {
+        Subtag { intern_id: SymbolU32::try_from_usize(id as usize).unwrap() }
+    }
+}
+
+impl From<SymbolU32> for Subtag
+{
+    fn from(value: SymbolU32) -> Self
+    {
+        Self { intern_id: value }
+    }
+}
+
+impl From<Subtag> for Tag
+{
+    fn from(value: Subtag) -> Self
+    {
+        Tag { subtags: vec![value] }
+    }
+}
+
+impl From<&Subtag> for Tag
+{
+    fn from(value: &Subtag) -> Self
+    {
+        Tag { subtags: vec![*value] }
+    }
+}
+
+impl Default for Subtag
+{
+    fn default() -> Self
+    {
+        Self::reserved_new(0)
+    }
+}
+
+// TODO: A macro that creates a tag from a variable number of Subtags
+// tag_from_subtags!(TIMELINE, DEFAULT)
+#[derive(Debug, Deserialize, PartialEq, Eq, PartialOrd, Ord, Serialize, Clone, Hash)]
+pub struct Tag
+{
+    subtags: Vec<Subtag>,
+}
+
+impl Tag
+{
+    pub fn to_string(&self, registry: &TagRegistry) -> Option<String>
+    {
+        let mut subtags = self.subtags.iter().map(|subtag| registry.string_interner.resolve(subtag.intern_id)).peekable();
+        
+        let mut string = String::new();
+        while let Some(subtag) = subtags.next()
+        {
+            match subtag
             {
-                cur.push_str(sub);
-                res.push(cur.to_string());
-                if it.peek().is_some()
-                {
-                    cur.push('.');
-                }
+                Some(subtag) => string.push_str(subtag),
+                None => return None,
             }
+            if subtags.peek().is_some()
+            {
+                string.push(TAG_DELIMITER);
+            }
+        }
+        Some(string)
+    }
+
+    /// Removes the prefix of the tag up to the matching given prefix.
+    /// 
+    /// Returns None if no match is found or the entire tag is removed
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "spell", "name of spell"]);
+    /// 
+    /// let tag = registry.get_tag("ability.spell.Name of Spell").unwrap();
+    /// let ability_spell = registry.get_tag("ability.spell").unwrap();
+    /// let ability_spell_name = registry.get_tag("ability.spell.name of spell").unwrap();
+    /// 
+    /// assert_eq!(registry.get_tag("Name Of Spell"), tag.remove_prefix(ability_spell));
+    /// assert_eq!(None, tag.remove_prefix(ability_spell_name));
+    /// ```
+    pub fn remove_prefix(&self, prefix: &Tag) -> Option<Tag>
+    {
+        let mut first_diff = None;
+        for ((i, lhs), rhs) in self.subtags.iter().enumerate().zip(prefix.subtags.iter())
+        {
+            if lhs != rhs
+            {
+                first_diff = Some(i);
+                break;
+            }
+        }
+
+        match first_diff
+        {
+            // The index `i` will always be in range, as, in order to be found
+            // the iterator above must have run and found some subtag for which `lhs` != `rhs`.
+            // It is also not possible for the resulting subtag string to be empty, as again,
+            // this would only happen if i >= self.subtags.len(), which is not possible.
+            Some(i) => Some(Tag { subtags: self.subtags[i..].to_vec() }),
+            None => None,
+        }
+    }
+
+    /// Removes the first `count` elements from the subtags of the tag
+    /// If the count is greater than the number of subtags, then this
+    /// method will return none.
+    pub fn remove_prefix_by_count(&self, count: usize) -> Option<Tag>
+    {
+        if count >= self.subtags.len()
+        {
+            None
         }
         else
         {
-            res.push(self.name.to_string());
+            Some(Tag { subtags: self.subtags[count..].to_vec() })
         }
+    }
+    
+    /// Prefix a tag with another prefix tag
+    /// Ex:
+    ///     add_prefix(Name Of Spell, ability.spell) -> ability.spell.Name Of Spell
+    pub fn add_prefix(&self, prefix: &Tag) -> Tag
+    {
+        Tag { subtags: prefix.subtags.iter().map(|s| *s).chain(self.subtags.iter().map(|s| *s)).collect() }
+    }
+
+    pub fn has_prefix(&self, prefix: &Tag) -> bool
+    {
+        if self.subtags.len() >= prefix.subtags.len()
+        {
+            self.subtags.starts_with(&prefix.subtags)
+        }
+        else
+        {
+            false
+        }
+    }
+
+    /// Removes the suffix of the tag up to the matching given suffix.
+    /// 
+    /// Returns None if no match is found or the entire tag is removed
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "spell", "name of spell"]);
+    /// 
+    /// let tag = registry.get_tag("ability.spell.Name of Spell").unwrap();
+    /// let spell_name = registry.get_tag("spell.name of spell").unwrap();
+    /// let ability_spell_name = registry.get_tag("ability.spell.name of spell").unwrap();
+    /// 
+    /// assert_eq!(registry.get_tag("ability"), tag.remove_suffix(spell_name));
+    /// assert_eq!(None, tag.remove_suffix(ability_spell_name));
+    /// ```
+    pub fn remove_suffix(&self, suffix: &Tag) -> Option<Tag>
+    {
+        let mut first_diff = None;
+        for ((i, lhs), rhs) in self.subtags.iter().rev().enumerate().zip(suffix.subtags.iter().rev())
+        {
+            if lhs != rhs
+            {
+                first_diff = Some(i);
+                break;
+            }
+        }
+
+        match first_diff
+        {
+            // The index `i` will always be in range, as, in order to be found
+            // the iterator above must have run and found some subtag for which `lhs` != `rhs`.
+            // It is also not possible for the resulting subtag string to be empty, as again,
+            // this would only happen if i >= self.subtags.len(), which is not possible.
+            Some(i) =>
+            {
+                let r = self.subtags.iter().rev().collect::<Vec<&Subtag>>()[i..].into_iter().rev().map(|s| **s).collect();
+                Some(Tag { subtags: r })
+            },
+            None => None,
+        }
+    }
+
+    /// Removes the suffix of the tag by a given count of subtags.
+    /// Returns None if the entire tag is removed
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "spell", "name of spell"]);
+    /// 
+    /// let tag = registry.get_tag("ability.spell.Name of Spell").unwrap();
+    /// 
+    /// assert_eq!(registry.get_tag("ability.spell"), tag.remove_suffix_by_count(1));
+    /// assert_eq!(registry.get_tag("ability"), tag.remove_suffix_by_count(2));
+    /// assert_eq!(None, tag.remove_suffix_by_count(3));
+    /// ```
+    pub fn remove_suffix_by_count(&self, count: usize) -> Option<Tag>
+    {
+        if self.subtags.len() >= count + 1
+        {
+            Some(Tag { subtags: self.subtags[..count + 1].to_vec() } )
+        }
+        else
+        {
+            None
+        }
+    }
+
+    /// Suffix a tag with another tag
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "spell", "name of spell"]);
+    /// 
+    /// let tag = registry.get_tag("ability.spell").unwrap();
+    /// let suffix = registry.get_tag("name of spell").unwrap();
+    /// 
+    /// assert_eq!(registry.get_tag("ability.spell.name of spell").unwrap(), tag.add_suffix(suffix));
+    /// ```
+    pub fn add_suffix(&self, suffix: &Tag) -> Tag
+    {
+        Self::add_prefix(suffix, self)
+    }
+
+    /// Check the suffix of a tag given another tag.
+    /// If the suffix subtag length is greater than
+    /// this tag's length, then the check fails.
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "spell", "name of spell"]);
+    /// 
+    /// let tag = registry.get_tag("ability.spell.name of spell").unwrap();
+    /// let suffix = registry.get_tag("name of spell").unwrap();
+    /// let suffix_two = registry.get_tag("spell.name of spell").unwrap();
+    /// 
+    /// assert!(tag.has_suffix(suffix));
+    /// assert!(tag.has_suffix(suffix_two));
+    /// ```
+    pub fn has_suffix(&self, suffix: &Tag) -> bool
+    {
+        if self.subtags.len() >= suffix.subtags.len()
+        {
+            self.subtags.ends_with(&suffix.subtags)
+        }
+        else
+        {
+            false
+        }
+    }
+
+    /// Returns the subtags in this tag as a slice.
+    /// 
+    /// You can also directly index into a tag to access specific subtags. 
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "spell", "name of spell"]);
+    /// 
+    /// let tag = registry.get_tag("ability.spell.name of spell").unwrap();
+    /// let subtags = vec![registry.get_subtag("ability").unwrap(), registry.get_subtag("spell").unwrap()];
+    /// assert_eq!(subtags.as_slice(), tag.as_slice()[..3]);
+    /// ```
+    pub fn as_subtag_slice(&self) -> &[Subtag]
+    {
+        self.subtags.as_slice()
+    }
+
+    /// Counts the number of subtags in this tag.
+    /// 
+    /// Equivalent to `&[..].len()`
+    pub fn count_subtags(&self) -> usize
+    {
+        self[..].len()
+    }
+
+    /// Unlike a subtag slice view of this tag, this view creates successively larger tags from an initial
+    /// prefix of just the initial subtag.
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "spell", "name of spell"]);
+    /// 
+    /// let tag = registry.get_tag("ability.spell.name of spell").unwrap();
+    /// let subtags = vec!["ability", "ability.spell", "ability.spell.name Of Spell"]
+    ///     .into_iter().map(|s| registry.get_tag(s).unwrap())
+    ///     .collect();
+    /// 
+    /// assert_eq!(subtags, tag.as_collective_subtags());
+    /// ```
+    pub fn as_collective_subtags(&self) -> Vec<Tag>
+    {
+        let (_, res) = self.subtags.iter().fold((vec![], vec![]), 
+            |(mut subtags, mut result), subtag|
+            {
+                subtags.push(*subtag); 
+                result.push(Tag { subtags: subtags.clone() } );
+                (subtags, result)
+            }
+        );
         res
     }
 }
 
-impl Display for Tag
+impl<Idx> std::ops::Index<Idx> for Tag
+where
+    Idx: std::slice::SliceIndex<[Subtag]>,
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.name)
+    type Output = Idx::Output;
+
+    fn index(&self, index: Idx) -> &Self::Output
+    {
+        &self.subtags[index]
     }
 }
 
@@ -475,42 +551,46 @@ impl Default for Tag
 {
     fn default() -> Self
     {
-        Self { name: "None".to_string() }
+        Subtag::default().into()
     }
 }
 
-/// Contains tags, which are string literals delinitated by '.'s
+/// Contains tags registered with a TagRegistry.
+/// 
+/// It is important to note, a TagSet is not explicitly associated
+/// with a TagRegistry. Thus, the tags it contains may not be valid
+/// depending on the TagRegistry used. This also means that Tags
+/// between TagRegistries can not be mixed and matched!
 /// 
 /// A tag can be made of smaller sub-tags, which are children to the
 /// greater tag. For example, Ability.Magic Theory as a tag has
 /// Ability as the first sub-tag and Magic Theory as the second.
-/// 
-/// The presence of Ability.Magic Theory 
 #[derive(Debug, Deserialize, PartialEq, Serialize, Clone)]
 pub struct TagSet
 {
     primary_tags: HashMap<Tag, i32>,
-    tags: HashMap<String, i32>,
+    tags: HashMap<Tag, i32>,
 }
 
 impl TagSet
 {
+    /// Creates a new empty TagSet
     pub fn new() -> TagSet
     {
         TagSet { primary_tags: HashMap::new(), tags: HashMap::new() }
     }
 
-    pub fn count_tag(&self, t: &Tag) -> i32
+    pub fn get_tag_count(&self, t: &Tag) -> i32
     {
-        self[&t.to_str()]
+        self[t]
     }
 
     pub fn add_tag_count(&mut self, t: &Tag, c: i32)
     {
-        for st in t.split_to_subtags()
+        for st in t.as_collective_subtags()
         {
-            let v = self[&st];
-            self.tags.insert(st.clone(), v + c);
+            let v = self.tags.get(&st).unwrap_or(&0);
+            self.tags.insert(st, v + c);
         }
         self.primary_tags.insert(t.clone(), c + self.primary_tags.get(t).unwrap_or(&0));
     }
@@ -522,7 +602,7 @@ impl TagSet
 
     pub fn has_tag(&self, t: &Tag) -> bool
     {
-        self.count_tag(t) > 0
+        self.get_tag_count(t) > 0
     }
 
     pub fn add_tag(&mut self, t: &Tag)
@@ -537,15 +617,31 @@ impl TagSet
 
     /// Given a tag prefix, this method returns all
     /// subtags which exist in this tag set (the count of the tag must be > 0)
-    /// Example:  get_subtags(ability) -> [ability.Magic Theory, ability.Magic Theory.Exp, ability.Latin, ability.Latin.Exp]
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "Magic Theory", "Exp", "Latin"]);
+    /// 
+    /// let tags: Vec<Tag> = vec!["ability.Magic Theory", "ability.Magic Theory.Exp", "ability.Latin", "ability.Latin.Exp"].into_iter()
+    ///     .map(|s| registry.get_tag(s).unwrap())
+    ///     .collect();
+    /// 
+    /// let mut tag_set = TagSet::new();
+    /// for t in tags.iter()
+    /// {
+    ///     tag_set.add_tag(t);
+    /// }
+    /// 
+    /// let matching = tag_set.get_matching_prefix(registry.get_tag("ability").unwrap());
+    /// assert_eq!(matching.sort(), tags.sort());
+    /// ```
     pub fn get_matching_prefix(&self, prefix: &Tag) -> Vec<Tag>
     {
-        self.tags.clone().into_iter().filter_map(|(t, c)| 
+        self.tags.iter().filter_map(|(t, c)| 
         {
-            let t = Tag { name: t };
-            if c > 0 && t.has_prefix(&prefix.name)
+            if *c > 0 && t.has_prefix(&prefix)
             {
-                Some(t)
+                Some(t.clone())
             }
             else
             {
@@ -554,19 +650,40 @@ impl TagSet
         }).collect()
     }
 
-    /// Given a tag prefix, this method returns all
-    /// immediate tags which exist in this tag set (the count of the tag must be > 0)
-    /// Example:  get_subtags(ability) -> [ability.Magic Theory, ability.Latin]
-    ///           but does not return [ability.Magic Theory.Exp, ability.Latin.Exp]
+    /// Given a tag prefix, this method returns all immediate tags which exist in this tag set (the count of the tag must be > 0)
+    /// 
+    /// In other words: `get_immediate_matching_prefix(ability) -> [ability.Magic Theory, ability.Latin]`
+    /// but does not return `[ability.Magic Theory.Exp, ability.Latin.Exp]` when the tag set
+    /// is `ability.Magic Theory, ability.Magic Theory.Exp, ability.Latin, ability.Latin.Exp`
+    /// 
+    /// ## Examples
+    /// ```
+    /// let registry = TagRegistry::new_with_reserved(&vec!["ability", "Magic Theory", "Exp", "Latin"]);
+    /// 
+    /// let tags: Vec<Tag> = vec!["ability.Magic Theory", "ability.Magic Theory.Exp", "ability.Latin", "ability.Latin.Exp"].into_iter()
+    ///     .map(|s| registry.get_tag(s).unwrap())
+    ///     .collect();
+    /// 
+    /// let mut tag_set = TagSet::new();
+    /// for t in tags.iter()
+    /// {
+    ///     tag_set.add_tag(t);
+    /// }
+    /// 
+    /// let expected: Vec<Tag> = vec!["ability.Magic Theory", "ability.Latin"].into_iter()
+    ///     .map(|s| registry.get_tag(s).unwrap())
+    ///     .collect();
+    /// let matching = tag_set.get_matching_prefix(registry.get_tag("ability").unwrap());
+    /// assert_eq!(matching.sort(), expected.sort());
+    /// ```
     pub fn get_immediate_matching_prefix(&self, prefix: &Tag) -> Vec<Tag>
     {
         let num_subtags = prefix.count_subtags() + 1;
-        self.tags.clone().into_iter().filter_map(|(t, c)|
+        self.tags.iter().filter_map(|(t, c)|
         {
-            let t = Tag { name: t };
-            if c > 0 && t.count_subtags() == num_subtags && t.has_prefix(&prefix.name) 
+            if *c > 0 && t.count_subtags() == num_subtags && t.has_prefix(&prefix) 
             {
-                Some(t)
+                Some(t.clone())
             }
             else
             {
@@ -576,9 +693,9 @@ impl TagSet
         ).collect()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = Tag> + '_
+    pub fn iter(&self) -> impl Iterator<Item = &Tag> + '_
     {
-        self.tags.keys().map(| s| Tag::from_str(s).unwrap()).into_iter()
+        self.tags.keys()
     }
 
     pub fn iter_primary_tags(&self) -> impl Iterator<Item = (&Tag, &i32)> + '_
@@ -599,13 +716,14 @@ impl TagSet
     }
 }
 
-impl Index<&str> for TagSet
+impl Index<&Tag> for TagSet
 {
     type Output = i32;
  
     #[inline]
-    fn index(&self, index: &str) -> &Self::Output {
-        self.tags.get(index).unwrap_or(&0)
+    fn index(&self, index: &Tag) -> &Self::Output
+    {
+        &self.tags[index]
     }
 }
 
@@ -1294,7 +1412,7 @@ mod unit_tests
         let tag = Tag::from_str("Simple").unwrap();
         tag_set.add_tag(&tag);
         assert!(tag_set.has_tag(&tag));
-        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
     }
 
     /// Tests adding a multi-word tag to a tag set.
@@ -1306,11 +1424,11 @@ mod unit_tests
         let tag = Tag::from_str("Simple.Subtag").unwrap();
         tag_set.add_tag(&tag);
         assert!(tag_set.has_tag(&tag));
-        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
 
         let leading = Tag::from_str("Simple").unwrap();
         assert!(tag_set.has_tag(&leading));
-        assert_eq!(tag_set.count_tag(&leading), 1);
+        assert_eq!(tag_set.get_tag_count(&leading), 1);
     }
 
     /// Tests adding multiple different tags
@@ -1322,12 +1440,12 @@ mod unit_tests
         let tag = Tag::from_str("Simple").unwrap();
         tag_set.add_tag(&tag);
         assert!(tag_set.has_tag(&tag));
-        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
 
         let other = Tag::from_str("Other").unwrap();
         tag_set.add_tag(&other);
         assert!(tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&other), 1);
+        assert_eq!(tag_set.get_tag_count(&other), 1);
     }
 
     /// Tests adding multiple of the same tags
@@ -1339,12 +1457,12 @@ mod unit_tests
         let tag = Tag::from_str("Simple").unwrap();
         tag_set.add_tag(&tag);
         assert!(tag_set.has_tag(&tag));
-        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
 
         let other = Tag::from_str(" Simple ").unwrap();
         tag_set.add_tag(&other);
         assert!(tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&other), 2);
+        assert_eq!(tag_set.get_tag_count(&other), 2);
     }
 
     /// Tests adding multiple tags
@@ -1356,14 +1474,14 @@ mod unit_tests
         let tag = Tag::from_str("Simple").unwrap();
         tag_set.add_tag(&tag);
         assert!(tag_set.has_tag(&tag));
-        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
 
         let other = Tag::from_str(" Simple .Subtag").unwrap();
         tag_set.add_tag(&other);
         assert!(tag_set.has_tag(&tag));
         assert!(tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&tag), 2);
-        assert_eq!(tag_set.count_tag(&other), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 2);
+        assert_eq!(tag_set.get_tag_count(&other), 1);
     }
 
     /// Tests adding and removing multiple tags
@@ -1375,26 +1493,26 @@ mod unit_tests
         let tag = Tag::from_str("Simple").unwrap();
         tag_set.add_tag(&tag);
         assert!(tag_set.has_tag(&tag));
-        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
 
         let other = Tag::from_str(" Simple .Subtag").unwrap();
         tag_set.add_tag(&other);
         assert!(tag_set.has_tag(&tag));
         assert!(tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&tag), 2);
-        assert_eq!(tag_set.count_tag(&other), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 2);
+        assert_eq!(tag_set.get_tag_count(&other), 1);
 
         tag_set.remove_tag(&tag);
         assert!(tag_set.has_tag(&tag));
         assert!(tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&tag), 1);
-        assert_eq!(tag_set.count_tag(&other), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&other), 1);
 
         tag_set.remove_tag(&other);
         assert!(!tag_set.has_tag(&tag));
         assert!(!tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&tag), 0);
-        assert_eq!(tag_set.count_tag(&other), 0);
+        assert_eq!(tag_set.get_tag_count(&tag), 0);
+        assert_eq!(tag_set.get_tag_count(&other), 0);
     }
 
     /// Tests adding and removing multiple tags
@@ -1406,26 +1524,26 @@ mod unit_tests
         let tag = Tag::from_str("Simple").unwrap();
         tag_set.add_tag(&tag);
         assert!(tag_set.has_tag(&tag));
-        assert_eq!(tag_set.count_tag(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
 
         let other = Tag::from_str(" Simple .Subtag").unwrap();
         tag_set.add_tag(&other);
         assert!(tag_set.has_tag(&tag));
         assert!(tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&tag), 2);
-        assert_eq!(tag_set.count_tag(&other), 1);
+        assert_eq!(tag_set.get_tag_count(&tag), 2);
+        assert_eq!(tag_set.get_tag_count(&other), 1);
 
         tag_set.remove_tag(&other);
         assert!(tag_set.has_tag(&tag));
         assert!(!tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&tag), 1);
-        assert_eq!(tag_set.count_tag(&other), 0);
+        assert_eq!(tag_set.get_tag_count(&tag), 1);
+        assert_eq!(tag_set.get_tag_count(&other), 0);
 
         tag_set.remove_tag(&tag);
         assert!(!tag_set.has_tag(&tag));
         assert!(!tag_set.has_tag(&other));
-        assert_eq!(tag_set.count_tag(&tag), 0);
-        assert_eq!(tag_set.count_tag(&other), 0);
+        assert_eq!(tag_set.get_tag_count(&tag), 0);
+        assert_eq!(tag_set.get_tag_count(&other), 0);
     }
     
     /// Tests the creation of a simple template tag

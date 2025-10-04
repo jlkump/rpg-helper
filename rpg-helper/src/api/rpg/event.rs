@@ -3,7 +3,7 @@ use std::{collections::HashMap, rc::Rc};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::api::{data::{conditional::Conditional, context::Context, effect::Effect, error::{DataError, ParseError}, tag::{Tag, TagTemplate}}, rpg::{ability::Ability, inventory::Item, timeline::Date}, };
+use crate::api::{data::{conditional::Conditional, context::Context, effect::Effect, error::{DataError, ParseError}, tag::{Subtag, Tag, TagTemplate}}, rpg::{ability::Ability, inventory::Item, timeline::Date}, };
 
 /// This is an instance of an Event using specifications from the EventSchema.
 /// It holds the date it took place and all the modifications performed.
@@ -47,6 +47,8 @@ pub enum EventModification
     GiveItem(Item),                                  // Gives an item. Like ability, the item is defined in the creation of the event
     RevokeAbility(Tag),                          // Removes an ability by the id tag of the individual ability.
     RemoveItem(Tag),
+    // This is an event that only really matters for the character individually, so it will not typically be displayed on a global timeline.
+    ChangeTimeContext(Subtag),
 }
 
 /// An event schema is used to create an event during active gameplay.
